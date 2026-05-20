@@ -6,7 +6,7 @@
     <meta name="type" content="implementation-plan" />
     <meta name="author" content="Hyoseo Lee" />
     <meta name="last-updated" content="2026-05-20" />
-    <meta name="status" content="in progress — v01.011 complete, v01.012 is next" />
+    <meta name="status" content="in progress — v01.012 complete, v01.013 is next" />
     <title>Implementation Plan — ww-extension</title>
   </head>
   <body>
@@ -176,14 +176,14 @@ ww-extension/
     </ul>
     <p>Verify: badges appear. Sort a column → badges re-appear. Change page → badges correct on new rows.</p>
 
-    <h3>v01.012 — Ranked sidebar list + row navigation [NEXT]</h3>
+    <h3>v01.012 — Ranked sidebar list + row navigation [DONE]</h3>
     <ul>
       <li>Render scores Map sorted descending into sidebar &lt;ul&gt;. Each card: score badge, verdict, title, org, reason (2-line clamp)</li>
       <li>Click handler: if posting ID is in visible tbody, scrollIntoView({block:'center'}) + flash highlight class for 1.5s</li>
     </ul>
     <p>Verify: sidebar lists jobs high-to-low. Click a visible card → row scrolls and highlights.</p>
 
-    <h3>v01.013 — Per-row "Save to Folder"</h3>
+    <h3>v01.013 — Per-row "Save to Folder" [NEXT]</h3>
     <ul>
       <li>Add a small "Save to Folder" button in the AI Score &lt;td&gt; for each row</li>
       <li>On click: bridge openFolderSidebar(postingId) → WW's native folder sidebar opens</li>

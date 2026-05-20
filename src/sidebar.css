@@ -108,6 +108,51 @@
   flex: 1;
 }
 
+/* Sidebar job cards */
+.ww-ext-card {
+  padding: 10px 14px;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+}
+.ww-ext-card:hover { background: #f5f5f5; }
+
+.ww-ext-card-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 3px;
+}
+.ww-ext-card-org {
+  font-size: 11px;
+  color: #888;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ww-ext-card-title {
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ww-ext-card-reason {
+  font-size: 12px;
+  color: #555;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Row highlight on sidebar card click */
+tr.ww-ext-highlight td,
+tr.ww-ext-highlight th {
+  background: #fff3cd !important;
+  transition: background 0.3s;
+}
+
 /* Score badges injected into the job table */
 .ww-ext-badge {
   display: inline-block;

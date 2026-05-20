@@ -121,6 +121,23 @@
     </dl>
 
 
+    <h2>v01.012 — Ranked sidebar list + row navigation (2026-05-20)</h2>
+
+    <dl>
+      <dt>Delegated click handler set up once in injectSidebar, not per render</dt>
+      <dd>
+        renderSidebarList() rewrites innerHTML on every score, which would lose
+        per-element event listeners. A single delegated listener on the ul persists
+        across re-renders and routes clicks via closest('.ww-ext-card').
+      </dd>
+      <dt>scrollToRow is a no-op when the row is not on the current page</dt>
+      <dd>
+        If the posting ID is on a different page, the input selector returns null and
+        the function exits silently. No navigation to other pages — per spec.
+      </dd>
+    </dl>
+
+
     <h2>v01.011 — AI Score column + badge re-injection (2026-05-20)</h2>
 
     <dl>

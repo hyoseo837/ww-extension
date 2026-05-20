@@ -173,6 +173,7 @@ async function scanAllJobs() {
       if (reply.ok) {
         scores.set(postingId, { ...reply.result, title: meta.title, org: meta.org });
         injectRowBadges();
+        renderSidebarList();
       } else if (reply.error?.includes('Rate limited')) {
         progressEl.textContent = `Rate limit reached after ${done} scored. Try again later.`;
         break;
@@ -213,6 +214,40 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+// ── Sidebar list ──────────────────────────────────────────────────────────────
+
+function renderSidebarList() {
+  const ul = document.getElementById('ww-ext-results');
+  if (!ul) return;
+  const sorted = [...scores.entries()].sort((a, b) => b[1].score - a[1].score);
+  ul.innerHTML = sorted.map(([id, { score, verdict, reason, title, org }]) => `
+    <li class="ww-ext-card" data-posting-id="${id}">
+      <div class="ww-ext-card-top">
+        <span class="ww-ext-badge ww-ext-badge--${verdict.toLowerCase()}">${score} · ${verdict}</span>
+        <span class="ww-ext-card-org">${esc(org)}</span>
+      </div>
+      <div class="ww-ext-card-title">${esc(title)}</div>
+      <div class="ww-ext-card-reason">${esc(reason)}</div>
+    </li>
+  `).join('');
+}
+
+function scrollToRow(postingId) {
+  const input = document.querySelector(
+    `#dataViewerPlaceholder table.data-viewer-table tbody input[value="${postingId}"]`
+  );
+  if (!input) return;
+  const row = input.closest('tr.table__row--body');
+  if (!row) return;
+  row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  row.classList.add('ww-ext-highlight');
+  setTimeout(() => row.classList.remove('ww-ext-highlight'), 1500);
+}
+
+function esc(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 // ── Sidebar ───────────────────────────────────────────────────────────────────
 
 function injectSidebar() {
@@ -241,4 +276,10 @@ function injectSidebar() {
   document.getElementById('ww-ext-close').addEventListener('click', () => sidebar.classList.remove('open'));
   document.getElementById('ww-ext-scan').addEventListener('click', scanAllJobs);
   document.getElementById('ww-ext-stop').addEventListener('click', () => { aborted = true; });
+
+  // Delegated click handler for sidebar cards
+  document.getElementById('ww-ext-results').addEventListener('click', e => {
+    const card = e.target.closest('.ww-ext-card');
+    if (card) scrollToRow(card.dataset.postingId);
+  });
 }
