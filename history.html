@@ -121,6 +121,24 @@
     </dl>
 
 
+    <h2>v01.007 — Background worker / Gemini client (2026-05-20)</h2>
+
+    <dl>
+      <dt>Network errors abort immediately; only 429s are retried</dt>
+      <dd>
+        A network-level fetch failure (DNS, timeout, offline) returns immediately with
+        an error rather than retrying. Retries are reserved for 429 rate-limit responses,
+        which are transient by nature. Non-429 HTTP errors (4xx/5xx) also abort immediately
+        since retrying them is unlikely to help.
+      </dd>
+      <dt>JSON parse failure returns the first 100 chars of raw output in the error</dt>
+      <dd>
+        Gemini sometimes returns unexpected formats. Including the raw prefix in the error
+        message makes it diagnosable without having to instrument the service worker.
+      </dd>
+    </dl>
+
+
     <h2>v01.005 — Manifest + file skeletons (2026-05-20)</h2>
 
     <p>
