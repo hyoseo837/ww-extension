@@ -107,3 +107,16 @@
   overflow-y: auto;
   flex: 1;
 }
+
+/* Score badges injected into the job table */
+.ww-ext-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font: 600 12px system-ui, sans-serif;
+  white-space: nowrap;
+  cursor: default;
+}
+.ww-ext-badge--apply    { background: #e6f4ea; color: #137333; }
+.ww-ext-badge--consider { background: #fef7e0; color: #b06000; }
+.ww-ext-badge--skip     { background: #fce8e6; color: #c5221f; }

@@ -121,6 +121,25 @@
     </dl>
 
 
+    <h2>v01.011 — AI Score column + badge re-injection (2026-05-20)</h2>
+
+    <dl>
+      <dt>Observer fires twice per DataViewer re-render but second call is a no-op</dt>
+      <dd>
+        When DataViewer replaces the tbody, the observer fires and injectRowBadges()
+        adds td[data-ww-score] elements, which triggers the observer again. The second
+        call finds all rows already have td[data-ww-score] and exits early. No infinite
+        loop, no flag needed.
+      </dd>
+      <dt>Empty badge cells are not added for unscored jobs</dt>
+      <dd>
+        injectRowBadges() only appends a td if the row doesn't already have one.
+        For unscored jobs the td is still appended (blank), which keeps column alignment.
+        Only jobs in the scores Map get visible badge content.
+      </dd>
+    </dl>
+
+
     <h2>v01.010 — Scan All Jobs flow (2026-05-20)</h2>
 
     <dl>

@@ -3,6 +3,7 @@ if (!window.__wwExtensionInjected) {
   waitForTable().then(() => {
     injectBridge();
     injectSidebar();
+    startTableObserver();
   });
 }
 
@@ -54,6 +55,51 @@ function waitForTable() {
   });
 }
 
+// ── Score column ──────────────────────────────────────────────────────────────
+
+function injectHeader() {
+  const headerRow = document.querySelector(
+    '#dataViewerPlaceholder table.data-viewer-table thead tr.table__row--header'
+  );
+  if (!headerRow || headerRow.querySelector('th[data-ww-score-header]')) return;
+  const th = document.createElement('th');
+  th.className = 'table__heading overflow--hidden';
+  th.setAttribute('data-v-612a1958', '');
+  th.setAttribute('data-ww-score-header', '');
+  th.setAttribute('scope', 'col');
+  th.textContent = 'AI Score';
+  headerRow.appendChild(th);
+}
+
+function injectRowBadges() {
+  document.querySelectorAll(
+    '#dataViewerPlaceholder table.data-viewer-table tbody tr.table__row--body'
+  ).forEach(row => {
+    if (row.querySelector('td[data-ww-score]')) return;
+    const id = row.querySelector('input[name="dataViewerSelection"]')?.value;
+    const td = document.createElement('td');
+    td.className = 'table__value overflow--hidden';
+    td.setAttribute('data-v-612a1958', '');
+    td.setAttribute('data-ww-score', '');
+    if (id && scores.has(id)) {
+      const { score, verdict, reason } = scores.get(id);
+      const escaped = reason.replace(/"/g, '&quot;');
+      td.innerHTML = `<span class="ww-ext-badge ww-ext-badge--${verdict.toLowerCase()}" title="${escaped}">${score} · ${verdict}</span>`;
+    }
+    row.appendChild(td);
+  });
+}
+
+function startTableObserver() {
+  const table = document.querySelector('#dataViewerPlaceholder table.data-viewer-table');
+  if (!table) return;
+  const obs = new MutationObserver(() => {
+    injectHeader();
+    injectRowBadges();
+  });
+  obs.observe(table, { childList: true, subtree: true });
+}
+
 // ── Scan ──────────────────────────────────────────────────────────────────────
 
 async function scanAllJobs() {
@@ -95,6 +141,8 @@ async function scanAllJobs() {
     const total   = postingIds.length;
     let done = 0;
 
+    injectHeader();
+
     for (const postingId of postingIds) {
       if (aborted) break;
       progressEl.textContent = `Fetching ${done + 1} of ${total}…`;
@@ -122,6 +170,7 @@ async function scanAllJobs() {
 
       if (reply.ok) {
         scores.set(postingId, { ...reply.result, title: meta.title, org: meta.org });
+        injectRowBadges();
       } else if (reply.error?.includes('Rate limited')) {
         progressEl.textContent = `Rate limit reached after ${done} scored. Try again later.`;
         break;

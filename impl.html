@@ -6,7 +6,7 @@
     <meta name="type" content="implementation-plan" />
     <meta name="author" content="Hyoseo Lee" />
     <meta name="last-updated" content="2026-05-20" />
-    <meta name="status" content="in progress — v01.010 complete, v01.011 is next" />
+    <meta name="status" content="in progress — v01.011 complete, v01.012 is next" />
     <title>Implementation Plan — ww-extension</title>
   </head>
   <body>
@@ -167,7 +167,7 @@ ww-extension/
     </ul>
     <p>Verify: click Scan → progress ticks 0 to N (N matches WW's result count). Stop halts within one job. Network tab: one POST for selectAll + N POSTs for overviews.</p>
 
-    <h3>v01.011 — AI Score column + badge re-injection [NEXT]</h3>
+    <h3>v01.011 — AI Score column + badge re-injection [DONE]</h3>
     <ul>
       <li>After scan, append "AI Score" &lt;th class="table__heading overflow--hidden" data-v-612a1958=""&gt; to thead tr.table__row--header</li>
       <li>Append &lt;td class="table__value overflow--hidden" data-v-612a1958=""&gt; with score badge to every tr.table__row--body (look up posting ID via input[name="dataViewerSelection"].value against scores Map)</li>
@@ -176,7 +176,7 @@ ww-extension/
     </ul>
     <p>Verify: badges appear. Sort a column → badges re-appear. Change page → badges correct on new rows.</p>
 
-    <h3>v01.012 — Ranked sidebar list + row navigation</h3>
+    <h3>v01.012 — Ranked sidebar list + row navigation [NEXT]</h3>
     <ul>
       <li>Render scores Map sorted descending into sidebar &lt;ul&gt;. Each card: score badge, verdict, title, org, reason (2-line clamp)</li>
       <li>Click handler: if posting ID is in visible tbody, scrollIntoView({block:'center'}) + flash highlight class for 1.5s</li>
