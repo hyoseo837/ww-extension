@@ -121,6 +121,25 @@
     </dl>
 
 
+    <h2>v01.010 — Scan All Jobs flow (2026-05-20)</h2>
+
+    <dl>
+      <dt>Title/org only available for visible rows; fallback is #postingId</dt>
+      <dd>
+        indexVisibleRows() maps only the currently rendered table rows to title/org.
+        Jobs on other pages get title="#postingId", org="" as a fallback. This is
+        acceptable because the sidebar list (v01.012) will display whatever is stored,
+        and titles for visible-page jobs will be correct.
+      </dd>
+      <dt>fetchOverview failures are skipped silently</dt>
+      <dd>
+        If the bridge times out or getPostingOverview errors for a specific posting,
+        the scan increments the counter and continues rather than aborting the whole
+        scan. A broken single posting should not kill 200 others.
+      </dd>
+    </dl>
+
+
     <h2>Bugfixes found during v01.009 testing (2026-05-20)</h2>
 
     <dl>

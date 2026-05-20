@@ -6,6 +6,9 @@ if (!window.__wwExtensionInjected) {
   });
 }
 
+const scores = new Map(); // postingId → {score, verdict, reason, title, org}
+let aborted = false;
+
 // ── Bridge ────────────────────────────────────────────────────────────────────
 
 function injectBridge() {
@@ -51,6 +54,109 @@ function waitForTable() {
   });
 }
 
+// ── Scan ──────────────────────────────────────────────────────────────────────
+
+async function scanAllJobs() {
+  const scanBtn    = document.getElementById('ww-ext-scan');
+  const stopBtn    = document.getElementById('ww-ext-stop');
+  const progressEl = document.getElementById('ww-ext-progress');
+
+  scanBtn.disabled = true;
+  stopBtn.disabled = false;
+  aborted = false;
+
+  try {
+    const tokens = await sendBridge('extractTokens');
+    if (!tokens.selectAll) {
+      progressEl.textContent = 'Error: selectAll token not found.';
+      return;
+    }
+
+    const res = await fetch('/myAccount/co-op/full/jobs.htm', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ action: tokens.selectAll })
+    });
+    const data = await res.json();
+    const postingIds = data.resultIds;
+    if (!postingIds?.length) {
+      progressEl.textContent = 'No jobs found.';
+      return;
+    }
+
+    const settings = await chrome.storage.local.get(['apiKey', 'model', 'cvText']);
+    if (!settings.apiKey || !settings.cvText) {
+      progressEl.textContent = 'Open settings — API key and CV required.';
+      return;
+    }
+
+    const rowMeta = indexVisibleRows();
+    const total   = postingIds.length;
+    let done = 0;
+
+    for (const postingId of postingIds) {
+      if (aborted) break;
+      progressEl.textContent = `${done} of ${total} scored…`;
+
+      let descriptionText = '';
+      try {
+        const html = await sendBridge('fetchOverview', { postingId }, 15000);
+        const doc  = new DOMParser().parseFromString(html, 'text/html');
+        descriptionText = doc.body.textContent.trim().slice(0, 6000);
+      } catch {
+        done++; continue;
+      }
+
+      const meta = rowMeta[postingId] ?? { title: `#${postingId}`, org: '' };
+
+      const reply = await chrome.runtime.sendMessage({
+        type: 'scoreJob',
+        meta,
+        descriptionText,
+        cvText:  settings.cvText,
+        apiKey:  settings.apiKey,
+        model:   settings.model || 'gemini-2.5-flash'
+      });
+
+      if (reply.ok) {
+        scores.set(postingId, { ...reply.result, title: meta.title, org: meta.org });
+      }
+
+      done++;
+      await sleep(600);
+    }
+
+    progressEl.textContent = aborted
+      ? `Stopped at ${done} of ${total}.`
+      : `${done} of ${total} scored.`;
+
+  } catch (e) {
+    progressEl.textContent = `Error: ${e.message}`;
+  } finally {
+    scanBtn.disabled = false;
+    stopBtn.disabled = true;
+  }
+}
+
+function indexVisibleRows() {
+  const map = {};
+  document.querySelectorAll(
+    '#dataViewerPlaceholder table.data-viewer-table tbody tr.table__row--body'
+  ).forEach(row => {
+    const id    = row.querySelector('input[name="dataViewerSelection"]')?.value;
+    const cells = row.querySelectorAll('td.table__value');
+    const title = cells[0]?.querySelector('a')?.textContent.trim() ?? '';
+    const org   = cells[1]?.querySelector('span')?.textContent.trim() ?? '';
+    if (id) map[id] = { title: title || `#${id}`, org };
+  });
+  return map;
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 // ── Sidebar ───────────────────────────────────────────────────────────────────
 
 function injectSidebar() {
@@ -77,4 +183,6 @@ function injectSidebar() {
 
   toggle.addEventListener('click', () => sidebar.classList.toggle('open'));
   document.getElementById('ww-ext-close').addEventListener('click', () => sidebar.classList.remove('open'));
+  document.getElementById('ww-ext-scan').addEventListener('click', scanAllJobs);
+  document.getElementById('ww-ext-stop').addEventListener('click', () => { aborted = true; });
 }
