@@ -64,7 +64,7 @@ function injectRowScores() {
     const id = row.querySelector('input[name="dataViewerSelection"]')?.value;
     if (!id || !scores.has(id)) return;
     const titleCell = row.querySelectorAll('td.table__value')[0];
-    if (!titleCell || titleCell.querySelector('.ww-ext-score-inline')) return;
+    if (!titleCell || titleCell.querySelector('.ww-ext-badge')) return;
     const anchor = titleCell.querySelector('a');
     if (!anchor) return;
     const { score, verdict } = scores.get(id);
