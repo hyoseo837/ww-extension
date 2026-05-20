@@ -121,6 +121,9 @@ async function scanAllJobs() {
 
       if (reply.ok) {
         scores.set(postingId, { ...reply.result, title: meta.title, org: meta.org });
+      } else if (reply.error?.includes('Rate limited')) {
+        progressEl.textContent = `Rate limit reached after ${done} of ${total} jobs. Try again later.`;
+        break;
       }
 
       done++;
