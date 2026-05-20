@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="session-history" />
+    <meta name="session-date" content="2026-05-20" />
+    <title>Session History — ww-extension</title>
+  </head>
+  <body>
+
+    <h1>Session History — 2026-05-20</h1>
+
+    <p>
+      This file records what was done, what was decided, and why, in the first
+      planning session for ww-extension. Future agents can read this to understand
+      context that is not derivable from the code or the other plan files.
+    </p>
+
+
+    <h2>What Was Done</h2>
+
+    <h3>Phase 1: Planning</h3>
+    <p>
+      The user provided a complete confirmed spec in plan.html. An Explore agent
+      read exampleWW.html (553KB WaterlooWorks page snapshot) to verify every DOM
+      and JS hook the spec claimed to exist.
+    </p>
+
+    <h3>Phase 2: Reference file creation (v01.001)</h3>
+    <p>
+      Created <code>exampleWW-compact.html</code> — a 15KB extract of exampleWW.html
+      containing only the sections needed to build the extension. Future agents
+      must read this instead of the 553KB original.
+    </p>
+    <p>
+      Created <code>impl.html</code> — the project-visible implementation plan with
+      build phases, file layout, and key technical decisions.
+    </p>
+
+    <h3>Phase 3: plan.html corrections (v01.002)</h3>
+    <p>
+      plan.html had 6 factual mistakes about the rendered DOM (it described Vue
+      template attributes, not the actual rendered HTML). All 6 were corrected.
+      See section below for the full delta.
+    </p>
+
+
+    <h2>plan.html Corrections (v01.002)</h2>
+
+    <ol>
+      <li>
+        <strong>Posting ID column is a &lt;th&gt;, not &lt;td&gt;.</strong>
+        plan.html said "the posting ID is the text content of the first td".
+        The rendered DOM has &lt;th scope="row"&gt; for the first column.
+        Corrected to: use input[name="dataViewerSelection"].value (numeric string).
+        Fallback: checkbox id matches /^resultRow_(\d+)$/.
+      </li>
+      <li>
+        <strong>Vue template attributes stripped from rendered DOM.</strong>
+        plan.html said to use col-key="Id" and :is-id="true" as selectors.
+        These are Vue template props consumed by DataViewer and are absent in
+        the rendered HTML. Removed from spec.
+      </li>
+      <li>
+        <strong>Table selector added.</strong>
+        plan.html did not specify how to uniquely identify the jobs table.
+        Added: #dataViewerPlaceholder table.data-viewer-table (the data-viewer-table
+        class is unique to this table on the page).
+      </li>
+      <li>
+        <strong>Action tokens are object-literal values, not var declarations.</strong>
+        plan.html said "embedded as string literals... by searching for the function
+        or variable name". The actual pattern is always an object property value
+        (e.g. action: '_-_-...' inside a $.post call). Updated extraction language
+        and provided concrete regexes in both plan.html and exampleWW-compact.html §4.
+      </li>
+      <li>
+        <strong>getPostingOverview returns an HTML string, not JSON.</strong>
+        plan.html implied JSON. The function has no explicit dataType on its $.post
+        call, so jQuery returns the raw server response — an HTML string. Must use
+        DOMParser + .textContent to extract plain text before sending to Gemini.
+      </li>
+      <li>
+        <strong>Folder trigger: bare form, not .$data form.</strong>
+        plan.html said dataViewerApp.$data.jobFolderEditSidebar = true.
+        The page itself uses dataViewerApp.jobFolderEditSidebar = true (bare, no
+        .$data) for single-row actions. Both work in Vue 3; corrected to bare form.
+      </li>
+      <li>
+        <strong>Vue 3.5.13 IS loaded by the page.</strong>
+        plan.html said "NOT a plain Vue 3 SPA" — true, but implied Vue was not
+        present. Vue 3.5.13 is loaded globally as the underlying framework for
+        DataViewer. The extension must not ship its own copy of Vue.
+      </li>
+    </ol>
+
+
+    <h2>Key Decisions Made This Session</h2>
+
+    <dl>
+      <dt>Build order: incremental version-tagged milestones</dt>
+      <dd>User confirmed: build in phases (v01.003 → v01.012), committing each.
+      Easier to verify in browser between steps vs. one large push.</dd>
+
+      <dt>page-bridge.js as a separate file</dt>
+      <dd>Not in the original plan.html spec. Added so the bridge runs as a proper
+      script file (real DevTools line numbers) rather than an eval'd string from
+      content.js. Declared in manifest web_accessible_resources.</dd>
+
+      <dt>Project-internal documentation</dt>
+      <dd>User required: implementation plans and reference extracts must live
+      inside the project tree (not only in ~/.claude/plans/), so other agents
+      can read them. All docs are HTML per rules.html §1.</dd>
+
+      <dt>exampleWW-compact.html as the reference for all future agents</dt>
+      <dd>User required: create a compact extract before writing any code so
+      future agents do not waste tokens reading 553KB. Target was &lt;30KB;
+      result is 15KB. All subsequent code and doc references point here,
+      not to the original exampleWW.html.</dd>
+    </dl>
+
+
+    <h2>What Was NOT Done (next up)</h2>
+
+    <p>No extension code has been written yet. The next step is v01.003: manifest.json + empty file skeletons.</p>
+
+    <p>See impl.html for the full build order and what each phase entails.</p>
+
+  </body>
+</html>

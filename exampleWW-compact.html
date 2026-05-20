@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="reference-compact" />
+    <meta name="source" content="exampleWW.html (saved snapshot of WaterlooWorks co-op jobs page)" />
+    <meta name="purpose" content="Key DOM structure and JS hooks needed to build the extension. Read this instead of the full 553KB exampleWW.html." />
+    <title>WaterlooWorks — Compact Reference</title>
+  </head>
+  <body>
+
+    <h1>WaterlooWorks Compact Reference</h1>
+
+    <p>
+      Extracted from <code>exampleWW.html</code> (saved snapshot of
+      <code>https://waterlooworks.uwaterloo.ca/myAccount/co-op/full/jobs.htm</code>).
+      Only the parts relevant to the extension are kept. Line references point to
+      the original <code>exampleWW.html</code>.
+    </p>
+
+    <p>
+      <strong>Note on scoped attributes:</strong> DataViewer renders elements with
+      scoped Vue attributes (<code>data-v-612a1958</code>, <code>data-v-5e323a0e</code>, etc.).
+      These are stripped for readability in the snippets below.
+      To inherit DataViewer's CSS on injected cells, add
+      <code>data-v-612a1958=""</code> to injected <code>&lt;th&gt;</code> and <code>&lt;td&gt;</code> elements.
+    </p>
+
+
+    <h2>1. Job Table Structure</h2>
+    <!-- exampleWW.html line 7728 — entire DataViewer output is on this one long line -->
+
+    <p>
+      The table is mounted inside <code>#dataViewerPlaceholder</code>.
+      Unique CSS selector for the jobs table (no other table on the page shares this class):
+      <code>#dataViewerPlaceholder table.data-viewer-table</code>.
+    </p>
+
+    <h3>thead — column headers</h3>
+    <pre>
+&lt;!-- Selector: #dataViewerPlaceholder table.data-viewer-table thead --&gt;
+&lt;thead class="table__head"&gt;
+  &lt;tr class="table__row--header"&gt;
+    &lt;!-- Column 1: ID (is a &lt;th&gt;, not &lt;td&gt;) --&gt;
+    &lt;th class="table__heading overflow--hidden first--header" scope="col"&gt;
+      &lt;input id="selectAll" name="selectAll" type="checkbox"&gt;
+      &lt;span class="js--data-grid--header--label"&gt;ID&lt;/span&gt;
+    &lt;/th&gt;
+    &lt;!-- Remaining columns (all &lt;th class="table__heading overflow--hidden"&gt;): --&gt;
+    &lt;!-- Job Title | Organization | Division | Openings | City | Level | Apps | App Deadline --&gt;
+  &lt;/tr&gt;
+&lt;/thead&gt;
+    </pre>
+
+    <h3>tbody — one sample body row</h3>
+    <p>
+      Posting ID extraction: use
+      <code>tr.table__row--body input[name="dataViewerSelection"]</code> → <code>.value</code>.
+      The value is a purely numeric string (e.g. <code>"471670"</code>).
+      Fallback: checkbox <code>id</code> matches <code>/^resultRow_(\d+)$/</code>.
+      The visible number in <code>span.overflow--ellipsis</code> is also the posting ID.
+    </p>
+    <pre>
+&lt;!-- Selector: #dataViewerPlaceholder table.data-viewer-table tbody tr.table__row--body --&gt;
+&lt;tr class="table__row--body"&gt;
+
+  &lt;!-- Column 1: ID — this is a &lt;th scope="row"&gt;, NOT a &lt;td&gt; --&gt;
+  &lt;th class="overflow--hidden" scope="row"&gt;
+    &lt;!-- Row-action icon buttons (Save to Folder, Remove, Apply, Print) sit here --&gt;
+    &lt;input id="resultRow_471670" name="dataViewerSelection" type="checkbox" value="471670"&gt;
+    &lt;label for="resultRow_471670"&gt;Select Row&lt;/label&gt;
+    &lt;span class="overflow--ellipsis"&gt;471670&lt;/span&gt;  &lt;!-- visible posting ID --&gt;
+  &lt;/th&gt;
+
+  &lt;!-- Remaining data columns — all &lt;td class="table__value overflow--hidden"&gt; --&gt;
+  &lt;td class="table__value overflow--hidden"&gt;
+    &lt;a href="javascript:void(0)" class="overflow--ellipsis"&gt;Co-op Student Printed Biological Sensors&lt;/a&gt;
+  &lt;/td&gt;
+  &lt;td class="table__value overflow--hidden"&gt;
+    &lt;span class="overflow--ellipsis"&gt;National Research Council Canada&lt;/span&gt;
+  &lt;/td&gt;
+  &lt;!-- Division, Openings, City, Level, Apps, App Deadline follow the same &lt;td&gt; pattern --&gt;
+
+&lt;/tr&gt;
+    </pre>
+
+    <p>
+      <strong>Injecting the AI Score column:</strong>
+      Append a <code>&lt;th class="table__heading overflow--hidden" data-v-612a1958="" scope="col"&gt;</code>
+      to <code>thead tr.table__row--header</code>, and a matching
+      <code>&lt;td class="table__value overflow--hidden" data-v-612a1958=""&gt;</code>
+      to each <code>tr.table__row--body</code>.
+    </p>
+
+
+    <h2>2. Folder-Assign Sidebar Component Binding</h2>
+    <!-- exampleWW.html line 7043 -->
+
+    <pre>
+&lt;!-- exampleWW.html line 7043 --&gt;
+&lt;folder-assign-sidebar
+  v-model="jobFolderEditSidebar"
+  :folders="folders"
+  :blacklisted-postings="blacklistedPostings"
+  :postings-in-folders="postingsInFolders"
+  :posting-ids="sidebarPostingIds"
+  :max-folders="maxFolders"
+  :folder-max-length="folderMaxLength"
+  @success="updateFoldersAndBlacklist"&gt;
+&lt;/folder-assign-sidebar&gt;
+    </pre>
+
+
+    <h2>3. Page-defined JS Functions</h2>
+    <!-- exampleWW.html lines 5294-5342 (inside a &lt;script&gt; tag, page context) -->
+
+    <p>
+      These functions are defined in an inline <code>&lt;script&gt;</code> tag in page context.
+      Content scripts cannot call them directly — use a page-bridge script injected via
+      <code>&lt;script src="..."&gt;</code> and communicate via <code>window.postMessage</code>.
+    </p>
+    <p>
+      All three POST to <code>/myAccount/co-op/full/jobs.htm</code> using jQuery's
+      <code>$.post</code> (session cookies are sent automatically).
+      <strong>Action tokens are session-specific</strong> — extract fresh on each scan,
+      never cache or hardcode.
+    </p>
+
+    <h3>getPostingPreScreening</h3>
+    <!-- exampleWW.html lines 5294-5308 -->
+    <pre>
+// exampleWW.html lines 5294-5308
+function getPostingPreScreening(postingId, callback) {
+    orbisApp.showLoadingOverlay();
+    $.post("/myAccount/co-op/full/jobs.htm", {
+        action: '_-_-QzfUCYsapXrP_vQM9R0VAgDxzQGL2Fki9wTeLs4gBNzFGbi6fq-YCJZSxJJ4bN6XpgzMqse76gyZzQNDyicQtY232jlzGWhZdQnnHDzN7vukIQE_ua3rWDYM4wpBaHzp6oQG6DDYZtIhyGZLC-GY8K3no1JJnQB1AsYqv3Q7oxGVq46nfTUjIq7-2UfRYom7iwwtBgWRcTvaJtHyIN5rE4At9tuH6P1-EI6sAQ6yX5ibSPnOv5MAP090qxhB2_fFvvw',
+        postingId
+    }, (data, status, xhr) => {
+        orbisApp.hideLoadingOverlay();
+        if (orbisAppSr.checkAjaxResponse(xhr)) { callback(data); }
+    });
+}
+    </pre>
+
+    <h3>getPostingOverview — used to fetch job descriptions</h3>
+    <!-- exampleWW.html lines 5312-5326 -->
+    <pre>
+// exampleWW.html lines 5312-5326
+function getPostingOverview(postingId, callback) {
+    orbisApp.showLoadingOverlay();
+    $.post("/myAccount/co-op/full/jobs.htm", {
+        action: '_-_-gbFatryoP8yCDxHxvHuZhl2__svvzUR4zsEik5mgAYB93QPcj1u9j9IempBQXbMZKoZNGrsuXeeBaNdHAPfqnbokpq25zIYKMjiYiQhuPlSi5w7EFHVyYNd2BnVFyKclxRrxdMeLaLerjLVIU0UpoWv_1BdgHduhQTJbJbs96pDw-uQgv45WSUOq5iy93cWc0xIIiMR2nCHwDkO1TP9AyGV8-fLuE_7z4iJPLIm6tABOKg',
+        postingId
+    }, (data, status, xhr) => {
+        orbisApp.hideLoadingOverlay();
+        if (orbisAppSr.checkAjaxResponse(xhr)) { callback(data); }
+    });
+    // NOTE: no explicit "json" dataType — data is an HTML string.
+    // Strip to text via DOMParser + .textContent before sending to Gemini.
+}
+    </pre>
+
+    <h3>getPostingData (returns JSON)</h3>
+    <!-- exampleWW.html lines 5328-5342 -->
+    <pre>
+// exampleWW.html lines 5328-5342
+function getPostingData(postingId, callback) {
+    orbisApp.showLoadingOverlay();
+    $.post("/myAccount/co-op/full/jobs.htm", {
+        action: '_-_-t_aRtPW-NnvIe3-Bq5PbuFwKH_f37qlul2MJtlXh2-nxf6s5B5D2vmU5QVVlKyuhDTouGJY8FimvOF7Y0mwRrg7B2Cg_-O8ZGrDDrlllY4kjC9oWqQhnzkHCCjFzmGQ5YN9USZomHOexim0REr9nb3DHj4ODc375hVop3uS6VtjwFQi2prNlrlFsGe3U5kkaSzQ9WNnV_mxyjLybEdfJTb28yusuh_LNKQ0',
+        postingId
+    }, (data, status, xhr) => {
+        orbisApp.hideLoadingOverlay();
+        if (orbisAppSr.checkAjaxResponse(xhr)) { callback(data); }
+    }, "json");  // explicit JSON — unlike getPostingOverview
+}
+    </pre>
+
+
+    <h2>4. Action Token Shape and Extraction</h2>
+
+    <p>
+      Every WaterlooWorks action uses a session-specific token with prefix <code>_-_-</code>
+      followed by a base64url payload (<code>[A-Za-z0-9_-]</code>). Lengths range ~195–215+
+      chars. Tokens are always object-literal <em>values</em> (e.g. <code>action: '_-_-...'</code>),
+      never bare <code>var x = '_-_-...'</code>.
+    </p>
+
+    <p><strong>Extraction strategy:</strong> scan all inline <code>&lt;script&gt;</code> elements
+    (those without a <code>src</code> attribute), search for the function/property name that
+    owns the token, then capture the adjacent token. Extraction regexes:</p>
+
+    <pre>
+// Extract selectAll token:
+/onSelectAll[\s\S]{0,400}?action:\s*['"](_-_-[A-Za-z0-9_-]+)['"]/
+
+// Extract getPostingOverview token:
+/function\s+getPostingOverview[\s\S]{0,400}?action:\s*['"](_-_-[A-Za-z0-9_-]+)['"]/
+
+// Generic: capture any token adjacent to a known name:
+/FUNCTION_OR_PROP_NAME[\s\S]{0,400}?(_-_-[A-Za-z0-9_-]+)/
+    </pre>
+
+
+    <h2>5. dataViewerActions — Row Actions (Save to Folder)</h2>
+    <!-- exampleWW.html lines 7848-7967 -->
+
+    <pre>
+// exampleWW.html lines 7848-7873 — single-row folder actions
+const dataViewerActions = [
+    {
+        label: "Change My Jobs Folder",
+        icon: "folder_open",
+        callback: (ids) => {
+            dataViewerApp.sidebarPostingIds = parseInt(ids[0]);
+            dataViewerApp.$data.jobFolderEditSidebar = true;
+        },
+        isVisible: row => dataViewerApp.postingsInFolders && dataViewerApp.postingsInFolders[row.id],
+        isBulkAction: false
+    },
+    {
+        label: "Save to My Jobs Folder",
+        icon: "create_new_folder",
+        callback: (ids) => {
+            dataViewerApp.sidebarPostingIds = parseInt(ids[0]);
+            dataViewerApp.$data.jobFolderEditSidebar = true;
+        },
+        isVisible: row => dataViewerApp.postingsInFolders && !dataViewerApp.postingsInFolders[row.id],
+        isBulkAction: false
+    },
+    // ... (Remove from search results, Apply, Print omitted)
+
+    // exampleWW.html lines 7960-7967 — bulk "My Jobs Actions"
+    {
+        label: "My Jobs Actions",
+        callback: (ids) => {
+            dataViewerApp.sidebarPostingIds = ids.map(Number);  // array for bulk
+            dataViewerApp.jobFolderEditSidebar = true;          // bare form, no .$data
+        },
+        isRowAction: false
+    },
+];
+    </pre>
+
+    <p>
+      <strong>To trigger the WW folder sidebar from extension code</strong> (via page-bridge):
+    </p>
+    <pre>
+// Single posting (matches single-row action pattern):
+dataViewerApp.sidebarPostingIds = Number(postingId);
+dataViewerApp.jobFolderEditSidebar = true;
+
+// Both .$data.jobFolderEditSidebar and bare .jobFolderEditSidebar work in Vue 3.
+// The page uses both forms; bare form is preferred.
+    </pre>
+
+
+    <h2>6. onSelectAll — Get All Posting IDs Across All Pages</h2>
+    <!-- exampleWW.html lines 8095-8110 -->
+
+    <pre>
+// exampleWW.html lines 8095-8110 (inside dataViewerProps object literal)
+onSelectAll: (selectAllState, setIds, filters) => {
+    if (selectAllState) {
+        const request = {
+            action: '_-_-MWRFDNT_fERe0qeMAKt5yVUBwxUpGCQiUuOHpMCl9qRRQvjTNeWYpx7gWI2zJNGaS3ZWJkahQbhhvjJAr9WKWP3YH4GODZozilW-0rgQqWL4mjuBYQtyYHGSxaLPw59ss1pWeAk8Kld8GT5S50E5wd3G0WHfZz9rrAs1DVbMrs29LepvCvT9rEl2ZpSixgiVp3T0VGddYW5jqxMBdfQrxmsP3lK2L-nSZ9L2yqasjktLuRpTRCA'
+        };
+        $.post("/myAccount/co-op/full/jobs.htm", request, function (data, status, xhr) {
+            if (orbisAppSr.checkAjaxResponse(xhr)) {
+                setIds(data.resultIds);  // data.resultIds = array of all matching posting IDs
+            }
+        }, "json");
+    } else {
+        setIds([]);
+    }
+},
+    </pre>
+
+    <p>
+      <strong>To replicate from content.js</strong> (isolated world, but cookies are shared):
+    </p>
+    <pre>
+const res = await fetch('/myAccount/co-op/full/jobs.htm', {
+    method: 'POST',
+    credentials: 'include',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+    body: new URLSearchParams({ action: selectAllToken })
+});
+const data = await res.json();
+const postingIds = data.resultIds;  // string[] of numeric IDs
+    </pre>
+
+
+    <h2>7. dataViewerRoot — Reactive Data and App Mount</h2>
+    <!-- exampleWW.html lines 8116-8177, 8455-8459 -->
+
+    <pre>
+// exampleWW.html lines 8116-8177
+const dataViewerRoot = {
+    template: "#dataViewer",
+    data: () => ({
+        dataViewerProps,
+        dataViewerInit: false,
+        jobFolderEditSidebar: false,   // ← set to true to open WW's folder sidebar
+        removeJobConfirmModal: false,
+        folders: null,
+        postingsInFolders: null,
+        sidebarPostingIds: null,       // ← set to postingId (Number) before opening sidebar
+        folderOptions: [...],
+        blacklistedPostings: [],
+        // ... (viewedOptions, newOptions, deadlineOptions — filter UI only)
+    }),
+    // ...
+};
+
+// exampleWW.html lines 8455-8459 — app creation and mount
+const app = Vue.createApp(dataViewerRoot);
+app.use(DataViewer.default, dataViewerOpts);
+app.use(SRComponents);
+app.use(VueTippy.plugin);
+let dataViewerApp = app.mount("#dataViewerPlaceholder");
+// dataViewerApp is declared with `let` in inline-script scope.
+// It is accessible from page-context scripts but NOT from the content script
+// isolated world — use page-bridge injection.
+    </pre>
+
+
+    <h2>8. Library Versions</h2>
+
+    <ul>
+      <li>jQuery 3.1.1 — <code>lib/jquery/3.1.1/jquery.min.js</code></li>
+      <li>Vue 3.5.13 — <code>prototype/vue/3.5.13/vue.global.prod.js</code></li>
+      <li>DataViewer 0.10.2 — <code>dataViewer/0.10.2/DataViewer.umd.min.js</code></li>
+      <li>SRComponents 0.10.0, vue-tippy 6.7.0, DataViewerOutcome 1.3.8</li>
+    </ul>
+
+    <p>
+      Do not ship Vue, jQuery, or DataViewer with the extension — all three are already
+      loaded by WaterlooWorks on the target page.
+    </p>
+
+
+    <h2>9. Pagination and Re-render Signals</h2>
+
+    <p>
+      DataViewer replaces the entire <code>&lt;tbody&gt;</code> on sort, filter, page change,
+      and explicit <code>dataViewerApp.$dataViewer.refresh()</code> calls. There is no exposed
+      page-change event.
+    </p>
+    <p>
+      <strong>MutationObserver target:</strong> observe the <code>&lt;table&gt;</code> element
+      inside <code>#dataViewerPlaceholder</code> (not just <code>&lt;tbody&gt;</code>, which may
+      itself be replaced) with <code>{ childList: true, subtree: true }</code>. Re-inject AI
+      Score badges in the observer callback whenever new <code>tr.table__row--body</code> elements
+      appear.
+    </p>
+    <p>
+      Pagination controls use <code>ul.pagination__list</code> and <code>li.pagination__item</code>;
+      the active page item has class <code>active disabled</code>. Page size is user-selectable:
+      25 or 50 (default 50, set via <code>itemsPerPage: 50</code> in dataViewerProps).
+    </p>
+
+  </body>
+</html>

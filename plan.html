@@ -63,7 +63,9 @@
       https://waterlooworks.uwaterloo.ca — specifically the co-op full-cycle
       jobs page (/myAccount/co-op/full/jobs.htm). The job table is managed by
       a proprietary DataViewer Vue component (DataViewer.umd.min.js v0.10.2)
-      on top of jQuery 3.1.1. It is NOT a plain Vue 3 SPA.
+      on top of jQuery 3.1.1 and Vue 3.5.13. It is NOT a plain Vue 3 SPA —
+      DataViewer is a plugin registered on top of Vue 3. The page loads Vue
+      3.5.13 globally; do not ship a second copy of Vue with the extension.
     </p>
 
     <h2>File Structure</h2>
@@ -173,21 +175,28 @@ ww-extension/
 
     <h2>WaterlooWorks DOM and API</h2>
 
-    <h3>Job table structure (from exampleWW.html)</h3>
+    <h3>Job table structure (from exampleWW-compact.html §1)</h3>
     <p>
-      The table is rendered by the DataViewer component. Each visible job row
+      The table is rendered by the DataViewer component inside
+      #dataViewerPlaceholder. Unique CSS selector:
+      #dataViewerPlaceholder table.data-viewer-table. Each visible job row
       is a tr.table__row--body inside a tbody. Columns in order: Id (posting
       ID), Job Title, Organization, Division, Openings, City, Level, Apps
       (ApplicationCount), App Deadline.
     </p>
     <p>
-      The posting ID is the text content of the first td in each row
-      (col-key="Id", :is-id="true"). Read this to identify each row.
+      The first column is a &lt;th scope="row"&gt;, not a &lt;td&gt;. The Vue template
+      attributes col-key="Id" and :is-id="true" are stripped from the rendered
+      DOM and must not be used as selectors. Read the posting ID from:
+      tr.table__row--body input[name="dataViewerSelection"].value (numeric string,
+      e.g. "471670"). Fallback: the checkbox id matches /^resultRow_(\d+)$/.
     </p>
     <p>
-      To inject the AI Score column: add a th to the thead tr, and add a td
-      with the score badge to each tbody tr. Re-run injection inside the
-      MutationObserver callback.
+      To inject the AI Score column: append a th (class "table__heading
+      overflow--hidden", data-v-612a1958="") to thead tr.table__row--header,
+      and a matching td (class "table__value overflow--hidden",
+      data-v-612a1958="") to each tr.table__row--body. Re-run injection inside
+      the MutationObserver callback.
     </p>
 
     <h3>Getting all posting IDs (across all pages)</h3>
@@ -201,33 +210,43 @@ ww-extension/
       content.js to get all IDs.
     </p>
 
-    <h3>Fetching job descriptions</h3>
+    <h3>Fetching job descriptions (from exampleWW-compact.html §3)</h3>
     <p>
-      The page defines a function getPostingOverview(postingId, callback)
-      that POSTs to /myAccount/co-op/full/jobs.htm with the posting's action
-      token and session cookies. Because content scripts run in an isolated
-      world and cannot call page-defined functions directly, inject a small
-      script element into the page to call getPostingOverview and relay the
-      result back via window.postMessage. The content script listens for
-      that message.
+      The page defines getPostingOverview(postingId, callback) which POSTs to
+      /myAccount/co-op/full/jobs.htm with the posting's action token and session
+      cookies. It does NOT specify a jQuery dataType, so the callback receives
+      an HTML string (not a JSON object). Strip it to plain text using
+      DOMParser + .textContent before sending to Gemini.
+    </p>
+    <p>
+      Because content scripts run in an isolated world and cannot call
+      page-defined functions directly, inject a small script element into the
+      page to call getPostingOverview and relay the result back via
+      window.postMessage. The content script listens for that message.
     </p>
 
-    <h3>Action tokens</h3>
+    <h3>Action tokens (from exampleWW-compact.html §4)</h3>
     <p>
       Each WaterlooWorks action has its own session-specific token starting
-      with _-_-. They are embedded as string literals in inline script tags.
-      Tokens must be extracted fresh on each page load — they change per
-      session. Use textContent of all script tags to find and extract them
-      by searching for the function or variable name they belong to.
+      with _-_- followed by a base64url payload ([A-Za-z0-9_-], ~195–215+
+      chars). Tokens are always object-literal values (e.g. action: '_-_-...'
+      inside a $.post call or dataViewerProps property) — never bare variable
+      declarations (var x = '_-_-...'). Tokens must be extracted fresh on each
+      page load — they change per session. Scan inline script elements
+      (script:not([src])) and search for the owning function or property name,
+      then capture the adjacent token with a regex such as:
+      /onSelectAll[\s\S]{0,400}?action:\s*['"](_-_-[A-Za-z0-9_-]+)['"]/
     </p>
 
-    <h3>Native folder feature</h3>
+    <h3>Native folder feature (from exampleWW-compact.html §5)</h3>
     <p>
       WaterlooWorks has a built-in "Save to My Jobs Folder" feature. Trigger
-      it from content.js by injecting a script that sets:
-      dataViewerApp.sidebarPostingIds = postingId and
-      dataViewerApp.$data.jobFolderEditSidebar = true. The WW folder sidebar
-      then handles all storage.
+      it from content.js by injecting a page-context script that sets:
+      dataViewerApp.sidebarPostingIds = Number(postingId) and
+      dataViewerApp.jobFolderEditSidebar = true. The bare form (no .$data) is
+      what the page itself uses for single-row actions (exampleWW-compact.html
+      §5). Both the bare form and the .$data form work in Vue 3; use the bare
+      form. The WW folder sidebar then handles all storage.
     </p>
 
     <h2>Gemini API</h2>

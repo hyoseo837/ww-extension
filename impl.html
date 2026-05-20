@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="implementation-plan" />
+    <meta name="author" content="Hyoseo Lee" />
+    <meta name="last-updated" content="2026-05-20" />
+    <meta name="status" content="in progress — v01.004 complete, v01.005 is next" />
+    <title>Implementation Plan — ww-extension</title>
+  </head>
+  <body>
+
+    <h1>ww-extension — Implementation Plan</h1>
+
+    <p>
+      This is the active build plan. Read these files first, in order:
+    </p>
+    <ol>
+      <li><strong>plan.html</strong> — confirmed spec (vision, architecture, features, constraints)</li>
+      <li><strong>exampleWW-compact.html</strong> — WaterlooWorks DOM and JS reference (extracted from the 553KB exampleWW.html; all code must match this, not plan.html's original DOM claims which have been corrected)</li>
+      <li><strong>impl.html</strong> (this file) — build order, phase status, technical decisions</li>
+    </ol>
+
+
+    <h2>Project State</h2>
+
+    <p>Greenfield — no extension code exists yet. Only reference and planning files.</p>
+
+    <h3>Files in project</h3>
+    <ul>
+      <li><code>plan.html</code> — confirmed spec (corrected 2026-05-20)</li>
+      <li><code>impl.html</code> — this file</li>
+      <li><code>exampleWW.html</code> — full WaterlooWorks page snapshot (553KB, do not read directly)</li>
+      <li><code>exampleWW-compact.html</code> — 15KB extract with all JS hooks and DOM structure needed</li>
+      <li><code>.claude/rules.html</code> — project rules (HTML docs, minimal code, vXX.XXX versioning)</li>
+      <li><code>.gitignore</code></li>
+    </ul>
+
+
+    <h2>Final File Layout</h2>
+
+    <pre>
+ww-extension/
+├── plan.html
+├── impl.html
+├── exampleWW-compact.html
+├── exampleWW.html             (untouched — full reference only)
+├── .claude/rules.html
+├── manifest.json
+├── popup.html
+├── icons/
+│   ├── icon16.png
+│   ├── icon48.png
+│   └── icon128.png
+└── src/
+    ├── content.js             (injected into WaterlooWorks)
+    ├── sidebar.css            (injected with content.js)
+    ├── page-bridge.js         (loaded into page context; communicates via postMessage)
+    ├── background.js          (service worker — Gemini calls only)
+    └── popup.js
+    </pre>
+
+    <p>
+      <strong>Why page-bridge.js is a separate file:</strong>
+      Content scripts run in an isolated world and cannot access page-defined
+      JS (dataViewerApp, getPostingOverview, action tokens). The bridge is
+      injected as a real <code>&lt;script src="..."&gt;</code> element so it runs in page
+      context with access to those globals. Using a separate file (vs. a string
+      blob injected from content.js) gives real DevTools line numbers on errors.
+      It must be listed under <code>web_accessible_resources</code> in manifest.json.
+    </p>
+
+
+    <h2>Build Phases</h2>
+
+    <p>
+      Each phase = one commit tagged vXX.XXX per rules.html §4. After each phase,
+      load the unpacked extension in chrome://extensions and verify on the live
+      WaterlooWorks page before moving on.
+    </p>
+
+    <h3>v01.001 — Init repo, project plan, agent rules [DONE]</h3>
+    <h3>v01.002 — Update rules to reflect confirmed plan [DONE]</h3>
+    <h3>v01.003 — Add vision and goal section to plan [DONE]</h3>
+
+    <h3>v01.004 — Reference files + plan.html corrections [DONE]</h3>
+    <ul>
+      <li>Created <code>exampleWW-compact.html</code> (15KB extract of 553KB exampleWW.html)</li>
+      <li>Created <code>impl.html</code> (this file) and <code>history.html</code></li>
+      <li>Applied 6 DOM/JS corrections to plan.html based on exampleWW-compact.html findings — see history.html for the full delta</li>
+    </ul>
+
+    <h3>v01.005 — Manifest + file skeletons [NEXT]</h3>
+    <ul>
+      <li>
+        <code>manifest.json</code> (MV3):
+        <ul>
+          <li><code>host_permissions</code>: https://waterlooworks.uwaterloo.ca/* and https://generativelanguage.googleapis.com/*</li>
+          <li><code>permissions</code>: ["storage"]</li>
+          <li><code>content_scripts</code>: matches jobs page URL, injects src/content.js + src/sidebar.css, run_at: "document_idle"</li>
+          <li><code>web_accessible_resources</code>: src/page-bridge.js exposed to waterlooworks.uwaterloo.ca</li>
+          <li><code>background.service_worker</code>: src/background.js</li>
+          <li><code>action.default_popup</code>: popup.html</li>
+          <li><code>icons</code>: 16/48/128 (placeholder transparent PNGs are fine for dev)</li>
+        </ul>
+      </li>
+      <li>Empty stub files: src/content.js, src/background.js, src/page-bridge.js, popup.html, src/popup.js, src/sidebar.css</li>
+      <li>Placeholder icon PNGs under icons/</li>
+    </ul>
+    <p>Verify: extension loads in Chrome without errors (chrome://extensions → Load unpacked).</p>
+
+    <h3>v01.006 — Settings popup</h3>
+    <ul>
+      <li><code>popup.html</code>: password input (API key), model &lt;select&gt; (gemini-2.5-flash default, gemini-2.5-pro option), CV &lt;textarea&gt;, Save button, Test API Key button, status line</li>
+      <li><code>src/popup.js</code>: read/write chrome.storage.local keys apiKey, model, cvText. Test button sends a minimal prompt to Gemini and reports ok / error.</li>
+    </ul>
+    <p>Verify: open popup → enter values → Save → reopen → values persist. Test button with real key = OK; bad key = error message shown.</p>
+
+    <h3>v01.007 — Background worker (Gemini client)</h3>
+    <ul>
+      <li><code>src/background.js</code>: chrome.runtime.onMessage listener for {type: 'scoreJob', meta, descriptionText, cvText, apiKey, model}</li>
+      <li>POST to https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey} with temperature 0.2, maxOutputTokens 300</li>
+      <li>Prompt: asks for strict JSON {score: 1-10, verdict: "Apply"|"Consider"|"Skip", reason: "2-3 sentences"}</li>
+      <li>Strip markdown code fences (```json ... ```) before JSON.parse</li>
+      <li>Retry on 429: delays 2s, 4s, 8s (max 3 retries)</li>
+      <li>Returns {ok: true, result} or {ok: false, error}</li>
+    </ul>
+    <p>Verify: from service worker DevTools console, send a test message and confirm parsed {score, verdict, reason} is returned.</p>
+
+    <h3>v01.008 — Content script: sidebar shell + injection guard</h3>
+    <ul>
+      <li>Module-level window.__wwExtensionInjected boolean to prevent double-injection</li>
+      <li>MutationObserver on document.body waiting for #dataViewerPlaceholder table.data-viewer-table tbody to appear</li>
+      <li>Inject right-edge sidebar toggle button and slide-in sidebar panel (DOM created via createElement, styles in sidebar.css)</li>
+      <li>Sidebar contents at this stage: Scan All Jobs button, progress line ("x of y jobs scored"), Stop button, empty scored-jobs &lt;ul&gt;</li>
+    </ul>
+    <p>Verify: sidebar toggle appears on the jobs page. Reload does not double-inject. Toggle opens/closes panel.</p>
+
+    <h3>v01.009 — Page bridge</h3>
+    <ul>
+      <li>
+        <code>src/page-bridge.js</code> runs in page context, exposes three operations via window.postMessage (namespace __ww_ext):
+        <ol>
+          <li><strong>extractTokens</strong>: scans script:not([src]) elements, returns {selectAll, getPostingOverview} tokens using regexes from exampleWW-compact.html §4</li>
+          <li><strong>fetchOverview(postingId)</strong>: calls page-defined getPostingOverview(id, cb) and posts the HTML result back</li>
+          <li><strong>openFolderSidebar(postingId)</strong>: sets dataViewerApp.sidebarPostingIds = Number(postingId) and dataViewerApp.jobFolderEditSidebar = true</li>
+        </ol>
+      </li>
+      <li>content.js injects the bridge once via &lt;script src="${chrome.runtime.getURL('src/page-bridge.js')}"&gt; and wraps each operation in a postMessage + request-id promise (with a timeout)</li>
+    </ul>
+    <p>
+      Verify: in DevTools (page context, not isolated world), manually postMessage an extractTokens request and confirm two tokens are returned. fetchOverview with a real posting ID returns HTML. openFolderSidebar opens WW's native folder sidebar.
+    </p>
+
+    <h3>v01.010 — Scan All Jobs flow</h3>
+    <ul>
+      <li>Wire the Scan button in content.js:
+        <ol>
+          <li>Call bridge extractTokens → {selectAll token}</li>
+          <li>fetch('/myAccount/co-op/full/jobs.htm', {method:'POST', credentials:'include', body: new URLSearchParams({action: selectAllToken})}) → JSON → data.resultIds (array of numeric posting ID strings). Content scripts share session cookies for matching hosts.</li>
+          <li>Read apiKey, model, cvText from chrome.storage.local. If any missing, show inline "Open settings" prompt in sidebar and abort.</li>
+          <li>For each postingId: bridge fetchOverview → DOMParser strip HTML to text (cap ~6000 chars) → chrome.runtime.sendMessage({type:'scoreJob', ...}) → store in scores Map (postingId → {score, verdict, reason, title, org})</li>
+          <li>600ms delay between jobs (await sleep(600)). Update progress counter. Stop button flips an aborted flag checked at top of loop.</li>
+        </ol>
+      </li>
+    </ul>
+    <p>Verify: click Scan → progress ticks 0 to N (N matches WW's result count). Stop halts within one job. Network tab: one POST for selectAll + N POSTs for overviews.</p>
+
+    <h3>v01.011 — AI Score column + badge re-injection</h3>
+    <ul>
+      <li>After scan, append "AI Score" &lt;th class="table__heading overflow--hidden" data-v-612a1958=""&gt; to thead tr.table__row--header</li>
+      <li>Append &lt;td class="table__value overflow--hidden" data-v-612a1958=""&gt; with score badge to every tr.table__row--body (look up posting ID via input[name="dataViewerSelection"].value against scores Map)</li>
+      <li>Badge: small pill, verdict color (green=Apply, yellow=Consider, red=Skip), score number, hover tooltip with reason</li>
+      <li>MutationObserver on #dataViewerPlaceholder table.data-viewer-table (childList + subtree) re-runs row injection whenever DataViewer replaces tbody (sort/filter/page change)</li>
+    </ul>
+    <p>Verify: badges appear. Sort a column → badges re-appear. Change page → badges correct on new rows.</p>
+
+    <h3>v01.012 — Ranked sidebar list + row navigation</h3>
+    <ul>
+      <li>Render scores Map sorted descending into sidebar &lt;ul&gt;. Each card: score badge, verdict, title, org, reason (2-line clamp)</li>
+      <li>Click handler: if posting ID is in visible tbody, scrollIntoView({block:'center'}) + flash highlight class for 1.5s</li>
+    </ul>
+    <p>Verify: sidebar lists jobs high-to-low. Click a visible card → row scrolls and highlights.</p>
+
+    <h3>v01.013 — Per-row "Save to Folder"</h3>
+    <ul>
+      <li>Add a small "Save to Folder" button in the AI Score &lt;td&gt; for each row</li>
+      <li>On click: bridge openFolderSidebar(postingId) → WW's native folder sidebar opens</li>
+    </ul>
+    <p>Verify: click Save to Folder → WW folder sidebar opens with that posting pre-selected.</p>
+
+    <h3>v01.014 — Polish</h3>
+    <ul>
+      <li>Sidebar CSS: z-index above WW's own sidebars but below its modal dialogs; match WW's font stack</li>
+      <li>Error handling in sidebar: toast for missing API key, Gemini 4xx (non-429), bridge timeout (&gt;10s per overview fetch)</li>
+      <li>Confirm injection guard survives pushState navigation within the jobs page</li>
+    </ul>
+
+
+    <h2>Key Technical Decisions</h2>
+
+    <dl>
+      <dt>page-bridge.js vs inline string injection</dt>
+      <dd>Bridge is a real file loaded via &lt;script src&gt;, not a string blob eval'd from content.js. Reason: real DevTools line numbers when debugging. Declared in web_accessible_resources for waterlooworks.uwaterloo.ca.</dd>
+
+      <dt>Posting ID extraction</dt>
+      <dd>Use input[name="dataViewerSelection"].value — the most reliable selector. The visible span.overflow--ellipsis text also works as fallback. Do NOT use col-key="Id" or :is-id="true" (Vue template attrs, stripped from rendered DOM).</dd>
+
+      <dt>selectAll vs per-page scraping</dt>
+      <dd>One POST with the selectAll token returns all matching posting IDs across all pages. This is exactly what WW's own "select all" checkbox does internally. No need to paginate through the table.</dd>
+
+      <dt>getPostingOverview returns HTML, not JSON</dt>
+      <dd>No explicit dataType on the $.post call, so jQuery returns whatever the server sends (HTML string). Use DOMParser + .textContent to strip to plain text before Gemini. Cap at ~6000 chars to control token cost.</dd>
+
+      <dt>Folder trigger</dt>
+      <dd>dataViewerApp.sidebarPostingIds = Number(postingId) then dataViewerApp.jobFolderEditSidebar = true. Bare form (no .$data) — this is what the page uses at lines 7963-7964 of exampleWW-compact.html. Both forms work in Vue 3; bare is preferred.</dd>
+
+      <dt>MutationObserver target</dt>
+      <dd>Observe the &lt;table&gt; element (not tbody) because DataViewer may replace the entire tbody on re-render. Use childList + subtree. Re-inject score badges in the callback whenever new tr.table__row--body elements appear.</dd>
+
+      <dt>Scores live in memory only</dt>
+      <dd>scores is a module-level Map in content.js. It does not persist across page reloads or sessions. This is intentional per spec (out of scope: cross-session persistence).</dd>
+
+      <dt>Rate limiting</dt>
+      <dd>600ms delay between Gemini calls. 429 retries: 2s, 4s, 8s (max 3). Both enforced in background.js.</dd>
+    </dl>
+
+
+    <h2>Out of Scope</h2>
+    <p>Per plan.html: auto-apply, cover letters, cross-session score persistence, backend server, non-Gemini providers, PDF CV upload. New features bump major version to v02.xxx.</p>
+
+  </body>
+</html>
