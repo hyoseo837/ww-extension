@@ -69,8 +69,9 @@ function injectRowScores() {
     if (!anchor) return;
     const { score, verdict } = scores.get(id);
     const span = document.createElement('span');
-    span.className = `ww-ext-score-inline ww-ext-score--${verdict.toLowerCase()}`;
-    span.textContent = ` (${score} - ${verdict})`;
+    span.className = `ww-ext-badge ww-ext-badge--${verdict.toLowerCase()}`;
+    span.style.marginLeft = '6px';
+    span.textContent = `${score} · ${verdict}`;
     anchor.insertAdjacentElement('afterend', span);
   });
 }

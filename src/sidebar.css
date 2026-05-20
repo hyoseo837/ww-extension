@@ -154,13 +154,7 @@ tr.ww-ext-highlight th {
 }
 
 
-/* Inline score appended to job title in the table */
-.ww-ext-score-inline         { font-size: 12px; font-weight: 600; }
-.ww-ext-score--apply         { color: #137333; }
-.ww-ext-score--consider      { color: #b06000; }
-.ww-ext-score--skip          { color: #c5221f; }
-
-/* Score badges used in the sidebar list */
+/* Score badges — used inline in the table title cell and in the sidebar list */
 .ww-ext-badge {
   display: inline-block;
   padding: 2px 8px;
