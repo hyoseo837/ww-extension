@@ -1,7 +1,41 @@
 if (!window.__wwExtensionInjected) {
   window.__wwExtensionInjected = true;
-  waitForTable().then(injectSidebar);
+  waitForTable().then(() => {
+    injectBridge();
+    injectSidebar();
+  });
 }
+
+// ── Bridge ────────────────────────────────────────────────────────────────────
+
+function injectBridge() {
+  const script = document.createElement('script');
+  script.src = chrome.runtime.getURL('src/page-bridge.js');
+  document.documentElement.appendChild(script);
+  script.remove();
+}
+
+function sendBridge(op, data = {}, timeout = 10000) {
+  return new Promise((resolve, reject) => {
+    const reqId = crypto.randomUUID();
+    const timer = setTimeout(() => {
+      window.removeEventListener('message', handler);
+      reject(new Error(`Bridge timeout: ${op}`));
+    }, timeout);
+
+    function handler(e) {
+      if (e.source !== window || e.data?.source !== '__ww_ext_page' || e.data?.reqId !== reqId) return;
+      window.removeEventListener('message', handler);
+      clearTimeout(timer);
+      e.data.error ? reject(new Error(e.data.error)) : resolve(e.data.result);
+    }
+
+    window.addEventListener('message', handler);
+    window.postMessage({ source: '__ww_ext_cs', reqId, op, data }, '*');
+  });
+}
+
+// ── Table wait ────────────────────────────────────────────────────────────────
 
 function waitForTable() {
   return new Promise(resolve => {
@@ -16,6 +50,8 @@ function waitForTable() {
     obs.observe(document.body, { childList: true, subtree: true });
   });
 }
+
+// ── Sidebar ───────────────────────────────────────────────────────────────────
 
 function injectSidebar() {
   const toggle = document.createElement('button');

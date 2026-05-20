@@ -6,7 +6,7 @@
     <meta name="type" content="implementation-plan" />
     <meta name="author" content="Hyoseo Lee" />
     <meta name="last-updated" content="2026-05-20" />
-    <meta name="status" content="in progress — v01.008 complete, v01.009 is next" />
+    <meta name="status" content="in progress — v01.009 complete, v01.010 is next" />
     <title>Implementation Plan — ww-extension</title>
   </head>
   <body>
@@ -137,7 +137,7 @@ ww-extension/
     </ul>
     <p>Verify: sidebar toggle appears on the jobs page. Reload does not double-inject. Toggle opens/closes panel.</p>
 
-    <h3>v01.009 — Page bridge [NEXT]</h3>
+    <h3>v01.009 — Page bridge [DONE]</h3>
     <ul>
       <li>
         <code>src/page-bridge.js</code> runs in page context, exposes three operations via window.postMessage (namespace __ww_ext):
@@ -153,7 +153,7 @@ ww-extension/
       Verify: in DevTools (page context, not isolated world), manually postMessage an extractTokens request and confirm two tokens are returned. fetchOverview with a real posting ID returns HTML. openFolderSidebar opens WW's native folder sidebar.
     </p>
 
-    <h3>v01.010 — Scan All Jobs flow</h3>
+    <h3>v01.010 — Scan All Jobs flow [NEXT]</h3>
     <ul>
       <li>Wire the Scan button in content.js:
         <ol>

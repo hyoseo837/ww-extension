@@ -121,6 +121,25 @@
     </dl>
 
 
+    <h2>v01.009 — Page bridge (2026-05-20)</h2>
+
+    <dl>
+      <dt>e.source === window check prevents cross-origin message spoofing</dt>
+      <dd>
+        WaterlooWorks and any embedded iframes could otherwise postMessage into the
+        bridge. Checking e.source === window ensures only same-window messages are
+        processed, and the __ww_ext_cs / __ww_ext_page source field namespaces
+        extension messages away from anything WW posts internally.
+      </dd>
+      <dt>script.remove() after bridge injection is safe</dt>
+      <dd>
+        Removing the &lt;script&gt; element from the DOM after appending it does not
+        stop or interrupt script execution. The script continues running. Removing it
+        keeps the DOM clean.
+      </dd>
+    </dl>
+
+
     <h2>v01.008 — Content script: sidebar shell (2026-05-20)</h2>
 
     <dl>
