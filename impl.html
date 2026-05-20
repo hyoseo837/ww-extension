@@ -6,7 +6,7 @@
     <meta name="type" content="implementation-plan" />
     <meta name="author" content="Hyoseo Lee" />
     <meta name="last-updated" content="2026-05-20" />
-    <meta name="status" content="in progress — v01.007 complete, v01.008 is next" />
+    <meta name="status" content="in progress — v01.008 complete, v01.009 is next" />
     <title>Implementation Plan — ww-extension</title>
   </head>
   <body>
@@ -128,7 +128,7 @@ ww-extension/
     </ul>
     <p>Verify: from service worker DevTools console, send a test message and confirm parsed {score, verdict, reason} is returned.</p>
 
-    <h3>v01.008 — Content script: sidebar shell + injection guard [NEXT]</h3>
+    <h3>v01.008 — Content script: sidebar shell + injection guard [DONE]</h3>
     <ul>
       <li>Module-level window.__wwExtensionInjected boolean to prevent double-injection</li>
       <li>MutationObserver on document.body waiting for #dataViewerPlaceholder table.data-viewer-table tbody to appear</li>
@@ -137,7 +137,7 @@ ww-extension/
     </ul>
     <p>Verify: sidebar toggle appears on the jobs page. Reload does not double-inject. Toggle opens/closes panel.</p>
 
-    <h3>v01.009 — Page bridge</h3>
+    <h3>v01.009 — Page bridge [NEXT]</h3>
     <ul>
       <li>
         <code>src/page-bridge.js</code> runs in page context, exposes three operations via window.postMessage (namespace __ww_ext):

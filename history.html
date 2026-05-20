@@ -121,6 +121,22 @@
     </dl>
 
 
+    <h2>v01.008 — Content script: sidebar shell (2026-05-20)</h2>
+
+    <dl>
+      <dt>All CSS selectors are ID-based with ww-ext- prefix</dt>
+      <dd>
+        WaterlooWorks injects its own CSS globally. Using IDs (high specificity) with a
+        unique prefix avoids any class-name collisions without needing Shadow DOM.
+      </dd>
+      <dt>Toggle button uses writing-mode: vertical-rl instead of transform: rotate</dt>
+      <dd>
+        Vertical text via writing-mode keeps the button's clickable area correctly sized
+        along the right edge. A rotated element would misalign its hit box.
+      </dd>
+    </dl>
+
+
     <h2>v01.007 — Background worker / Gemini client (2026-05-20)</h2>
 
     <dl>
