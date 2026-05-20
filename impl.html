@@ -6,7 +6,7 @@
     <meta name="type" content="implementation-plan" />
     <meta name="author" content="Hyoseo Lee" />
     <meta name="last-updated" content="2026-05-20" />
-    <meta name="status" content="in progress — v01.004 complete, v01.005 is next" />
+    <meta name="status" content="in progress — v01.006 complete, v01.007 is next" />
     <title>Implementation Plan — ww-extension</title>
   </head>
   <body>
@@ -91,7 +91,7 @@ ww-extension/
       <li>Applied 6 DOM/JS corrections to plan.html based on exampleWW-compact.html findings — see history.html for the full delta</li>
     </ul>
 
-    <h3>v01.005 — Manifest + file skeletons [NEXT]</h3>
+    <h3>v01.005 — Manifest + file skeletons [DONE]</h3>
     <ul>
       <li>
         <code>manifest.json</code> (MV3):
@@ -110,14 +110,14 @@ ww-extension/
     </ul>
     <p>Verify: extension loads in Chrome without errors (chrome://extensions → Load unpacked).</p>
 
-    <h3>v01.006 — Settings popup</h3>
+    <h3>v01.006 — Settings popup [DONE]</h3>
     <ul>
       <li><code>popup.html</code>: password input (API key), model &lt;select&gt; (gemini-2.5-flash default, gemini-2.5-pro option), CV &lt;textarea&gt;, Save button, Test API Key button, status line</li>
       <li><code>src/popup.js</code>: read/write chrome.storage.local keys apiKey, model, cvText. Test button sends a minimal prompt to Gemini and reports ok / error.</li>
     </ul>
     <p>Verify: open popup → enter values → Save → reopen → values persist. Test button with real key = OK; bad key = error message shown.</p>
 
-    <h3>v01.007 — Background worker (Gemini client)</h3>
+    <h3>v01.007 — Background worker (Gemini client) [NEXT]</h3>
     <ul>
       <li><code>src/background.js</code>: chrome.runtime.onMessage listener for {type: 'scoreJob', meta, descriptionText, cvText, apiKey, model}</li>
       <li>POST to https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey} with temperature 0.2, maxOutputTokens 300</li>

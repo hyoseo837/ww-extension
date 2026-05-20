@@ -121,11 +121,31 @@
     </dl>
 
 
-    <h2>What Was NOT Done (next up)</h2>
+    <h2>v01.005 — Manifest + file skeletons (2026-05-20)</h2>
 
-    <p>No extension code has been written yet. The next step is v01.003: manifest.json + empty file skeletons.</p>
+    <p>
+      Created manifest.json, all stub source files, popup.html shell, and placeholder
+      blue PNGs for all three icon sizes. No decisions here beyond what was already in
+      impl.html.
+    </p>
 
-    <p>See impl.html for the full build order and what each phase entails.</p>
+
+    <h2>v01.006 — Settings popup (2026-05-20)</h2>
+
+    <dl>
+      <dt>Popup makes Gemini test calls directly, not via background.js</dt>
+      <dd>
+        The Test API Key button fetches the Gemini endpoint from popup.js rather than
+        routing through background.js. Both contexts have host_permissions for
+        generativelanguage.googleapis.com, so this works and avoids unnecessary message
+        passing for a one-off UI action.
+      </dd>
+      <dt>Status element uses CSS classes (ok / err) for color, not inline styles</dt>
+      <dd>
+        Keeps popup.js free of style concerns. The classes are defined in popup.html's
+        style block and toggled by setting el('status').className.
+      </dd>
+    </dl>
 
   </body>
 </html>

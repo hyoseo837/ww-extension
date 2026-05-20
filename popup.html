@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>WW Extension Settings</title>
+    <style>
+      body { font-family: system-ui, sans-serif; width: 320px; padding: 12px; margin: 0; }
+      label { display: block; font-size: 13px; font-weight: 600; margin-top: 10px; }
+      input, select, textarea {
+        width: 100%; box-sizing: border-box; margin-top: 4px;
+        padding: 6px; font-size: 13px; border: 1px solid #ccc; border-radius: 4px;
+      }
+      textarea { height: 120px; resize: vertical; font-family: monospace; font-size: 12px; }
+      .row { display: flex; gap: 8px; margin-top: 12px; }
+      button { flex: 1; padding: 7px; font-size: 13px; cursor: pointer; border: 1px solid #aaa; border-radius: 4px; background: #f5f5f5; }
+      button:hover { background: #e8e8e8; }
+      #status { margin-top: 8px; font-size: 12px; min-height: 16px; color: #555; }
+      #status.ok { color: green; }
+      #status.err { color: red; }
+    </style>
+  </head>
+  <body>
+    <label>API Key
+      <input id="apiKey" type="password" placeholder="AIza..." />
+    </label>
+    <label>Model
+      <select id="model">
+        <option value="gemini-2.5-flash">gemini-2.5-flash (default)</option>
+        <option value="gemini-2.5-pro">gemini-2.5-pro</option>
+      </select>
+    </label>
+    <label>CV Summary
+      <textarea id="cvText" placeholder="Paste your CV / resume summary here..."></textarea>
+    </label>
+    <div class="row">
+      <button id="save">Save</button>
+      <button id="test">Test API Key</button>
+    </div>
+    <div id="status"></div>
+    <script src="src/popup.js"></script>
+  </body>
+</html>
