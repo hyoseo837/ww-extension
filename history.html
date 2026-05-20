@@ -121,6 +121,25 @@
     </dl>
 
 
+    <h2>Bugfixes found during v01.009 testing (2026-05-20)</h2>
+
+    <dl>
+      <dt>script.remove() must be in onload, not synchronous</dt>
+      <dd>
+        Removing a &lt;script src&gt; element from the DOM synchronously after appendChild
+        causes Chrome to skip execution when the fetch completes. Moved remove() to
+        script.onload so the element stays in the document until the script has run.
+      </dd>
+      <dt>gemini-2.5-flash thinking tokens consume maxOutputTokens budget</dt>
+      <dd>
+        gemini-2.5-flash is a thinking model. Internal reasoning tokens count against
+        maxOutputTokens, leaving almost none for the actual JSON response. Fixed by
+        setting thinkingConfig: { thinkingBudget: 0 } to disable thinking (unnecessary
+        for simple scoring) and raising maxOutputTokens from 300 to 1024.
+      </dd>
+    </dl>
+
+
     <h2>v01.009 — Page bridge (2026-05-20)</h2>
 
     <dl>

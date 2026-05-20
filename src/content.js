@@ -11,8 +11,8 @@ if (!window.__wwExtensionInjected) {
 function injectBridge() {
   const script = document.createElement('script');
   script.src = chrome.runtime.getURL('src/page-bridge.js');
+  script.onload = () => script.remove();
   document.documentElement.appendChild(script);
-  script.remove();
 }
 
 function sendBridge(op, data = {}, timeout = 10000) {

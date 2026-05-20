@@ -23,7 +23,11 @@ ${descriptionText}`;
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
   const body = JSON.stringify({
     contents: [{ parts: [{ text: prompt }] }],
-    generationConfig: { temperature: 0.2, maxOutputTokens: 300 }
+    generationConfig: {
+      temperature: 0.2,
+      maxOutputTokens: 1024,
+      thinkingConfig: { thinkingBudget: 0 }
+    }
   });
 
   const retryDelays = [2000, 4000, 8000];
