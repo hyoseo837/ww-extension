@@ -121,6 +121,25 @@
     </dl>
 
 
+    <h2>Score persistence + cross-page navigation (2026-05-20)</h2>
+
+    <dl>
+      <dt>Persistence overrides the original out-of-scope decision — explicit user request</dt>
+      <dd>
+        plan.html listed "Saving scores across sessions or page reloads" as out of scope.
+        User explicitly requested persistence to save API tokens across partial scans.
+        Scores and allPostingIds are stored in chrome.storage.local (ww_scores, ww_posting_ids).
+        New scores overwrite old ones for the same posting ID; others are preserved (merge semantics).
+      </dd>
+      <dt>allPostingIds drives cross-page navigation — assumes default DataViewer sort order</dt>
+      <dd>
+        scrollToRow calculates target page as floor(resultIds.indexOf(postingId) / pageSize) + 1.
+        This is only correct when DataViewer is in the same sort order as the selectAll response.
+        If the user sorts by a different column, the navigation may land on the wrong page.
+      </dd>
+    </dl>
+
+
     <h2>v01.012 — Ranked sidebar list + row navigation (2026-05-20)</h2>
 
     <dl>

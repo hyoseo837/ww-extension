@@ -1,13 +1,15 @@
 if (!window.__wwExtensionInjected) {
   window.__wwExtensionInjected = true;
-  waitForTable().then(() => {
+  waitForTable().then(async () => {
     injectBridge();
     injectSidebar();
     startTableObserver();
+    await loadScores();
   });
 }
 
 const scores = new Map(); // postingId → {score, verdict, reason, title, org}
+let allPostingIds = [];   // ordered list from selectAll — used for page navigation
 let aborted = false;
 
 // ── Bridge ────────────────────────────────────────────────────────────────────
@@ -53,6 +55,24 @@ function waitForTable() {
     });
     obs.observe(document.body, { childList: true, subtree: true });
   });
+}
+
+// ── Persistence ───────────────────────────────────────────────────────────────
+
+function saveScores() {
+  chrome.storage.local.set({
+    ww_scores:      Object.fromEntries(scores),
+    ww_posting_ids: allPostingIds
+  });
+}
+
+async function loadScores() {
+  const data = await chrome.storage.local.get(['ww_scores', 'ww_posting_ids']);
+  if (!data.ww_scores) return;
+  for (const [id, entry] of Object.entries(data.ww_scores)) scores.set(id, entry);
+  allPostingIds = data.ww_posting_ids ?? [];
+  injectRowScores();
+  renderSidebarList();
 }
 
 // ── Score inline in title cell ────────────────────────────────────────────────
@@ -120,6 +140,7 @@ async function scanAllJobs() {
       return;
     }
 
+    allPostingIds = postingIds;
     const rowMeta = indexVisibleRows();
     const total   = postingIds.length;
     let done = 0;
@@ -157,6 +178,7 @@ async function scanAllJobs() {
 
       if (reply.ok) {
         scores.set(postingId, { ...reply.result, title: meta.title, org: meta.org });
+        saveScores();
         injectRowScores();
         renderSidebarList();
       } else if (reply.error?.includes('Rate limited')) {
@@ -217,10 +239,30 @@ function renderSidebarList() {
   `).join('');
 }
 
-function scrollToRow(postingId) {
-  const input = document.querySelector(
+async function scrollToRow(postingId) {
+  let input = document.querySelector(
     `#dataViewerPlaceholder table.data-viewer-table tbody input[value="${postingId}"]`
   );
+
+  if (!input && allPostingIds.length) {
+    const idx = allPostingIds.indexOf(postingId);
+    if (idx >= 0) {
+      const pageSize   = document.querySelectorAll(
+        '#dataViewerPlaceholder table.data-viewer-table tbody tr.table__row--body'
+      ).length || 50;
+      const targetPage = Math.floor(idx / pageSize) + 1;
+      const pageBtn    = [...document.querySelectorAll('ul.pagination__list li.pagination__item')]
+        .find(li => li.textContent.trim() === String(targetPage));
+      if (pageBtn) {
+        (pageBtn.querySelector('a, button') ?? pageBtn).click();
+        await new Promise(r => setTimeout(r, 700));
+        input = document.querySelector(
+          `#dataViewerPlaceholder table.data-viewer-table tbody input[value="${postingId}"]`
+        );
+      }
+    }
+  }
+
   if (!input) return;
   const row = input.closest('tr.table__row--body');
   if (!row) return;
