@@ -63,13 +63,22 @@ function injectHeader() {
   );
   if (!headerRow || headerRow.querySelector('th[data-ww-score-header]')) return;
   const th = document.createElement('th');
-  th.className = 'table__heading overflow--hidden';
+  th.setAttribute('data-v-76d37ef8', '');
   th.setAttribute('data-v-612a1958', '');
-  th.setAttribute('data-ww-score-header', '');
+  th.className = 'table__heading overflow--hidden';
   th.setAttribute('scope', 'col');
+  th.setAttribute('data-ww-score-header', '');
   th.style.width = '110px';
-  th.textContent = 'AI Score';
-  addResizeHandle(th);
+  th.innerHTML = `
+    <div data-v-76d37ef8="" class="display--flex align--middle match--padding">
+      <div data-v-76d37ef8="" class="display--flex align--middle">
+        <span data-v-76d37ef8="" class="js--data-grid--header--label margin--l--s" style="padding-left:0px;">AI Score</span>
+      </div>
+    </div>
+    <div data-v-76d37ef8="" class="resize--handle display--flex align--center" tabindex="0" role="button" aria-label="Resize AI Score column">
+      <div data-v-76d37ef8="" class=""></div>
+    </div>
+  `;
   headerRow.insertBefore(th, headerRow.children[1]);
 }
 
@@ -94,31 +103,6 @@ function injectRowBadges() {
   });
 }
 
-function addResizeHandle(th) {
-  const handle = document.createElement('div');
-  handle.className = 'ww-ext-resize-handle';
-  th.appendChild(handle);
-
-  handle.addEventListener('mousedown', e => {
-    e.preventDefault();
-    const startX    = e.clientX;
-    const startWidth = th.getBoundingClientRect().width;
-    handle.classList.add('ww-ext-resizing');
-
-    function onMove(e) {
-      const w = Math.max(60, startWidth + e.clientX - startX);
-      th.style.width = w + 'px';
-      document.querySelectorAll('td[data-ww-score]').forEach(td => { td.style.width = w + 'px'; });
-    }
-    function onUp() {
-      handle.classList.remove('ww-ext-resizing');
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
-    }
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
-  });
-}
 
 function startTableObserver() {
   const table = document.querySelector('#dataViewerPlaceholder table.data-viewer-table');
