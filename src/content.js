@@ -8,9 +8,17 @@ if (!window.__wwExtensionInjected) {
   });
 }
 
+const TABLE_SEL      = '#dataViewerPlaceholder table.data-viewer-table';
+const ROW_SEL        = `${TABLE_SEL} tbody tr.table__row--body`;
+const DESC_CHAR_CAP  = 6000;
+const SCAN_DELAY_MS  = 600;
+const FETCH_TIMEOUT  = 15000;
+const VERDICT_ORDER  = { Apply: 0, Consider: 1, Skip: 2 };
+
 const scores = new Map(); // postingId → {score, verdict, reason, title, org}
 let allPostingIds = [];   // ordered list from selectAll — used for page navigation
 let aborted = false;
+let detectedPageSize = 50; // refined upward from observed row counts
 
 // ── Bridge ────────────────────────────────────────────────────────────────────
 
@@ -45,19 +53,23 @@ function sendBridge(op, data = {}, timeout = 10000) {
 
 function waitForTable() {
   return new Promise(resolve => {
-    if (document.querySelector('#dataViewerPlaceholder table.data-viewer-table')) {
-      resolve(); return;
-    }
+    if (document.querySelector(TABLE_SEL)) { resolve(); return; }
     const obs = new MutationObserver(() => {
-      if (document.querySelector('#dataViewerPlaceholder table.data-viewer-table')) {
-        obs.disconnect(); resolve();
-      }
+      if (document.querySelector(TABLE_SEL)) { obs.disconnect(); resolve(); }
     });
     obs.observe(document.body, { childList: true, subtree: true });
   });
 }
 
 // ── Persistence ───────────────────────────────────────────────────────────────
+
+function clearScores() {
+  scores.clear();
+  allPostingIds = [];
+  chrome.storage.local.remove(['ww_scores', 'ww_posting_ids']);
+  document.querySelectorAll('.ww-ext-badge').forEach(el => el.remove());
+  renderSidebarList();
+}
 
 function saveScores() {
   chrome.storage.local.set({
@@ -68,21 +80,46 @@ function saveScores() {
 
 async function loadScores() {
   const data = await chrome.storage.local.get(['ww_scores', 'ww_posting_ids']);
-  if (!data.ww_scores) return;
-  for (const [id, entry] of Object.entries(data.ww_scores)) scores.set(id, entry);
-  allPostingIds = data.ww_posting_ids ?? [];
-  injectRowScores();
+  if (data.ww_scores) {
+    for (const [id, entry] of Object.entries(data.ww_scores)) scores.set(id, entry);
+    allPostingIds = data.ww_posting_ids ?? [];
+    injectRowScores();
+  }
   renderSidebarList();
+}
+
+// Throttle expensive UI work during the scan loop (sidebar re-render + storage write).
+// Per-job calls would be O(n²) and hit chrome.storage.local's write quota.
+let flushScheduled = false;
+function scheduleFlush() {
+  if (flushScheduled) return;
+  flushScheduled = true;
+  setTimeout(() => {
+    flushScheduled = false;
+    saveScores();
+    renderSidebarList();
+  }, 300);
 }
 
 // ── Score inline in title cell ────────────────────────────────────────────────
 
 function injectRowScores() {
-  document.querySelectorAll(
-    '#dataViewerPlaceholder table.data-viewer-table tbody tr.table__row--body'
-  ).forEach(row => {
+  let sidebarDirty = false;
+  document.querySelectorAll(ROW_SEL).forEach(row => {
     const id = row.querySelector('input[name="dataViewerSelection"]')?.value;
     if (!id || !scores.has(id)) return;
+
+    const entry = scores.get(id);
+    if (!entry.title || entry.title === `#${id}`) {
+      const cells = row.querySelectorAll('td.table__value');
+      const title = cells[0]?.querySelector('a')?.textContent.trim();
+      const org   = cells[1]?.querySelector('span')?.textContent.trim();
+      if (title) {
+        scores.set(id, { ...entry, title, org: org || entry.org });
+        sidebarDirty = true;
+      }
+    }
+
     const titleCell = row.querySelectorAll('td.table__value')[0];
     if (!titleCell || titleCell.querySelector('.ww-ext-badge')) return;
     const anchor = titleCell.querySelector('a');
@@ -94,21 +131,47 @@ function injectRowScores() {
     span.textContent = `${score} · ${verdict}`;
     anchor.insertAdjacentElement('afterend', span);
   });
+
+  if (sidebarDirty) { saveScores(); renderSidebarList(); }
+}
+
+function refreshPageSize() {
+  const count = document.querySelectorAll(ROW_SEL).length;
+  if (count > detectedPageSize) detectedPageSize = count;
 }
 
 function startTableObserver() {
-  const table = document.querySelector('#dataViewerPlaceholder table.data-viewer-table');
+  const table = document.querySelector(TABLE_SEL);
   if (!table) return;
-  const obs = new MutationObserver(() => injectRowScores());
+  let rafPending = false;
+  const obs = new MutationObserver(() => {
+    if (rafPending) return;
+    rafPending = true;
+    requestAnimationFrame(() => {
+      obs.disconnect();
+      table.querySelectorAll('.ww-ext-badge').forEach(el => el.remove());
+      injectRowScores();
+      refreshPageSize();
+      obs.observe(table, { childList: true, subtree: true });
+      rafPending = false;
+    });
+  });
   obs.observe(table, { childList: true, subtree: true });
+  refreshPageSize();
 }
 
 // ── Scan ──────────────────────────────────────────────────────────────────────
 
+function setProgress(text, isError = false) {
+  const el = document.getElementById('ww-ext-progress');
+  if (!el) return;
+  el.textContent = text;
+  el.classList.toggle('ww-ext-error', isError);
+}
+
 async function scanAllJobs() {
-  const scanBtn    = document.getElementById('ww-ext-scan');
-  const stopBtn    = document.getElementById('ww-ext-stop');
-  const progressEl = document.getElementById('ww-ext-progress');
+  const scanBtn = document.getElementById('ww-ext-scan');
+  const stopBtn = document.getElementById('ww-ext-stop');
 
   scanBtn.disabled = true;
   stopBtn.disabled = false;
@@ -117,7 +180,7 @@ async function scanAllJobs() {
   try {
     const tokens = await sendBridge('extractTokens');
     if (!tokens.selectAll) {
-      progressEl.textContent = 'Error: selectAll token not found.';
+      setProgress('Error: selectAll token not found.', true);
       return;
     }
 
@@ -125,39 +188,46 @@ async function scanAllJobs() {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ action: tokens.selectAll })
+      body: new URLSearchParams({ action: tokens.selectAll }),
+      signal: AbortSignal.timeout(20000)
     });
     const data = await res.json();
     const postingIds = data.resultIds;
     if (!postingIds?.length) {
-      progressEl.textContent = 'No jobs found.';
+      setProgress('No jobs found.', true);
       return;
     }
 
     const settings = await chrome.storage.local.get(['apiKey', 'model', 'cvText']);
     if (!settings.apiKey || !settings.cvText) {
-      progressEl.textContent = 'Open settings — API key and CV required.';
+      setProgress('Open extension popup to set API key and CV.', true);
       return;
     }
 
     allPostingIds = postingIds;
+    const toScore = postingIds.filter(id => !scores.has(id));
+    if (!toScore.length) {
+      setProgress('All jobs already scored.');
+      return;
+    }
     const rowMeta = indexVisibleRows();
-    const total   = postingIds.length;
-    let done = 0;
+    const total   = toScore.length;
+    let done = 0, failed = 0;
+    let lastError = '';
 
-    for (const postingId of postingIds) {
+    for (const postingId of toScore) {
       if (aborted) break;
-      progressEl.textContent = `Fetching ${done + 1} of ${total}…`;
+      setProgress(`Fetching ${done + failed + 1} of ${total}…`);
 
       let descriptionText = '';
       let extractedTitle  = '';
       try {
-        const html = await sendBridge('fetchOverview', { postingId }, 15000);
+        const html = await sendBridge('fetchOverview', { postingId }, FETCH_TIMEOUT);
         const doc  = new DOMParser().parseFromString(html, 'text/html');
-        descriptionText = doc.body.textContent.trim().slice(0, 6000);
+        descriptionText = doc.body.textContent.trim().slice(0, DESC_CHAR_CAP);
         extractedTitle  = doc.querySelector('h1, h2, h3')?.textContent.trim() ?? '';
-      } catch {
-        done++; continue;
+      } catch (e) {
+        failed++; lastError = `fetch: ${e.message}`; continue;
       }
 
       const rowInfo = rowMeta[postingId];
@@ -165,7 +235,7 @@ async function scanAllJobs() {
         title: rowInfo?.title || extractedTitle || `#${postingId}`,
         org:   rowInfo?.org   || ''
       };
-      progressEl.textContent = `Scoring ${done + 1} of ${total}…`;
+      setProgress(`Scoring ${done + failed + 1} of ${total}…`);
 
       const reply = await chrome.runtime.sendMessage({
         type: 'scoreJob',
@@ -178,25 +248,31 @@ async function scanAllJobs() {
 
       if (reply.ok) {
         scores.set(postingId, { ...reply.result, title: meta.title, org: meta.org });
-        saveScores();
         injectRowScores();
-        renderSidebarList();
-      } else if (reply.error?.includes('Rate limited')) {
-        progressEl.textContent = `Rate limit reached after ${done} scored. Try again later.`;
+        scheduleFlush();
+        done++;
+      } else if (reply.code === 'RATE_LIMIT') {
+        setProgress(`Rate limit reached after ${done} scored. Try again later.`, true);
         break;
+      } else {
+        failed++; lastError = reply.error || 'unknown';
       }
 
-      done++;
-      progressEl.textContent = `${done} of ${total} scored`;
-      await sleep(600);
+      await sleep(SCAN_DELAY_MS);
     }
 
-    progressEl.textContent = aborted
-      ? `Stopped at ${done} of ${total}.`
-      : `${done} of ${total} scored.`;
+    // Final flush — overrides the pending debounced one.
+    saveScores();
+    renderSidebarList();
+
+    const skipped = failed ? ` (${failed} failed: ${lastError})` : '';
+    const summary = aborted
+      ? `Stopped at ${done} of ${total}.${skipped}`
+      : `${done} of ${total} scored.${skipped}`;
+    setProgress(summary, failed > 0);
 
   } catch (e) {
-    progressEl.textContent = `Error: ${e.message}`;
+    setProgress(`Error: ${e.message}`, true);
   } finally {
     scanBtn.disabled = false;
     stopBtn.disabled = true;
@@ -205,9 +281,7 @@ async function scanAllJobs() {
 
 function indexVisibleRows() {
   const map = {};
-  document.querySelectorAll(
-    '#dataViewerPlaceholder table.data-viewer-table tbody tr.table__row--body'
-  ).forEach(row => {
+  document.querySelectorAll(ROW_SEL).forEach(row => {
     const id    = row.querySelector('input[name="dataViewerSelection"]')?.value;
     const cells = row.querySelectorAll('td.table__value');
     const title = cells[0]?.querySelector('a')?.textContent.trim() ?? '';
@@ -226,12 +300,22 @@ function sleep(ms) {
 function renderSidebarList() {
   const ul = document.getElementById('ww-ext-results');
   if (!ul) return;
-  const sorted = [...scores.entries()].sort((a, b) => b[1].score - a[1].score);
+  if (!scores.size) {
+    ul.innerHTML = `<li class="ww-ext-empty">No jobs scored yet. Click <b>Scan All Jobs</b> to start.</li>`;
+    return;
+  }
+  // Sort: score desc → verdict (Apply > Consider > Skip) → title asc, for stable rendering.
+  const sorted = [...scores.entries()].sort(([, a], [, b]) =>
+    (b.score - a.score) ||
+    ((VERDICT_ORDER[a.verdict] ?? 9) - (VERDICT_ORDER[b.verdict] ?? 9)) ||
+    String(a.title).localeCompare(String(b.title))
+  );
   ul.innerHTML = sorted.map(([id, { score, verdict, reason, title, org }]) => `
-    <li class="ww-ext-card" data-posting-id="${id}">
+    <li class="ww-ext-card" data-posting-id="${esc(id)}">
       <div class="ww-ext-card-top">
-        <span class="ww-ext-badge ww-ext-badge--${verdict.toLowerCase()}">${score} · ${verdict}</span>
+        <span class="ww-ext-badge ww-ext-badge--${esc((verdict ?? '').toLowerCase())}">${esc(score)} · ${esc(verdict)}</span>
         <span class="ww-ext-card-org">${esc(org)}</span>
+        <button class="ww-ext-save-btn" title="Save to folder">&#128193;</button>
       </div>
       <button class="ww-ext-card-title ww-ext-card-link">${esc(title)}</button>
       <div class="ww-ext-card-reason">${esc(reason)}</div>
@@ -239,27 +323,82 @@ function renderSidebarList() {
   `).join('');
 }
 
-async function scrollToRow(postingId) {
-  let input = document.querySelector(
-    `#dataViewerPlaceholder table.data-viewer-table tbody input[value="${postingId}"]`
-  );
+function paginationItems() {
+  return [...document.querySelectorAll('ul.pagination__list li.pagination__item')];
+}
+function pageNumberItem(n) {
+  return paginationItems().find(li => li.textContent.trim() === String(n));
+}
+function activePageItem() {
+  return paginationItems().find(li => li.classList.contains('active'));
+}
+function nextPageItem() {
+  const items = paginationItems();
+  const activeIdx = items.findIndex(li => li.classList.contains('active'));
+  if (activeIdx < 0) return null;
+  // Prefer the next numeric page; otherwise fall back to the last item (Next/Last button).
+  for (let i = activeIdx + 1; i < items.length; i++) {
+    if (/^\d+$/.test(items[i].textContent.trim())) return items[i];
+  }
+  return activeIdx < items.length - 1 ? items[items.length - 1] : null;
+}
+function clickPaginationItem(li) {
+  if (!li || li.classList.contains('disabled')) return false;
+  (li.querySelector('a, button') ?? li).click();
+  return true;
+}
+function waitForRowOrIdle(table, selector, timeout) {
+  return new Promise(resolve => {
+    if (document.querySelector(selector)) { resolve(true); return; }
+    const obs = new MutationObserver(() => {
+      if (document.querySelector(selector)) { obs.disconnect(); resolve(true); }
+    });
+    obs.observe(table, { childList: true, subtree: true });
+    setTimeout(() => { obs.disconnect(); resolve(false); }, timeout);
+  });
+}
 
+async function scrollToRow(postingId) {
+  const escId = CSS.escape(postingId);
+  const selector = `${TABLE_SEL} tbody input[value="${escId}"]`;
+  const table = document.querySelector(TABLE_SEL);
+  if (!table) return;
+
+  refreshPageSize();
+
+  let input = document.querySelector(selector);
+
+  // 1. Try direct page-button click using selectAll order + detected page size.
   if (!input && allPostingIds.length) {
     const idx = allPostingIds.indexOf(postingId);
     if (idx >= 0) {
-      const pageSize   = document.querySelectorAll(
-        '#dataViewerPlaceholder table.data-viewer-table tbody tr.table__row--body'
-      ).length || 50;
-      const targetPage = Math.floor(idx / pageSize) + 1;
-      const pageBtn    = [...document.querySelectorAll('ul.pagination__list li.pagination__item')]
-        .find(li => li.textContent.trim() === String(targetPage));
-      if (pageBtn) {
-        (pageBtn.querySelector('a, button') ?? pageBtn).click();
-        await new Promise(r => setTimeout(r, 700));
-        input = document.querySelector(
-          `#dataViewerPlaceholder table.data-viewer-table tbody input[value="${postingId}"]`
-        );
+      const targetPage = Math.floor(idx / detectedPageSize) + 1;
+      const onTarget = activePageItem()?.textContent.trim() === String(targetPage);
+      if (!onTarget && clickPaginationItem(pageNumberItem(targetPage))) {
+        await waitForRowOrIdle(table, selector, 2000);
       }
+      input = document.querySelector(selector);
+    }
+  }
+
+  // 2. Fallback: row didn't show up where we expected (target page missing from
+  //    pagination, sort order differs from selectAll, or list is stale).
+  //    Reset to page 1 and walk forward.
+  if (!input) {
+    if (activePageItem()?.textContent.trim() !== '1') {
+      if (clickPaginationItem(pageNumberItem(1))) {
+        await waitForRowOrIdle(table, selector, 1500);
+      }
+    }
+    input = document.querySelector(selector);
+
+    for (let hop = 0; !input && hop < 40; hop++) {
+      const prevActive = activePageItem();
+      if (!clickPaginationItem(nextPageItem())) break;
+      await waitForRowOrIdle(table, selector, 1500);
+      input = document.querySelector(selector);
+      // Safety: bail if the active page didn't actually change.
+      if (!input && activePageItem() === prevActive) break;
     }
   }
 
@@ -271,8 +410,9 @@ async function scrollToRow(postingId) {
   setTimeout(() => row.classList.remove('ww-ext-highlight'), 1500);
 }
 
-function esc(str) {
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+function esc(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
@@ -293,6 +433,12 @@ function injectSidebar() {
     <div id="ww-ext-controls">
       <button id="ww-ext-scan">Scan All Jobs</button>
       <button id="ww-ext-stop" disabled>Stop</button>
+      <div id="ww-ext-save-row">
+        <label for="ww-ext-min-score">Score ≥</label>
+        <input id="ww-ext-min-score" type="number" min="1" max="10" value="7">
+        <button id="ww-ext-save-all">Save to Folder</button>
+      </div>
+      <button id="ww-ext-clear">Clear</button>
       <div id="ww-ext-progress"></div>
     </div>
     <ul id="ww-ext-results"></ul>
@@ -303,10 +449,25 @@ function injectSidebar() {
   document.getElementById('ww-ext-close').addEventListener('click', () => sidebar.classList.remove('open'));
   document.getElementById('ww-ext-scan').addEventListener('click', scanAllJobs);
   document.getElementById('ww-ext-stop').addEventListener('click', () => { aborted = true; });
+  document.getElementById('ww-ext-save-all').addEventListener('click', () => {
+    const min = Number(document.getElementById('ww-ext-min-score').value);
+    const ids = [...scores.entries()]
+      .filter(([, { score }]) => score >= min)
+      .map(([id]) => id);
+    if (!ids.length) { setProgress('No jobs at that threshold.', true); return; }
+    sendBridge('openFolderSidebarBulk', { postingIds: ids });
+  });
+  document.getElementById('ww-ext-clear').addEventListener('click', clearScores);
 
   document.getElementById('ww-ext-results').addEventListener('click', e => {
+    const card = e.target.closest('.ww-ext-card');
+    if (!card) return;
+    if (e.target.closest('.ww-ext-save-btn')) {
+      sendBridge('openFolderSidebar', { postingId: card.dataset.postingId });
+      return;
+    }
     if (e.target.closest('.ww-ext-card-link')) {
-      scrollToRow(e.target.closest('.ww-ext-card').dataset.postingId);
+      scrollToRow(card.dataset.postingId);
       return;
     }
     const reason = e.target.closest('.ww-ext-card-reason');

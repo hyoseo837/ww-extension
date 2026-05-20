@@ -140,6 +140,163 @@
     </dl>
 
 
+    <h2>scrollToRow — robust page navigation (2026-05-20)</h2>
+
+    <dl>
+      <dt>Page size was wrong on the last page</dt>
+      <dd>
+        Previous impl used <code>querySelectorAll(ROW_SEL).length || 50</code> as the page
+        size. On the last page that returns the partial count (e.g. 7) — the targetPage
+        math then sends you to the wrong page. Fix: detectedPageSize is a module-level
+        max-watermark updated from the table observer; never shrinks.
+      </dd>
+      <dt>Target page button often isn't in visible pagination</dt>
+      <dd>
+        WW pagination renders a windowed view: <code>1 2 3 4 5 … 19 20</code>. The button
+        for page 8 isn't in the DOM, so querying for it returns null and navigation silently
+        fails. Fix: if direct click misses, reset to page 1 and walk forward via Next
+        (max 40 hops; bails if the active page stops changing).
+      </dd>
+      <dt>Sort-order mismatch handled by the same fallback</dt>
+      <dd>
+        allPostingIds is in selectAll's default order. If the user has re-sorted the
+        DataViewer, the index → page mapping is wrong. The forward walk from page 1 finds
+        the row regardless of sort order — at most O(pages) clicks.
+      </dd>
+    </dl>
+
+
+    <h2>Quality pass — Opus 4.7 review (2026-05-20)</h2>
+
+    <dl>
+      <dt>Bypass getPostingOverview to kill the loading-overlay flicker</dt>
+      <dd>
+        WW's getPostingOverview() calls orbisApp.showLoadingOverlay() per request. During
+        a 200-job scan that's 200 overlay flashes. Bridge's fetchOverview now hits
+        /myAccount/co-op/full/jobs.htm directly with $.post + the cached action token,
+        skipping the overlay. Page-side cached the extracted tokens too so re-scans
+        don't re-walk every inline script tag.
+      </dd>
+      <dt>Scan loop throttles sidebar re-render + storage writes</dt>
+      <dd>
+        Previously, every successfully scored job triggered saveScores() + renderSidebarList()
+        synchronously — O(n) work per call, O(n²) over a full scan. New scheduleFlush()
+        coalesces both into a 300ms-debounced setTimeout. Also keeps writes under
+        chrome.storage.local's quota when scoring fast. Final unconditional flush runs
+        at scan end so the persisted state matches what's on screen.
+      </dd>
+      <dt>Structured error codes between background and content</dt>
+      <dd>
+        background.js now returns {ok:false, code, error} where code ∈ {NETWORK, RATE_LIMIT,
+        HTTP, PARSE, SHAPE}. Replaces the brittle reply.error?.includes('Rate limited')
+        string match. Adding new error types from the worker no longer requires touching
+        content.js's branching logic.
+      </dd>
+      <dt>Gemini response shape validated server-side</dt>
+      <dd>
+        background.js now validates score ∈ 1..10, verdict ∈ {Apply, Consider, Skip},
+        reason non-empty. Bad-shape responses return code:'SHAPE' instead of getting stored
+        as scores Map entries with garbage data that would later crash the badge CSS
+        (.ww-ext-badge--&lt;unknown&gt; has no styling).
+      </dd>
+      <dt>CSS.escape() for posting IDs in selectors</dt>
+      <dd>
+        scrollToRow() template-strung the posting ID into input[value="${id}"]. Numeric
+        IDs are safe but it was an injection liability. Now uses CSS.escape() and reuses
+        the escaped selector for both the initial lookup and the post-navigation lookup.
+      </dd>
+      <dt>esc() handles null/undefined defensively</dt>
+      <dd>
+        Sidebar render previously called .replace() on whatever string came through.
+        A missing reason or org (e.g. interrupted scan partial entry) would throw.
+        esc() now coerces with String(value ?? '') first.
+      </dd>
+      <dt>Stable sort for the sidebar list</dt>
+      <dd>
+        Equal-score jobs used to reorder arbitrarily on every render. Now: score desc →
+        verdict (Apply &gt; Consider &gt; Skip) → title asc. Predictable position across
+        re-renders so the user doesn't lose their place mid-scan.
+      </dd>
+      <dt>20s timeout on the selectAll fetch</dt>
+      <dd>
+        Previously no timeout — if WW hung, scan hung forever with no Stop possible
+        (the for-loop hadn't started yet). AbortSignal.timeout(20000) bounds the wait.
+      </dd>
+      <dt>Magic numbers extracted to module constants</dt>
+      <dd>
+        TABLE_SEL, ROW_SEL, DESC_CHAR_CAP, SCAN_DELAY_MS, FETCH_TIMEOUT. The two table
+        selectors were duplicated in 6+ places; one source of truth now.
+      </dd>
+    </dl>
+
+
+    <h2>v01.014 — Polish: error states + empty state (2026-05-20)</h2>
+
+    <dl>
+      <dt>Silent Gemini failures now surface in the final summary</dt>
+      <dd>
+        Previously, non-rate-limit Gemini errors were silently ignored (the loop incremented
+        the counter and moved on). Now a separate <code>failed</code> counter tracks them
+        and the final summary shows "(N failed: last error)". Same for fetchOverview
+        timeouts. Helps diagnose whether the API key is wrong vs. WW being slow.
+      </dd>
+      <dt>Empty sidebar state appears on first load before any scan</dt>
+      <dd>
+        loadScores() now always calls renderSidebarList(), even when storage is empty,
+        so the "No jobs scored yet" placeholder shows immediately instead of an empty ul.
+      </dd>
+    </dl>
+
+
+    <h2>v01.013 — Bulk Save to Folder + per-card folder button (2026-05-20)</h2>
+
+    <dl>
+      <dt>Bulk save uses an array; WW handles it natively via My Jobs Actions pattern</dt>
+      <dd>
+        dataViewerApp.sidebarPostingIds accepts both a single Number (single-row actions)
+        and an Array of Numbers (bulk action) — see exampleWW-compact.html §5. Bridge has
+        two ops: openFolderSidebar (single) and openFolderSidebarBulk (array). No need
+        to loop click-saves; one bridge call opens the WW folder sidebar with all
+        selected posting IDs pre-attached.
+      </dd>
+      <dt>Score-threshold filter, not verdict filter</dt>
+      <dd>
+        User explicitly preferred a numeric "Score ≥ N" input over a verdict checkbox.
+        Lets them pick e.g. score >= 7 (a mix of Apply + high Consider) rather than being
+        locked into the LLM's three-bucket classification.
+      </dd>
+    </dl>
+
+
+    <h2>Mid-flight fixes (2026-05-20)</h2>
+
+    <dl>
+      <dt>DataViewer reuses tr elements across page changes — badges leak unless wiped</dt>
+      <dd>
+        Page change does NOT replace the entire tbody. DataViewer mutates row contents
+        in place: the same tr now shows a different posting ID, but the old .ww-ext-badge
+        span from the previous occupant is still there. The idempotency check found the
+        old badge and skipped re-injection. Fix: in the table MutationObserver callback,
+        disconnect, strip all .ww-ext-badge from the table, re-inject, reconnect.
+        rafPending flag debounces multiple mutations into one rAF pass.
+      </dd>
+      <dt>Title self-heals on page visit instead of being looked up via separate API call</dt>
+      <dd>
+        indexVisibleRows() only captures titles for jobs on the current page at scan
+        start. Jobs on other pages get title="#postingId". Fix: injectRowScores() now
+        also updates stored title/org from the live row whenever the row becomes visible.
+        After the user browses through pages, all titles are eventually corrected without
+        any extra network calls.
+      </dd>
+      <dt>Cross-page navigation waits for the row to appear, not a fixed 700ms</dt>
+      <dd>
+        scrollToRow used setTimeout(700) after clicking a pagination button. Replaced
+        with a MutationObserver that resolves the moment input[value="<id>"] appears
+        in the tbody, with a 2s ceiling. Reliable on slow re-renders.
+      </dd>
+    </dl>
+
+
     <h2>v01.012 — Ranked sidebar list + row navigation (2026-05-20)</h2>
 
     <dl>

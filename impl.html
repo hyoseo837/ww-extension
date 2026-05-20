@@ -6,7 +6,7 @@
     <meta name="type" content="implementation-plan" />
     <meta name="author" content="Hyoseo Lee" />
     <meta name="last-updated" content="2026-05-20" />
-    <meta name="status" content="in progress — v01.012 complete, v01.013 is next" />
+    <meta name="status" content="complete — v01.016 done" />
     <title>Implementation Plan — ww-extension</title>
   </head>
   <body>
@@ -183,18 +183,38 @@ ww-extension/
     </ul>
     <p>Verify: sidebar lists jobs high-to-low. Click a visible card → row scrolls and highlights.</p>
 
-    <h3>v01.013 — Per-row "Save to Folder" [NEXT]</h3>
+    <h3>v01.013 — Save to Folder (per-card + bulk) [DONE]</h3>
     <ul>
-      <li>Add a small "Save to Folder" button in the AI Score &lt;td&gt; for each row</li>
-      <li>On click: bridge openFolderSidebar(postingId) → WW's native folder sidebar opens</li>
+      <li>Per-card folder icon button on each sidebar card → bridge openFolderSidebar(postingId)</li>
+      <li>Sidebar control: "Score ≥ [N]" input + "Save to Folder" button → bridge openFolderSidebarBulk(postingIds[])</li>
+      <li>Bulk pattern matches WW's own "My Jobs Actions" — sidebarPostingIds accepts an Array of Numbers</li>
     </ul>
-    <p>Verify: click Save to Folder → WW folder sidebar opens with that posting pre-selected.</p>
 
-    <h3>v01.014 — Polish</h3>
+    <h3>v01.014 — Polish [DONE]</h3>
     <ul>
-      <li>Sidebar CSS: z-index above WW's own sidebars but below its modal dialogs; match WW's font stack</li>
-      <li>Error handling in sidebar: toast for missing API key, Gemini 4xx (non-429), bridge timeout (&gt;10s per overview fetch)</li>
-      <li>Confirm injection guard survives pushState navigation within the jobs page</li>
+      <li>Silent fetchOverview + non-rate-limit Gemini errors now counted as <code>failed</code> and surfaced in final summary (with last error)</li>
+      <li>Error states styled red (#c5221f) via .ww-ext-error class on the progress element</li>
+      <li>Empty sidebar state ("No jobs scored yet…") shown immediately on first load</li>
+      <li>Sidebar z-index 9900 confirmed above WW sidebars; module-level injection guard already in place</li>
+    </ul>
+
+    <h3>v01.015 — Quality pass (Opus 4.7 review) [DONE]</h3>
+    <ul>
+      <li>page-bridge bypasses getPostingOverview() and hits the endpoint directly with cached tokens — kills the loading-overlay flicker during scans</li>
+      <li>scheduleFlush() debounces saveScores + renderSidebarList during the scan loop (O(n²) → O(n))</li>
+      <li>background.js validates Gemini response shape (score 1–10, verdict ∈ {Apply, Consider, Skip}, reason non-empty); returns structured {ok, code, error} with code ∈ {NETWORK, RATE_LIMIT, HTTP, PARSE, SHAPE}</li>
+      <li>content.js uses reply.code === 'RATE_LIMIT' instead of brittle <code>error.includes('Rate limited')</code> string match</li>
+      <li>CSS.escape() on posting IDs in selectors; esc() coerces null/undefined to '' defensively</li>
+      <li>Sidebar list stably sorted: score desc → verdict (Apply &gt; Consider &gt; Skip) → title asc</li>
+      <li>20s AbortSignal.timeout on selectAll fetch</li>
+      <li>Constants: TABLE_SEL, ROW_SEL, DESC_CHAR_CAP, SCAN_DELAY_MS, FETCH_TIMEOUT</li>
+    </ul>
+
+    <h3>v01.016 — Robust scrollToRow [DONE]</h3>
+    <ul>
+      <li><code>detectedPageSize</code> module cache — max row count observed, never shrinks (fixes partial-last-page bug)</li>
+      <li>Two-stage navigation: direct page-button click first; if row doesn't appear, reset to page 1 and walk forward via Next (max 40 hops)</li>
+      <li>Handles distant pages not in visible pagination window, sort-order mismatch with selectAll order, and stale allPostingIds — all via the same fallback</li>
     </ul>
 
 

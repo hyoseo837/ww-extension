@@ -1,3 +1,6 @@
+const VALID_VERDICTS = new Set(['Apply', 'Consider', 'Skip']);
+const RETRY_DELAYS = [2000, 4000, 8000];
+
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.type !== 'scoreJob') return;
   scoreJob(msg).then(sendResponse);
@@ -30,9 +33,7 @@ ${descriptionText}`;
     }
   });
 
-  const retryDelays = [2000, 4000, 8000];
-
-  for (let attempt = 0; attempt < 4; attempt++) {
+  for (let attempt = 0; attempt < RETRY_DELAYS.length + 1; attempt++) {
     let res;
     try {
       res = await fetch(url, {
@@ -41,34 +42,47 @@ ${descriptionText}`;
         body
       });
     } catch (e) {
-      return { ok: false, error: `Network error: ${e.message}` };
+      return fail('NETWORK', `Network error: ${e.message}`);
     }
 
     if (res.status === 429) {
-      if (attempt < 3) { await sleep(retryDelays[attempt]); continue; }
-      return { ok: false, error: 'Rate limited after 3 retries' };
+      if (attempt < RETRY_DELAYS.length) { await sleep(RETRY_DELAYS[attempt]); continue; }
+      return fail('RATE_LIMIT', 'Rate limited after 3 retries');
     }
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      return { ok: false, error: `HTTP ${res.status}: ${err?.error?.message ?? 'unknown'}` };
+      return fail('HTTP', `HTTP ${res.status}: ${err?.error?.message ?? 'unknown'}`);
     }
 
     const data = await res.json();
     const raw = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
     const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
 
-    let result;
+    let parsed;
     try {
-      result = JSON.parse(cleaned);
+      parsed = JSON.parse(cleaned);
     } catch (e) {
-      return { ok: false, error: `JSON parse failed: ${e.message}. Raw: ${raw.slice(0, 100)}` };
+      return fail('PARSE', `JSON parse failed: ${e.message}. Raw: ${raw.slice(0, 100)}`);
     }
+
+    const result = validate(parsed);
+    if (!result) return fail('SHAPE', `Invalid response shape: ${cleaned.slice(0, 120)}`);
 
     return { ok: true, result };
   }
 }
 
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+function validate(p) {
+  if (!p || typeof p !== 'object') return null;
+  const score   = Number(p.score);
+  const verdict = String(p.verdict ?? '');
+  const reason  = String(p.reason  ?? '');
+  if (!Number.isInteger(score) || score < 1 || score > 10) return null;
+  if (!VALID_VERDICTS.has(verdict)) return null;
+  if (!reason) return null;
+  return { score, verdict, reason };
 }
+
+function fail(code, error) { return { ok: false, code, error }; }
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
