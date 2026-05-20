@@ -68,7 +68,7 @@ function injectHeader() {
   th.setAttribute('data-ww-score-header', '');
   th.setAttribute('scope', 'col');
   th.textContent = 'AI Score';
-  headerRow.appendChild(th);
+  headerRow.insertBefore(th, headerRow.children[1]);
 }
 
 function injectRowBadges() {
@@ -82,7 +82,7 @@ function injectRowBadges() {
       td.className = 'table__value overflow--hidden';
       td.setAttribute('data-v-612a1958', '');
       td.setAttribute('data-ww-score', '');
-      row.appendChild(td);
+      row.insertBefore(td, row.querySelector('td.table__value'));
     }
     if (id && scores.has(id) && !td.querySelector('.ww-ext-badge')) {
       const { score, verdict, reason } = scores.get(id);
