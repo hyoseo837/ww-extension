@@ -55,79 +55,28 @@ function waitForTable() {
   });
 }
 
-// ── Score column ──────────────────────────────────────────────────────────────
+// ── Score inline in title cell ────────────────────────────────────────────────
 
-function injectHeader() {
-  const headerRow = document.querySelector(
-    '#dataViewerPlaceholder table.data-viewer-table thead tr.table__row--header'
-  );
-  if (!headerRow || headerRow.querySelector('th[data-ww-score-header]')) return;
-  const th = document.createElement('th');
-  th.setAttribute('data-v-76d37ef8', '');
-  th.setAttribute('data-v-612a1958', '');
-  th.className = 'table__heading overflow--hidden';
-  th.setAttribute('scope', 'col');
-  th.setAttribute('data-ww-score-header', '');
-  th.style.width = '110px';
-  th.innerHTML = `
-    <div data-v-76d37ef8="" class="display--flex align--middle match--padding">
-      <div data-v-76d37ef8="" class="display--flex align--middle">
-        <span data-v-76d37ef8="" class="js--data-grid--header--label margin--l--s" style="padding-left:0px;">AI Score</span>
-      </div>
-    </div>
-    <div data-v-76d37ef8="" class="resize--handle display--flex align--center" tabindex="0" role="button" aria-label="Resize AI Score column" style="cursor:col-resize;">
-      <div data-v-76d37ef8="" class=""></div>
-    </div>
-  `;
-  headerRow.insertBefore(th, headerRow.children[1]);
-
-  th.querySelector('.resize--handle').addEventListener('mousedown', e => {
-    e.preventDefault();
-    const startX     = e.clientX;
-    const startWidth = th.getBoundingClientRect().width;
-    function onMove(e) {
-      const w = Math.max(60, startWidth + e.clientX - startX);
-      th.style.width = w + 'px';
-      document.querySelectorAll('td[data-ww-score]').forEach(td => { td.style.width = w + 'px'; });
-    }
-    function onUp() {
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
-    }
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
-  });
-}
-
-function injectRowBadges() {
+function injectRowScores() {
   document.querySelectorAll(
     '#dataViewerPlaceholder table.data-viewer-table tbody tr.table__row--body'
   ).forEach(row => {
     const id = row.querySelector('input[name="dataViewerSelection"]')?.value;
-    let td = row.querySelector('td[data-ww-score]');
-    if (!td) {
-      td = document.createElement('td');
-      td.className = 'table__value overflow--hidden';
-      td.setAttribute('data-v-612a1958', '');
-      td.setAttribute('data-ww-score', '');
-      row.insertBefore(td, row.querySelector('td.table__value'));
-    }
-    if (id && scores.has(id) && !td.querySelector('.ww-ext-badge')) {
-      const { score, verdict, reason } = scores.get(id);
-      const escaped = reason.replace(/"/g, '&quot;');
-      td.innerHTML = `<span class="ww-ext-badge ww-ext-badge--${verdict.toLowerCase()}" title="${escaped}">${score} · ${verdict}</span>`;
-    }
+    if (!id || !scores.has(id)) return;
+    const titleCell = row.querySelectorAll('td.table__value')[0];
+    if (!titleCell || titleCell.querySelector('.ww-ext-score-inline')) return;
+    const { score, verdict } = scores.get(id);
+    const span = document.createElement('span');
+    span.className = `ww-ext-score-inline ww-ext-score--${verdict.toLowerCase()}`;
+    span.textContent = ` (${score} - ${verdict})`;
+    titleCell.appendChild(span);
   });
 }
-
 
 function startTableObserver() {
   const table = document.querySelector('#dataViewerPlaceholder table.data-viewer-table');
   if (!table) return;
-  const obs = new MutationObserver(() => {
-    injectHeader();
-    injectRowBadges();
-  });
+  const obs = new MutationObserver(() => injectRowScores());
   obs.observe(table, { childList: true, subtree: true });
 }
 
@@ -172,8 +121,6 @@ async function scanAllJobs() {
     const total   = postingIds.length;
     let done = 0;
 
-    injectHeader();
-
     for (const postingId of postingIds) {
       if (aborted) break;
       progressEl.textContent = `Fetching ${done + 1} of ${total}…`;
@@ -201,7 +148,7 @@ async function scanAllJobs() {
 
       if (reply.ok) {
         scores.set(postingId, { ...reply.result, title: meta.title, org: meta.org });
-        injectRowBadges();
+        injectRowScores();
         renderSidebarList();
       } else if (reply.error?.includes('Rate limited')) {
         progressEl.textContent = `Rate limit reached after ${done} scored. Try again later.`;
@@ -306,7 +253,6 @@ function injectSidebar() {
   document.getElementById('ww-ext-scan').addEventListener('click', scanAllJobs);
   document.getElementById('ww-ext-stop').addEventListener('click', () => { aborted = true; });
 
-  // Delegated click handler for sidebar cards
   document.getElementById('ww-ext-results').addEventListener('click', e => {
     const card = e.target.closest('.ww-ext-card');
     if (card) scrollToRow(card.dataset.postingId);
