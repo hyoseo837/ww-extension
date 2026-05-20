@@ -97,7 +97,7 @@ async function scanAllJobs() {
 
     for (const postingId of postingIds) {
       if (aborted) break;
-      progressEl.textContent = `${done} of ${total} scored…`;
+      progressEl.textContent = `Fetching ${done + 1} of ${total}…`;
 
       let descriptionText = '';
       try {
@@ -109,6 +109,7 @@ async function scanAllJobs() {
       }
 
       const meta = rowMeta[postingId] ?? { title: `#${postingId}`, org: '' };
+      progressEl.textContent = `Scoring ${done + 1} of ${total}…`;
 
       const reply = await chrome.runtime.sendMessage({
         type: 'scoreJob',
@@ -122,11 +123,12 @@ async function scanAllJobs() {
       if (reply.ok) {
         scores.set(postingId, { ...reply.result, title: meta.title, org: meta.org });
       } else if (reply.error?.includes('Rate limited')) {
-        progressEl.textContent = `Rate limit reached after ${done} of ${total} jobs. Try again later.`;
+        progressEl.textContent = `Rate limit reached after ${done} scored. Try again later.`;
         break;
       }
 
       done++;
+      progressEl.textContent = `${done} of ${total} scored`;
       await sleep(600);
     }
 
