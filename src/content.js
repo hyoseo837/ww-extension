@@ -75,11 +75,28 @@ function injectHeader() {
         <span data-v-76d37ef8="" class="js--data-grid--header--label margin--l--s" style="padding-left:0px;">AI Score</span>
       </div>
     </div>
-    <div data-v-76d37ef8="" class="resize--handle display--flex align--center" tabindex="0" role="button" aria-label="Resize AI Score column">
+    <div data-v-76d37ef8="" class="resize--handle display--flex align--center" tabindex="0" role="button" aria-label="Resize AI Score column" style="cursor:col-resize;">
       <div data-v-76d37ef8="" class=""></div>
     </div>
   `;
   headerRow.insertBefore(th, headerRow.children[1]);
+
+  th.querySelector('.resize--handle').addEventListener('mousedown', e => {
+    e.preventDefault();
+    const startX     = e.clientX;
+    const startWidth = th.getBoundingClientRect().width;
+    function onMove(e) {
+      const w = Math.max(60, startWidth + e.clientX - startX);
+      th.style.width = w + 'px';
+      document.querySelectorAll('td[data-ww-score]').forEach(td => { td.style.width = w + 'px'; });
+    }
+    function onUp() {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
 }
 
 function injectRowBadges() {
