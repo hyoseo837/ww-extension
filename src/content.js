@@ -129,15 +129,21 @@ async function scanAllJobs() {
       progressEl.textContent = `Fetching ${done + 1} of ${total}…`;
 
       let descriptionText = '';
+      let extractedTitle  = '';
       try {
         const html = await sendBridge('fetchOverview', { postingId }, 15000);
         const doc  = new DOMParser().parseFromString(html, 'text/html');
         descriptionText = doc.body.textContent.trim().slice(0, 6000);
+        extractedTitle  = doc.querySelector('h1, h2, h3')?.textContent.trim() ?? '';
       } catch {
         done++; continue;
       }
 
-      const meta = rowMeta[postingId] ?? { title: `#${postingId}`, org: '' };
+      const rowInfo = rowMeta[postingId];
+      const meta = {
+        title: rowInfo?.title || extractedTitle || `#${postingId}`,
+        org:   rowInfo?.org   || ''
+      };
       progressEl.textContent = `Scoring ${done + 1} of ${total}…`;
 
       const reply = await chrome.runtime.sendMessage({
@@ -205,7 +211,7 @@ function renderSidebarList() {
         <span class="ww-ext-badge ww-ext-badge--${verdict.toLowerCase()}">${score} · ${verdict}</span>
         <span class="ww-ext-card-org">${esc(org)}</span>
       </div>
-      <div class="ww-ext-card-title">${esc(title)}</div>
+      <button class="ww-ext-card-title ww-ext-card-link">${esc(title)}</button>
       <div class="ww-ext-card-reason">${esc(reason)}</div>
     </li>
   `).join('');
@@ -257,7 +263,11 @@ function injectSidebar() {
   document.getElementById('ww-ext-stop').addEventListener('click', () => { aborted = true; });
 
   document.getElementById('ww-ext-results').addEventListener('click', e => {
-    const card = e.target.closest('.ww-ext-card');
-    if (card) scrollToRow(card.dataset.postingId);
+    if (e.target.closest('.ww-ext-card-link')) {
+      scrollToRow(e.target.closest('.ww-ext-card').dataset.postingId);
+      return;
+    }
+    const reason = e.target.closest('.ww-ext-card-reason');
+    if (reason) reason.classList.toggle('ww-ext-expanded');
   });
 }

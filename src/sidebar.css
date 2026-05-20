@@ -112,9 +112,7 @@
 .ww-ext-card {
   padding: 10px 14px;
   border-bottom: 1px solid #f0f0f0;
-  cursor: pointer;
 }
-.ww-ext-card:hover { background: #f5f5f5; }
 
 .ww-ext-card-top {
   display: flex;
@@ -129,21 +127,35 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.ww-ext-card-title {
+.ww-ext-card-link {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
   font-weight: 600;
   font-size: 13px;
+  color: #1a73e8;
+  cursor: pointer;
   margin-bottom: 3px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.ww-ext-card-link:hover { text-decoration: underline; }
 .ww-ext-card-reason {
   font-size: 12px;
   color: #555;
+  cursor: pointer;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+.ww-ext-card-reason.ww-ext-expanded {
+  display: block;
+  overflow: visible;
 }
 
 /* Row highlight on sidebar card click */
