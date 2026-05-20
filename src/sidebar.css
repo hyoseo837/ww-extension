@@ -153,6 +153,14 @@ tr.ww-ext-highlight th {
   transition: background 0.3s;
 }
 
+/* AI Score column width */
+th[data-ww-score-header],
+td[data-ww-score] {
+  width: 110px !important;
+  min-width: 110px !important;
+  max-width: 110px !important;
+}
+
 /* Score badges injected into the job table */
 .ww-ext-badge {
   display: inline-block;
