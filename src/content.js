@@ -65,11 +65,13 @@ function injectRowScores() {
     if (!id || !scores.has(id)) return;
     const titleCell = row.querySelectorAll('td.table__value')[0];
     if (!titleCell || titleCell.querySelector('.ww-ext-score-inline')) return;
+    const anchor = titleCell.querySelector('a');
+    if (!anchor) return;
     const { score, verdict } = scores.get(id);
     const span = document.createElement('span');
     span.className = `ww-ext-score-inline ww-ext-score--${verdict.toLowerCase()}`;
     span.textContent = ` (${score} - ${verdict})`;
-    titleCell.appendChild(span);
+    anchor.insertAdjacentElement('afterend', span);
   });
 }
 
