@@ -67,7 +67,9 @@ function injectHeader() {
   th.setAttribute('data-v-612a1958', '');
   th.setAttribute('data-ww-score-header', '');
   th.setAttribute('scope', 'col');
+  th.style.width = '110px';
   th.textContent = 'AI Score';
+  addResizeHandle(th);
   headerRow.insertBefore(th, headerRow.children[1]);
 }
 
@@ -89,6 +91,32 @@ function injectRowBadges() {
       const escaped = reason.replace(/"/g, '&quot;');
       td.innerHTML = `<span class="ww-ext-badge ww-ext-badge--${verdict.toLowerCase()}" title="${escaped}">${score} · ${verdict}</span>`;
     }
+  });
+}
+
+function addResizeHandle(th) {
+  const handle = document.createElement('div');
+  handle.className = 'ww-ext-resize-handle';
+  th.appendChild(handle);
+
+  handle.addEventListener('mousedown', e => {
+    e.preventDefault();
+    const startX    = e.clientX;
+    const startWidth = th.getBoundingClientRect().width;
+    handle.classList.add('ww-ext-resizing');
+
+    function onMove(e) {
+      const w = Math.max(60, startWidth + e.clientX - startX);
+      th.style.width = w + 'px';
+      document.querySelectorAll('td[data-ww-score]').forEach(td => { td.style.width = w + 'px'; });
+    }
+    function onUp() {
+      handle.classList.remove('ww-ext-resizing');
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
   });
 }
 

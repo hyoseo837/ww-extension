@@ -153,13 +153,26 @@ tr.ww-ext-highlight th {
   transition: background 0.3s;
 }
 
-/* AI Score column width */
-th[data-ww-score-header],
-td[data-ww-score] {
-  width: 110px !important;
-  min-width: 110px !important;
-  max-width: 110px !important;
+/* AI Score column */
+th[data-ww-score-header] {
+  position: relative;
+  overflow: visible !important;
+  width: 110px;
+  min-width: 60px;
 }
+
+.ww-ext-resize-handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 5px;
+  height: 100%;
+  cursor: col-resize;
+  user-select: none;
+  z-index: 1;
+}
+.ww-ext-resize-handle:hover,
+.ww-ext-resize-handle.ww-ext-resizing { background: rgba(26,115,232,0.35); }
 
 /* Score badges injected into the job table */
 .ww-ext-badge {
