@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="project-plan" />
+    <meta name="author" content="Hyoseo Lee" />
+    <meta name="status" content="confirmed — ready to build" />
+    <meta name="last-updated" content="2026-05-20" />
+    <meta
+      name="goal"
+      content="Chrome extension that injects a sidebar and score badges into WaterlooWorks. Reads all job IDs across all pages, fetches each description, scores against user CV with Gemini, and displays scores inline in the job table."
+    />
+    <title>Plan — ww-extension</title>
+  </head>
+  <body>
+    <h1>ww-extension — Project Plan</h1>
+
+    <p>
+      This is the authoritative plan. All decisions here have been confirmed
+      with the user. Read this fully before writing any code.
+    </p>
+
+    <h2>Project Overview</h2>
+
+    <p>
+      A Chrome extension (Manifest V3) for personal use on the WaterlooWorks
+      co-op job search page. It reads all job IDs across all pages, fetches
+      each job description, scores each job against the user's CV using the
+      Gemini API, and injects score badges directly into the WaterlooWorks job
+      table. A sidebar provides controls and a ranked list of all scored jobs.
+    </p>
+
+    <h3>Target site</h3>
+    <p>
+      https://waterlooworks.uwaterloo.ca — specifically the co-op full-cycle
+      jobs page (/myAccount/co-op/full/jobs.htm). The job table is managed by
+      a proprietary DataViewer Vue component (DataViewer.umd.min.js v0.10.2)
+      on top of jQuery 3.1.1. It is NOT a plain Vue 3 SPA.
+    </p>
+
+    <h2>File Structure</h2>
+
+    <pre>
+ww-extension/
+├── plan.html               (this file)
+├── .claude/
+│   └── rules.html          (agent rules for this project)
+├── manifest.json
+├── popup.html
+├── icons/
+│   ├── icon16.png
+│   ├── icon48.png
+│   └── icon128.png
+└── src/
+    ├── content.js          (injected into WaterlooWorks)
+    ├── sidebar.css         (injected with content.js)
+    ├── background.js       (service worker — Gemini calls only)
+    └── popup.js
+    </pre>
+
+    <h2>Architecture</h2>
+
+    <h3>content.js</h3>
+    <ul>
+      <li>
+        Injects the sidebar toggle button and sidebar panel into the page.
+        Uses a module-level boolean flag to prevent duplicate injection on
+        re-runs.
+      </li>
+      <li>
+        Waits for the DataViewer table to appear using MutationObserver before
+        doing anything.
+      </li>
+      <li>
+        On "Scan All Jobs": POSTs to /myAccount/co-op/full/jobs.htm with the
+        selectAll action token (extracted from the page's inline scripts) to
+        retrieve all matching posting IDs across all pages. This mirrors what
+        WaterlooWorks does internally for its "select all" feature.
+      </li>
+      <li>
+        For each posting ID, fetches the full job description by calling
+        getPostingOverview via a page-context script injection and postMessage.
+        This is done from the page context (not the content script isolated
+        world) so it can use the session cookies and the action token already
+        embedded in the page's JS.
+      </li>
+      <li>
+        Sends each job's text to background.js for Gemini scoring. Adds a
+        600ms delay between jobs to avoid rate limits.
+      </li>
+      <li>
+        Stores all scores in memory (Map: postingId to score result).
+      </li>
+      <li>
+        Injects an AI Score column into the visible table rows. Uses a
+        MutationObserver on the tbody to re-inject badges whenever the
+        DataViewer re-renders rows (on sort, filter, page change).
+      </li>
+      <li>
+        Sidebar shows a ranked list of all scored jobs (sorted by score
+        descending) regardless of which page is currently visible.
+      </li>
+      <li>
+        For "Save to Folder": triggers WaterlooWorks' native folder UI by
+        setting dataViewerApp.sidebarPostingIds and
+        dataViewerApp.$data.jobFolderEditSidebar = true. No custom storage
+        needed.
+      </li>
+    </ul>
+
+    <h3>background.js (service worker)</h3>
+    <ul>
+      <li>
+        Receives a message from content.js: job metadata, description text,
+        CV summary, API key, and model name.
+      </li>
+      <li>
+        Calls the Gemini API and returns a score (1–10), verdict (Apply /
+        Consider / Skip), and a 2–3 sentence reason.
+      </li>
+      <li>
+        Retries on 429 responses with exponential backoff: 2s, 4s, 8s (max 3
+        retries).
+      </li>
+      <li>
+        Strips markdown code fences from the response before JSON parsing.
+      </li>
+    </ul>
+
+    <h3>popup.html + popup.js</h3>
+    <ul>
+      <li>
+        Stores settings in chrome.storage.local: Gemini API key, model name,
+        CV summary (plain text).
+      </li>
+      <li>Fields: API key (password input), model selector, CV textarea.</li>
+      <li>
+        "Test API Key" button: sends a minimal prompt to verify the key works.
+      </li>
+      <li>
+        Does not store scores or job data. That lives only in content.js memory
+        for the lifetime of the page.
+      </li>
+    </ul>
+
+    <h2>WaterlooWorks DOM and API</h2>
+
+    <h3>Job table structure (from exampleWW.html)</h3>
+    <p>
+      The table is rendered by the DataViewer component. Each visible job row
+      is a tr.table__row--body inside a tbody. Columns in order: Id (posting
+      ID), Job Title, Organization, Division, Openings, City, Level, Apps
+      (ApplicationCount), App Deadline.
+    </p>
+    <p>
+      The posting ID is the text content of the first td in each row
+      (col-key="Id", :is-id="true"). Read this to identify each row.
+    </p>
+    <p>
+      To inject the AI Score column: add a th to the thead tr, and add a td
+      with the score badge to each tbody tr. Re-run injection inside the
+      MutationObserver callback.
+    </p>
+
+    <h3>Getting all posting IDs (across all pages)</h3>
+    <p>
+      WaterlooWorks' "select all" feature internally POSTs to
+      /myAccount/co-op/full/jobs.htm with the selectAll action token and
+      returns data.resultIds — an array of all posting IDs matching the
+      current filter. Extract the selectAll action token from the inline
+      script that defines the onSelectAll callback (search for
+      "onSelectAll" in all script tags). Use this same request from
+      content.js to get all IDs.
+    </p>
+
+    <h3>Fetching job descriptions</h3>
+    <p>
+      The page defines a function getPostingOverview(postingId, callback)
+      that POSTs to /myAccount/co-op/full/jobs.htm with the posting's action
+      token and session cookies. Because content scripts run in an isolated
+      world and cannot call page-defined functions directly, inject a small
+      script element into the page to call getPostingOverview and relay the
+      result back via window.postMessage. The content script listens for
+      that message.
+    </p>
+
+    <h3>Action tokens</h3>
+    <p>
+      Each WaterlooWorks action has its own session-specific token starting
+      with _-_-. They are embedded as string literals in inline script tags.
+      Tokens must be extracted fresh on each page load — they change per
+      session. Use textContent of all script tags to find and extract them
+      by searching for the function or variable name they belong to.
+    </p>
+
+    <h3>Native folder feature</h3>
+    <p>
+      WaterlooWorks has a built-in "Save to My Jobs Folder" feature. Trigger
+      it from content.js by injecting a script that sets:
+      dataViewerApp.sidebarPostingIds = postingId and
+      dataViewerApp.$data.jobFolderEditSidebar = true. The WW folder sidebar
+      then handles all storage.
+    </p>
+
+    <h2>Gemini API</h2>
+
+    <dl>
+      <dt>Endpoint</dt>
+      <dd>
+        https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}
+      </dd>
+      <dt>Default model</dt>
+      <dd>gemini-2.5-flash</dd>
+      <dt>Other selectable models</dt>
+      <dd>gemini-2.5-pro</dd>
+      <dt>Response fields</dt>
+      <dd>score (integer 1–10), verdict (Apply / Consider / Skip), reason (2–3 sentences)</dd>
+      <dt>Temperature</dt>
+      <dd>0.2</dd>
+      <dt>Max output tokens</dt>
+      <dd>300</dd>
+    </dl>
+
+    <h2>CV Input</h2>
+
+    <p>
+      Plain text only. The user pastes their CV summary into a textarea in
+      the popup. Stored in chrome.storage.local. No PDF parsing. Plain text
+      minimizes token cost and avoids formatting noise.
+    </p>
+
+    <h2>Features</h2>
+
+    <ol>
+      <li>
+        Sidebar toggle button fixed to the right edge of the WaterlooWorks
+        page.
+      </li>
+      <li>
+        Sidebar panel with: Scan All Jobs button, progress indicator (x of y
+        jobs scored), stop button, and a ranked list of all scored jobs sorted
+        by score descending.
+      </li>
+      <li>
+        Each sidebar job card shows: score, verdict, job title, org, reason.
+        Clicking a card scrolls the table to that row if visible, or navigates
+        to that page.
+      </li>
+      <li>
+        AI Score column injected into the WaterlooWorks job table. Each badge
+        shows the score and verdict color (green = Apply, yellow = Consider,
+        red = Skip). Badges persist across pagination via the score Map.
+      </li>
+      <li>
+        Per-row action in the table: "Save to Folder" button that triggers
+        WaterlooWorks' native folder sidebar.
+      </li>
+      <li>
+        Settings popup: API key, model selector, CV textarea, Save button,
+        Test API Key button.
+      </li>
+    </ol>
+
+    <h2>Out of Scope</h2>
+
+    <ul>
+      <li>Auto-apply (clicking Apply buttons automatically).</li>
+      <li>Cover letter generation.</li>
+      <li>Saving scores across sessions or page reloads.</li>
+      <li>Any backend server or remote storage.</li>
+      <li>Non-Gemini AI providers (extensible by design, not built now).</li>
+      <li>PDF CV upload.</li>
+    </ul>
+
+    <h2>Key Constraints and Gotchas</h2>
+
+    <ul>
+      <li>
+        Content scripts run in an isolated world — they cannot access
+        page-defined JS variables or functions (dataViewerApp,
+        getPostingOverview, etc.) directly. Use script-tag injection into the
+        page context and window.postMessage to bridge the gap.
+      </li>
+      <li>
+        The DataViewer re-renders tbody rows on every sort, filter, page
+        change, and refresh. Always re-inject score badges inside the
+        MutationObserver callback, not just on page load.
+      </li>
+      <li>
+        Action tokens are session-specific. Extract them from the current
+        page's script tags on each scan — never hardcode or cache across
+        sessions.
+      </li>
+      <li>
+        Gemini sometimes wraps JSON in markdown fences. Always strip fences
+        before parsing.
+      </li>
+      <li>
+        Add 600ms delay between Gemini calls. Retry on 429 with exponential
+        backoff (2s, 4s, 8s, max 3 retries).
+      </li>
+      <li>
+        The page size is 25 or 50 (user-selectable). Scanning all jobs
+        requires the selectAll POST to get IDs beyond the visible page.
+      </li>
+      <li>
+        manifest.json must declare host_permissions for
+        waterlooworks.uwaterloo.ca and generativelanguage.googleapis.com.
+      </li>
+    </ul>
+
+    <h2>Versioning</h2>
+
+    <p>
+      Format: vXX.XXX — first number is major version (new feature or
+      structural reconstruction), second number increments on every commit.
+      Every commit message must include the version. Some versions may be
+      non-functional; that is expected.
+    </p>
+  </body>
+</html>

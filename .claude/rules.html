@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="agent-rules" />
+    <meta name="author" content="Hyoseo Lee" />
+    <meta name="applies-to" content="all agents working on this project" />
+    <title>Project Rules — ww-extension</title>
+  </head>
+  <body>
+    <h1>Project Rules</h1>
+
+    <p>All agents working on this project must follow these rules strictly.</p>
+
+    <h2>1. HTML for all documents</h2>
+    <p>
+      Use HTML for all plans, documents, and written artifacts — not markdown.
+      HTML files must contain only content and metadata. No CSS, no JavaScript,
+      no design elements. HTML is used because it supports richer semantic
+      metadata than markdown.
+    </p>
+
+    <h2>2. plan.html is directional only</h2>
+    <p>
+      plan.html was written by a different agent. Use it to understand the
+      overall project direction, but do not treat any detail as final. Every
+      implementation detail must be confirmed with the user before building.
+    </p>
+
+    <h2>3. Minimal code</h2>
+    <p>
+      Write the simplest, clearest, most direct code that solves the problem.
+      No abstractions beyond what the task requires. No clever patterns, no
+      premature generalization. Three similar lines is better than a premature
+      abstraction.
+    </p>
+
+    <h2>4. Versioning — vXX.XXX</h2>
+    <p>
+      Every commit must include a version number in the message using the
+      format vXX.XXX. The first number is the major version — increment it when
+      adding a new feature or reconstructing the project structure. The second
+      number increments on every commit. Some versions may be non-functional;
+      that is expected and acceptable.
+    </p>
+  </body>
+</html>
