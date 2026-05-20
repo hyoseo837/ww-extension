@@ -75,18 +75,20 @@ function injectRowBadges() {
   document.querySelectorAll(
     '#dataViewerPlaceholder table.data-viewer-table tbody tr.table__row--body'
   ).forEach(row => {
-    if (row.querySelector('td[data-ww-score]')) return;
     const id = row.querySelector('input[name="dataViewerSelection"]')?.value;
-    const td = document.createElement('td');
-    td.className = 'table__value overflow--hidden';
-    td.setAttribute('data-v-612a1958', '');
-    td.setAttribute('data-ww-score', '');
-    if (id && scores.has(id)) {
+    let td = row.querySelector('td[data-ww-score]');
+    if (!td) {
+      td = document.createElement('td');
+      td.className = 'table__value overflow--hidden';
+      td.setAttribute('data-v-612a1958', '');
+      td.setAttribute('data-ww-score', '');
+      row.appendChild(td);
+    }
+    if (id && scores.has(id) && !td.querySelector('.ww-ext-badge')) {
       const { score, verdict, reason } = scores.get(id);
       const escaped = reason.replace(/"/g, '&quot;');
       td.innerHTML = `<span class="ww-ext-badge ww-ext-badge--${verdict.toLowerCase()}" title="${escaped}">${score} · ${verdict}</span>`;
     }
-    row.appendChild(td);
   });
 }
 
