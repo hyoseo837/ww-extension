@@ -136,7 +136,9 @@ function injectRowScores() {
     const span = document.createElement('span');
     span.className = `ww-ext-badge ww-ext-badge--${verdict.toLowerCase()}`;
     span.style.marginLeft = '6px';
+    span.style.cursor = 'pointer';
     span.textContent = `${score} · ${verdict}`;
+    span.dataset.postingId = id;
     anchor.insertAdjacentElement('afterend', span);
   });
 
@@ -557,6 +559,26 @@ function injectSidebar() {
     <ul id="ww-ext-results"></ul>
   `;
   document.body.appendChild(sidebar);
+
+  // Badge reason tooltip
+  const tooltip = document.createElement('div');
+  tooltip.id = 'ww-ext-badge-tooltip';
+  document.body.appendChild(tooltip);
+
+  document.addEventListener('click', e => {
+    const badge = e.target.closest('.ww-ext-badge[data-posting-id]');
+    if (badge) {
+      const reason = scores.get(badge.dataset.postingId)?.reason;
+      if (!reason) return;
+      tooltip.textContent = reason;
+      const r = badge.getBoundingClientRect();
+      tooltip.style.top  = (r.bottom + 6) + 'px';
+      tooltip.style.left = Math.min(r.left, window.innerWidth - 300) + 'px';
+      tooltip.classList.add('visible');
+    } else if (!e.target.closest('#ww-ext-badge-tooltip')) {
+      tooltip.classList.remove('visible');
+    }
+  });
 
   toggle.addEventListener('click', () => sidebar.classList.toggle('open'));
   document.getElementById('ww-ext-close').addEventListener('click', () => sidebar.classList.remove('open'));

@@ -267,6 +267,23 @@ tr.ww-ext-highlight th {
 }
 
 
+/* Badge reason tooltip */
+#ww-ext-badge-tooltip {
+  position: fixed;
+  z-index: 9950;
+  background: #131b2e;
+  border: 1px solid #494454;
+  border-radius: 6px;
+  padding: 10px 14px;
+  max-width: 280px;
+  font: 12px/1.5 system-ui, sans-serif;
+  color: #dae2fd;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  display: none;
+  pointer-events: none;
+}
+#ww-ext-badge-tooltip.visible { display: block; }
+
 /* Score badges — used inline in the table title cell and in the sidebar list */
 .ww-ext-badge {
   display: inline-block;
