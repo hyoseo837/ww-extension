@@ -7,7 +7,7 @@
     <meta name="major-version" content="v02" />
     <meta name="author" content="Hyoseo Lee" />
     <meta name="last-updated" content="2026-05-21" />
-    <meta name="status" content="in progress — v02.003 next" />
+    <meta name="status" content="in progress — v02.004 next" />
     <title>Implementation Plan — ww-extension v02</title>
   </head>
   <body>
@@ -95,14 +95,14 @@
       <li>Verify: real PDF extraction populates textarea; oversized files rejected; manual textarea entry still works.</li>
     </ul>
 
-    <h3>v02.003 — Preferences field + prompt wiring [NEXT]</h3>
+    <h3>v02.004 — Preferences field + prompt wiring [NEXT]</h3>
     <ul>
       <li>Touches: <code>options.html</code> (new textarea), <code>src/options.js</code> (load/save), <code>src/content.js</code> (pass through), <code>src/background.js</code> (prompt template + conditional include).</li>
       <li>New storage key: <code>preferences</code>. Empty means omitted from prompt entirely.</li>
       <li>Verify: when empty, the <code>Candidate Preferences:</code> block is absent from the request body (check DevTools Network).</li>
     </ul>
 
-    <h3>v02.004 — Context caching + responseSchema [pending v02.003]</h3>
+    <h3>v02.005 — Context caching + responseSchema [pending v02.004]</h3>
     <ul>
       <li>
         <strong>responseSchema</strong>: In <code>src/background.js</code>, drop the "Respond with ONLY a JSON object…" prose
