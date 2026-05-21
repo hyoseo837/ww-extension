@@ -323,41 +323,47 @@ function renderSidebarList() {
   `).join('');
 }
 
-function paginationItems() {
-  return [...document.querySelectorAll('ul.pagination__list li.pagination__item')];
+// WW pagination puts `active` / `disabled` / aria-label on the inner
+// <a class="pagination__link">, not on the <li> wrapper. We operate on the <a>s.
+function paginationLinks() {
+  return [...document.querySelectorAll('ul.pagination__list .pagination__link')];
 }
-function activePageItem() {
-  return paginationItems().find(li => li.classList.contains('active'));
+function activeLink() {
+  return paginationLinks().find(a => a.classList.contains('active'));
 }
 function activePageText() {
-  return activePageItem()?.textContent.trim();
+  return activeLink()?.textContent.trim();
 }
-function isItemDisabled(li) {
-  // Active items also carry `disabled` per WW's pattern — that's fine for our
-  // "is this a no-op click" guard since clicking the active page does nothing.
-  return li.classList.contains('disabled') || li.getAttribute('aria-disabled') === 'true';
+function isLinkDisabled(a) {
+  // The currently-active link also carries `disabled` — that's by design and
+  // correctly makes it a no-op click target for our purposes.
+  return a.classList.contains('disabled') || a.getAttribute('aria-disabled') === 'true';
 }
-function pageNumberItem(n) {
-  return paginationItems().find(li => li.textContent.trim() === String(n));
+function pageNumberLink(n) {
+  return paginationLinks().find(a => a.textContent.trim() === String(n));
 }
-function nextPageItem() {
-  const items = paginationItems();
-  const activeIdx = items.findIndex(li => li.classList.contains('active'));
+function nextPageLink() {
+  const links = paginationLinks();
+  const activeIdx = links.findIndex(a => a.classList.contains('active'));
   if (activeIdx < 0) return null;
   // 1: next visible numeric page after active.
-  for (let i = activeIdx + 1; i < items.length; i++) {
-    if (/^\d+$/.test(items[i].textContent.trim())) return items[i];
+  for (let i = activeIdx + 1; i < links.length; i++) {
+    if (/^\d+$/.test(links[i].textContent.trim())) return links[i];
   }
-  // 2: a "Next" button (›, », →, aria-label="next").
-  for (const li of items) {
-    const lbl = (li.getAttribute('aria-label') || li.textContent.trim()).toLowerCase();
-    if (/next|›|»|→/.test(lbl) && !isItemDisabled(li)) return li;
+  // 2: a "Next" arrow button — aria-label="Go to next page" in WW's markup.
+  for (const a of links) {
+    const lbl = (a.getAttribute('aria-label') || '').toLowerCase();
+    if (lbl.includes('next') && !isLinkDisabled(a)) return a;
   }
   return null;
 }
-function clickItem(li) {
-  if (!li || isItemDisabled(li)) return false;
-  (li.querySelector('a, button') ?? li).click();
+// Dispatch a synthetic click instead of .click(). Real .click() on an
+// <a href="javascript:void(0);"> makes the browser try to navigate to the
+// javascript: URL, which CSP blocks (harmless but noisy in the console).
+// Synthetic events still fire Vue's @click handler.
+function clickLink(a) {
+  if (!a || isLinkDisabled(a)) return false;
+  a.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
   return true;
 }
 
@@ -382,13 +388,13 @@ function waitActive(predicate, timeout = 800) {
 async function goToPage(pageNum) {
   const target = String(pageNum);
   if (activePageText() === target) return true;
-  if (!clickItem(pageNumberItem(pageNum))) return false;
+  if (!clickLink(pageNumberLink(pageNum))) return false;
   return waitActive(t => t === target);
 }
 
 async function goNext() {
   const prev = activePageText();
-  if (!clickItem(nextPageItem())) return false;
+  if (!clickLink(nextPageLink())) return false;
   return waitActive(t => t !== prev);
 }
 

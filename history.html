@@ -140,6 +140,40 @@
     </dl>
 
 
+    <h2>v01.019 — scrollToRow: read active/disabled from the &lt;a&gt;, not the &lt;li&gt; (2026-05-20)</h2>
+
+    <dl>
+      <dt>WW pagination puts state on the &lt;a class="pagination__link"&gt;, not the wrapping &lt;li&gt;</dt>
+      <dd>
+        v01.018's helpers all read <code>active</code> / <code>disabled</code> / aria-label
+        from the <code>&lt;li&gt;</code>, which never has any of those. Effects:
+        <ul>
+          <li><code>activePageItem()</code> always returned undefined → <code>waitActive</code>
+          predicate never matched → every navigation burned the full 800ms timeout.</li>
+          <li><code>nextPageItem()</code>'s <code>findIndex(li =&gt; li.classList.contains('active'))</code>
+          returned -1 → <code>nextPageItem</code> returned null → the walk broke
+          on its first hop. <strong>This is the real reason page 1 → anywhere
+          failed: we never advanced past page 1.</strong></li>
+          <li>Page 4 → page 1 "worked" by accident — after ~1.6s of failed waits
+          a rAF check happened to find the row that the click had in fact moved
+          into place.</li>
+        </ul>
+        Fix: helpers now operate on <code>.pagination__link</code> elements
+        directly (paginationLinks / activeLink / pageNumberLink / nextPageLink).
+      </dd>
+      <dt>Dispatch synthetic clicks to avoid CSP errors from javascript: hrefs</dt>
+      <dd>
+        Pagination anchors are <code>&lt;a href="javascript:void(0);"&gt;</code>. Calling
+        the native <code>.click()</code> makes the browser try to navigate to the
+        javascript: URL, which CSP blocks (cosmetic, but noisy). Switched to
+        <code>dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true,
+        view: window }))</code> — Vue's @click handler still fires (it listens via
+        addEventListener), but untrusted events don't trigger the anchor's
+        default navigation.
+      </dd>
+    </dl>
+
+
     <h2>v01.018 — scrollToRow: watch active page, not the row (2026-05-20)</h2>
 
     <dl>
