@@ -7,7 +7,7 @@
     <meta name="major-version" content="v02" />
     <meta name="author" content="Hyoseo Lee" />
     <meta name="last-updated" content="2026-05-21" />
-    <meta name="status" content="in progress — v02.002 next" />
+    <meta name="status" content="in progress — v02.003 next" />
     <title>Implementation Plan — ww-extension v02</title>
   </head>
   <body>
@@ -86,7 +86,7 @@
       <li>Verify: toolbar icon opens options tab; sidebar ⚙ also opens it; all v01 settings round-trip; Scan All Jobs still works end-to-end.</li>
     </ul>
 
-    <h3>v02.002 — PDF upload + AI extraction [NEXT]</h3>
+    <h3>v02.002 — PDF upload + AI extraction [DONE]</h3>
     <ul>
       <li>Adds file input + Extract button to <code>options.html</code> only.</li>
       <li>Touches: <code>options.html</code>, <code>src/options.js</code>.</li>
@@ -95,7 +95,7 @@
       <li>Verify: real PDF extraction populates textarea; oversized files rejected; manual textarea entry still works.</li>
     </ul>
 
-    <h3>v02.003 — Preferences field + prompt wiring [pending v02.002]</h3>
+    <h3>v02.003 — Preferences field + prompt wiring [NEXT]</h3>
     <ul>
       <li>Touches: <code>options.html</code> (new textarea), <code>src/options.js</code> (load/save), <code>src/content.js</code> (pass through), <code>src/background.js</code> (prompt template + conditional include).</li>
       <li>New storage key: <code>preferences</code>. Empty means omitted from prompt entirely.</li>

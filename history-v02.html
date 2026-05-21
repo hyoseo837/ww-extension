@@ -19,6 +19,21 @@
       the same pattern applied to v01.001 through v01.020.
     </p>
 
+    <h2>v02.002 — PDF upload and Gemini multimodal extraction (2026-05-21)</h2>
+
+    <p>
+      Extraction uses <code>inline_data</code> with the full base64 PDF — no
+      Files API upload step. This keeps the implementation self-contained in
+      the options page and avoids a separate upload round-trip; the 20 MB cap
+      matches Gemini's inline-data ceiling. <code>FileReader.readAsDataURL</code>
+      is used (instead of <code>readAsArrayBuffer</code> + manual btoa) because
+      it handles the base64 encoding in one step; the <code>data:…;base64,</code>
+      prefix is stripped with a regex before sending. Extraction status is a
+      separate <code>#extractStatus</code> element so the main Save/Test
+      <code>#status</code> is unaffected. The textarea remains editable after
+      extraction — the user must still click Save to persist.
+    </p>
+
     <h2>v02.001 — Options page replaces popup (2026-05-21)</h2>
 
     <p>

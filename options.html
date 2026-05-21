@@ -19,6 +19,12 @@
       #status { margin-top: 10px; font-size: 12px; min-height: 16px; color: #555; }
       #status.ok { color: green; }
       #status.err { color: red; }
+      .pdf-row { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+      .pdf-row input[type="file"] { flex: 1; padding: 5px; font-size: 12px; }
+      .pdf-row button { flex: none; width: auto; padding: 7px 14px; font-size: 13px; }
+      #extractStatus { font-size: 12px; min-height: 16px; color: #555; margin-top: 4px; }
+      #extractStatus.ok { color: green; }
+      #extractStatus.err { color: red; }
     </style>
   </head>
   <body>
@@ -32,6 +38,13 @@
         <option value="gemini-2.5-pro">gemini-2.5-pro</option>
       </select>
     </label>
+    <label>Application Package PDF</label>
+    <div class="pdf-row">
+      <input id="packageFile" type="file" accept=".pdf" />
+      <button id="extract">Extract from PDF</button>
+    </div>
+    <div id="extractStatus"></div>
+    <small>Your PDF is sent to Google's Gemini API for text extraction.</small>
     <label>Profile
       <textarea id="cvText" placeholder="Paste your CV / resume summary here..."></textarea>
     </label>
