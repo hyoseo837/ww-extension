@@ -1,44 +1,92 @@
 const el = id => document.getElementById(id);
 
-document.querySelectorAll('.tab').forEach(btn => {
+// ── Tab navigation ────────────────────────────────────────────────────────────
+
+document.querySelectorAll('.nav-item').forEach(btn => {
   btn.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
     btn.classList.add('active');
     el('tab-' + btn.dataset.tab).classList.add('active');
   });
 });
 
+// ── Status helpers ────────────────────────────────────────────────────────────
+
 function setStatus(msg, type) {
   const s = el('status');
   s.textContent = msg;
-  s.className = type ?? '';
+  s.className = 'status-line' + (type ? ' ' + type : '');
 }
 
 function setExtractStatus(msg, type) {
   const s = el('extractStatus');
   s.textContent = msg;
-  s.className = type ?? '';
+  s.className = 'status-line' + (type ? ' ' + type : '');
 }
 
+function setProfileStatus(msg, type) {
+  const s = el('profileStatus');
+  s.textContent = msg;
+  s.className = 'status-line' + (type ? ' ' + type : '');
+}
+
+// ── Load saved settings ───────────────────────────────────────────────────────
+
 chrome.storage.local.get(['apiKey', 'model', 'cvText', 'preferences'], data => {
-  if (data.apiKey)       el('apiKey').value         = data.apiKey;
-  if (data.model)        el('model').value           = data.model;
-  if (data.cvText)       el('extractedText').value  = data.cvText;
-  if (data.preferences)  el('preferences').value    = data.preferences;
+  if (data.apiKey)      el('apiKey').value        = data.apiKey;
+  if (data.model)       el('model').value          = data.model;
+  if (data.cvText)      el('extractedText').value  = data.cvText;
+  if (data.preferences) el('preferences').value    = data.preferences;
 });
+
+// ── Save handlers ─────────────────────────────────────────────────────────────
+
+function saveAll(onDone) {
+  chrome.storage.local.set({
+    apiKey:      el('apiKey').value.trim(),
+    model:       el('model').value,
+    cvText:      el('extractedText').value.trim(),
+    preferences: el('preferences').value.trim()
+  }, onDone);
+}
 
 el('save').addEventListener('click', () => {
-  chrome.storage.local.set({
-    apiKey:       el('apiKey').value.trim(),
-    model:        el('model').value,
-    cvText:       el('extractedText').value.trim(),
-    preferences:  el('preferences').value.trim()
-  }, () => setStatus('Saved.', 'ok'));
+  saveAll(() => setStatus('Saved.', 'ok'));
 });
 
-el('extract').addEventListener('click', async () => {
+el('saveProfile').addEventListener('click', () => {
+  saveAll(() => setProfileStatus('Profile updated.', 'ok'));
+});
+
+// ── Drag-and-drop ─────────────────────────────────────────────────────────────
+
+let droppedFile = null;
+
+const dropZone = el('dropZone');
+
+dropZone.addEventListener('dragover', e => {
+  e.preventDefault();
+  dropZone.classList.add('drag-over');
+});
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) { droppedFile = file; el('fileName').textContent = file.name; }
+});
+
+el('packageFile').addEventListener('change', () => {
+  droppedFile = null;
   const file = el('packageFile').files[0];
+  if (file) el('fileName').textContent = file.name;
+});
+
+// ── Extract from PDF ──────────────────────────────────────────────────────────
+
+el('extract').addEventListener('click', async () => {
+  const file = droppedFile || el('packageFile').files[0];
   if (!file) { setExtractStatus('Select a PDF first.', 'err'); return; }
   if (file.size > 5 * 1024 * 1024) { setExtractStatus('File exceeds 5 MB limit.', 'err'); return; }
 
@@ -89,6 +137,8 @@ el('extract').addEventListener('click', async () => {
     el('extract').disabled = false;
   }
 });
+
+// ── Test API key ──────────────────────────────────────────────────────────────
 
 el('test').addEventListener('click', async () => {
   const apiKey = el('apiKey').value.trim();
