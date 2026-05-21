@@ -38,7 +38,7 @@ el('save').addEventListener('click', () => {
 el('extract').addEventListener('click', async () => {
   const file = el('packageFile').files[0];
   if (!file) { setExtractStatus('Select a PDF first.', 'err'); return; }
-  if (file.size > 20 * 1024 * 1024) { setExtractStatus('File exceeds 20 MB limit.', 'err'); return; }
+  if (file.size > 5 * 1024 * 1024) { setExtractStatus('File exceeds 5 MB limit.', 'err'); return; }
 
   const apiKey = el('apiKey').value.trim();
   const model  = el('model').value;
