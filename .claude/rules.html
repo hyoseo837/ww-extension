@@ -21,12 +21,26 @@
       metadata than markdown.
     </p>
 
-    <h2>2. plan.html is the confirmed spec</h2>
+    <h2>2. Read the right doc set</h2>
     <p>
-      plan.html has been fully reviewed and confirmed by the user. Treat every
-      detail in it as decided. Build from it directly without re-confirming
-      decisions already documented there. If something is not covered by
-      plan.html, confirm with the user before implementing.
+      The project has two doc generations. Always read the current set first:
+    </p>
+    <ul>
+      <li>
+        <strong>Current (v02, since 2026-05-20)</strong>:
+        <code>plan-v02.html</code>, <code>impl-v02.html</code>,
+        <code>history-v02.html</code>. All new work documents itself here.
+      </li>
+      <li>
+        <strong>Archived (v01.001 → v01.020)</strong>:
+        <code>plan.html</code>, <code>impl.html</code>, <code>history.html</code>.
+        Historical reference only. Do not extend.
+      </li>
+    </ul>
+    <p>
+      Both the v01 plan and the v02 plan are user-confirmed. Treat their
+      contents as decided. Build directly from them; if something is not
+      covered, confirm with the user.
     </p>
 
     <h2>3. Minimal code</h2>
