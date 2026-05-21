@@ -5,10 +5,18 @@ const SCAN_DELAY_MS  = 600;
 const FETCH_TIMEOUT  = 15000;
 const VERDICT_ORDER  = { Apply: 0, Consider: 1, Skip: 2 };
 
+const SYSTEM_TEXT =
+`You are a job-fit scorer. Score how well the candidate fits the job.
+
+score: 1–10 (10 = perfect fit)
+verdict: Apply if strong fit, Consider if marginal, Skip if poor fit
+reason: 2–3 sentences explaining the score`;
+
 const scores = new Map(); // postingId → {score, verdict, reason, title, org}
 let allPostingIds = [];   // ordered list from selectAll — used for page navigation
 let aborted = false;
 let detectedPageSize = 50; // refined upward from observed row counts
+let cacheName = null;      // context cache name for the current scan session
 
 if (!window.__wwExtensionInjected) {
   window.__wwExtensionInjected = true;
@@ -177,6 +185,8 @@ async function scanAllJobs() {
   stopBtn.disabled = false;
   aborted = false;
 
+  let scanApiKey = null;
+
   try {
     const tokens = await sendBridge('extractTokens');
     if (!tokens.selectAll) {
@@ -202,6 +212,36 @@ async function scanAllJobs() {
     if (!settings.apiKey || !settings.cvText) {
       setProgress('Open Settings (⚙) to set API key and Profile.', true);
       return;
+    }
+
+    scanApiKey = settings.apiKey;
+
+    // Try to create a context cache for this scan session.
+    // Requires ≥ 1,024 tokens of cached content — falls back to inline if it fails.
+    cacheName = null;
+    try {
+      const cacheRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/cachedContents?key=${settings.apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: `models/${settings.model || 'gemini-2.5-flash'}`,
+            systemInstruction: { parts: [{ text: SYSTEM_TEXT }] },
+            contents: [{ role: 'user', parts: [{ text: `Candidate Profile:\n${settings.cvText}` }] }],
+            ttl: '1800s'
+          })
+        }
+      );
+      if (cacheRes.ok) {
+        const cd = await cacheRes.json();
+        cacheName = cd.name ?? null;
+        if (cacheName) console.log(`[ww] context cache created: ${cacheName}`);
+      } else {
+        console.warn('[ww] context cache creation failed, using inline');
+      }
+    } catch (e) {
+      console.warn('[ww] context cache error:', e.message);
     }
 
     allPostingIds = postingIds.map(String);
@@ -248,6 +288,7 @@ async function scanAllJobs() {
         descriptionText,
         cvText:      settings.cvText,
         preferences: settings.preferences || '',
+        cacheName,
         apiKey:      settings.apiKey,
         model:       settings.model || 'gemini-2.5-flash'
       });
@@ -280,6 +321,13 @@ async function scanAllJobs() {
   } catch (e) {
     setProgress(`Error: ${e.message}`, true);
   } finally {
+    if (cacheName && scanApiKey) {
+      fetch(
+        `https://generativelanguage.googleapis.com/v1beta/${cacheName}?key=${scanApiKey}`,
+        { method: 'DELETE' }
+      ).catch(() => {});
+      cacheName = null;
+    }
     scanBtn.disabled = false;
     stopBtn.disabled = true;
   }

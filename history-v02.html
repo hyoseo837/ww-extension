@@ -19,6 +19,30 @@
       the same pattern applied to v01.001 through v01.020.
     </p>
 
+    <h2>v02.005 — Context caching + responseSchema (2026-05-21)</h2>
+
+    <p>
+      <code>SYSTEM_TEXT</code> is duplicated in both <code>background.js</code>
+      and <code>content.js</code> — they are separate MV3 execution contexts and
+      cannot share modules, so duplication is intentional. The cache body in
+      <code>content.js</code> uses the same text so the cached system instruction
+      is identical to what the inline fallback sends.
+    </p>
+    <p>
+      <code>scanApiKey</code> is hoisted outside the <code>try</code> block so
+      the <code>finally</code> cache-delete can reference it without capturing
+      <code>settings</code> (which is declared inside the try). The delete is
+      fire-and-forget (<code>.catch(() => {})</code>) — the 30-minute TTL covers
+      the case where it fails.
+    </p>
+    <p>
+      Markdown-fence stripping removed from the parse step — <code>responseSchema</code>
+      guarantees the model returns bare JSON. <code>validate()</code> kept for
+      semantic checks (score bounds, verdict membership) that the schema alone
+      cannot enforce. Token log now includes <code>cachedContentTokenCount</code>
+      to make cache hits visible in DevTools.
+    </p>
+
     <h2>v02.004 — Preferences field + prompt wiring (2026-05-21)</h2>
 
     <p>

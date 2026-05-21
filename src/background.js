@@ -1,6 +1,23 @@
 const VALID_VERDICTS = new Set(['Apply', 'Consider', 'Skip']);
 const RETRY_DELAYS = [2000, 4000, 8000];
 
+const SYSTEM_TEXT =
+`You are a job-fit scorer. Score how well the candidate fits the job.
+
+score: 1–10 (10 = perfect fit)
+verdict: Apply if strong fit, Consider if marginal, Skip if poor fit
+reason: 2–3 sentences explaining the score`;
+
+const RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    score:   { type: 'integer' },
+    verdict: { type: 'string', enum: ['Apply', 'Consider', 'Skip'] },
+    reason:  { type: 'string' }
+  },
+  required: ['score', 'verdict', 'reason']
+};
+
 chrome.action.onClicked.addListener(() => {
   chrome.runtime.openOptionsPage();
 });
@@ -15,31 +32,31 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   return true; // keep message channel open for async response
 });
 
-async function scoreJob({ meta, descriptionText, cvText, preferences, apiKey, model }) {
-  const prompt =
-`You are a job-fit scorer. Respond with ONLY a JSON object — no markdown, no explanation.
+async function scoreJob({ meta, descriptionText, cvText, preferences, cacheName, apiKey, model }) {
+  const resolvedModel = model || 'gemini-2.5-flash';
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${resolvedModel}:generateContent?key=${apiKey}`;
 
-Fields:
-- score: integer 1–10 (10 = perfect fit)
-- verdict: exactly one of "Apply", "Consider", or "Skip"
-- reason: 2–3 sentences explaining the score
+  const jobPart = `${preferences ? `Candidate Preferences:\n${preferences}\n\n` : ''}Job: ${meta.title} at ${meta.org}\nDescription:\n${descriptionText}`;
 
-Candidate Profile:
-${cvText}
-${preferences ? `\nCandidate Preferences:\n${preferences}\n` : ''}
-Job: ${meta.title} at ${meta.org}
-Description:
-${descriptionText}`;
+  const generationConfig = {
+    temperature: 0.2,
+    maxOutputTokens: 1024,
+    thinkingConfig: { thinkingBudget: 0 },
+    responseMimeType: 'application/json',
+    responseSchema: RESPONSE_SCHEMA
+  };
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-  const body = JSON.stringify({
-    contents: [{ parts: [{ text: prompt }] }],
-    generationConfig: {
-      temperature: 0.2,
-      maxOutputTokens: 1024,
-      thinkingConfig: { thinkingBudget: 0 }
-    }
-  });
+  const body = cacheName
+    ? JSON.stringify({
+        cachedContent: cacheName,
+        contents: [{ role: 'user', parts: [{ text: jobPart }] }],
+        generationConfig
+      })
+    : JSON.stringify({
+        systemInstruction: { parts: [{ text: SYSTEM_TEXT }] },
+        contents: [{ role: 'user', parts: [{ text: `Candidate Profile:\n${cvText}\n\n${jobPart}` }] }],
+        generationConfig
+      });
 
   for (let attempt = 0; attempt < RETRY_DELAYS.length + 1; attempt++) {
     let res;
@@ -65,19 +82,18 @@ ${descriptionText}`;
 
     const data = await res.json();
     const usage = data.usageMetadata;
-    if (usage) console.log(`[ww] tokens — prompt: ${usage.promptTokenCount}, output: ${usage.candidatesTokenCount}, total: ${usage.totalTokenCount}`);
+    if (usage) console.log(`[ww] tokens — prompt: ${usage.promptTokenCount}, cached: ${usage.cachedContentTokenCount ?? 0}, output: ${usage.candidatesTokenCount}, total: ${usage.totalTokenCount}`);
     const raw = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-    const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
 
     let parsed;
     try {
-      parsed = JSON.parse(cleaned);
+      parsed = JSON.parse(raw);
     } catch (e) {
       return fail('PARSE', `JSON parse failed: ${e.message}. Raw: ${raw.slice(0, 100)}`);
     }
 
     const result = validate(parsed);
-    if (!result) return fail('SHAPE', `Invalid response shape: ${cleaned.slice(0, 120)}`);
+    if (!result) return fail('SHAPE', `Invalid response shape: ${raw.slice(0, 120)}`);
 
     return { ok: true, result };
   }
