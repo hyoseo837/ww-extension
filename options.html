@@ -42,6 +42,7 @@
     <div id="tabs">
       <button class="tab active" data-tab="api">API</button>
       <button class="tab" data-tab="context">Context</button>
+      <button class="tab" data-tab="prefs">Preferences</button>
     </div>
 
     <div id="tab-api" class="tab-panel active">
@@ -73,6 +74,13 @@
       <label>Profile
         <textarea id="cvText" placeholder="Paste your CV / resume summary here..."></textarea>
       </label>
+    </div>
+
+    <div id="tab-prefs" class="tab-panel">
+      <label>Preferences
+        <textarea id="preferences" placeholder="e.g. Prefer Waterloo or Toronto, no San Francisco. Open to backend or data roles, not interested in QA."></textarea>
+      </label>
+      <small>Included in each scoring prompt as a separate section. Leave blank to omit entirely (no token cost).</small>
     </div>
 
     <div class="row">

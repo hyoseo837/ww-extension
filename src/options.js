@@ -21,17 +21,19 @@ function setExtractStatus(msg, type) {
   s.className = type ?? '';
 }
 
-chrome.storage.local.get(['apiKey', 'model', 'cvText'], data => {
-  if (data.apiKey) el('apiKey').value = data.apiKey;
-  if (data.model)  el('model').value  = data.model;
-  if (data.cvText) el('cvText').value = data.cvText;
+chrome.storage.local.get(['apiKey', 'model', 'cvText', 'preferences'], data => {
+  if (data.apiKey)       el('apiKey').value       = data.apiKey;
+  if (data.model)        el('model').value         = data.model;
+  if (data.cvText)       el('cvText').value        = data.cvText;
+  if (data.preferences)  el('preferences').value   = data.preferences;
 });
 
 el('save').addEventListener('click', () => {
   chrome.storage.local.set({
-    apiKey: el('apiKey').value.trim(),
-    model:  el('model').value,
-    cvText: el('cvText').value.trim()
+    apiKey:       el('apiKey').value.trim(),
+    model:        el('model').value,
+    cvText:       el('cvText').value.trim(),
+    preferences:  el('preferences').value.trim()
   }, () => setStatus('Saved.', 'ok'));
 });
 

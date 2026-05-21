@@ -19,6 +19,19 @@
       the same pattern applied to v01.001 through v01.020.
     </p>
 
+    <h2>v02.004 — Preferences field + prompt wiring (2026-05-21)</h2>
+
+    <p>
+      Preferences live in a dedicated third tab ("Preferences") rather than
+      appended to the Context tab — keeps each tab focused and makes the
+      upcoming v02.005 caching phase easier to reason about (preferences are
+      a per-call inline field, not part of the cached content).
+      The conditional ternary in the prompt template ensures the
+      <code>Candidate Preferences:</code> block, including its surrounding
+      blank lines, is entirely absent when the field is empty — no token cost
+      for users who don't fill it in.
+    </p>
+
     <h2>v02.002 — PDF upload and Gemini multimodal extraction (2026-05-21)</h2>
 
     <p>

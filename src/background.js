@@ -15,7 +15,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   return true; // keep message channel open for async response
 });
 
-async function scoreJob({ meta, descriptionText, cvText, apiKey, model }) {
+async function scoreJob({ meta, descriptionText, cvText, preferences, apiKey, model }) {
   const prompt =
 `You are a job-fit scorer. Respond with ONLY a JSON object — no markdown, no explanation.
 
@@ -24,9 +24,9 @@ Fields:
 - verdict: exactly one of "Apply", "Consider", or "Skip"
 - reason: 2–3 sentences explaining the score
 
-CV Summary:
+Candidate Profile:
 ${cvText}
-
+${preferences ? `\nCandidate Preferences:\n${preferences}\n` : ''}
 Job: ${meta.title} at ${meta.org}
 Description:
 ${descriptionText}`;

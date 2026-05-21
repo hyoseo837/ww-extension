@@ -198,7 +198,7 @@ async function scanAllJobs() {
       return;
     }
 
-    const settings = await chrome.storage.local.get(['apiKey', 'model', 'cvText']);
+    const settings = await chrome.storage.local.get(['apiKey', 'model', 'cvText', 'preferences']);
     if (!settings.apiKey || !settings.cvText) {
       setProgress('Open Settings (⚙) to set API key and Profile.', true);
       return;
@@ -246,9 +246,10 @@ async function scanAllJobs() {
         type: 'scoreJob',
         meta,
         descriptionText,
-        cvText:  settings.cvText,
-        apiKey:  settings.apiKey,
-        model:   settings.model || 'gemini-2.5-flash'
+        cvText:      settings.cvText,
+        preferences: settings.preferences || '',
+        apiKey:      settings.apiKey,
+        model:       settings.model || 'gemini-2.5-flash'
       });
 
       if (reply.ok) {
