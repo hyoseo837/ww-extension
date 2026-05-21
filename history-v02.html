@@ -19,6 +19,32 @@
       the same pattern applied to v01.001 through v01.020.
     </p>
 
+    <h2>v02.017 — atomic token counter + header auth (partial, 2026-05-21)</h2>
+
+    <p>
+      Token accumulation in v02.016 used <code>chrome.storage.local.get</code>
+      followed by <code>set</code> with no serialization — concurrent calls
+      (extraction during a scan, or back-to-back scoreJob handlers) could read
+      the same starting value and the later write would clobber earlier
+      increments. Fix: a module-level <code>tokenWriteChain = Promise.resolve()</code>
+      in each context, with <code>incrementTokenUsage</code> appending the
+      next get→set to the chain. Within a context, increments are now serial.
+      Cross-context races (background ↔ options) remain theoretically possible
+      but require simultaneous activity in both contexts — rare for this UX.
+    </p>
+    <p>
+      All Gemini calls now send the API key as <code>X-Goog-Api-Key</code>
+      rather than the <code>?key=</code> query string. Query-string keys land
+      in browser history (for options-page calls) and any fetch instrumentation;
+      header auth keeps the key contained to the request body itself.
+    </p>
+    <p>
+      Removed <code>currentTheme</code> in <code>content.js</code> — set on
+      every theme change, never read. Vestigial from an earlier design that
+      gated per-badge class toggling on the current theme; the
+      <code>:root.ww-light</code> CSS-var approach made that unnecessary.
+    </p>
+
     <h2>v02.016 — light/dark theme + cumulative token usage (2026-05-21)</h2>
 
     <p>

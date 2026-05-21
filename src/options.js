@@ -41,6 +41,22 @@ function renderTokens(usage) {
   el('tokCached').textContent = fmt(usage?.cached);
 }
 
+// Serialize get→set so concurrent API calls don't lose increments.
+let tokenWriteChain = Promise.resolve();
+function incrementTokenUsage(usage) {
+  if (!usage) return;
+  tokenWriteChain = tokenWriteChain.then(() => new Promise(resolve => {
+    chrome.storage.local.get('tokenUsage', stored => {
+      const cur = stored.tokenUsage || { input: 0, cached: 0, output: 0 };
+      chrome.storage.local.set({ tokenUsage: {
+        input:  cur.input  + (usage.promptTokenCount        ?? 0),
+        cached: cur.cached + (usage.cachedContentTokenCount ?? 0),
+        output: cur.output + (usage.candidatesTokenCount    ?? 0)
+      }}, resolve);
+    });
+  }));
+}
+
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area === 'local' && changes.tokenUsage) renderTokens(changes.tokenUsage.newValue);
 });
@@ -152,10 +168,10 @@ el('extract').addEventListener('click', async () => {
     });
 
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': apiKey },
         body: JSON.stringify({
           contents: [{
             parts: [
@@ -173,17 +189,7 @@ el('extract').addEventListener('click', async () => {
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
       el('extractedText').value = text;
       setExtractStatus(`Extracted ${text.length.toLocaleString()} characters.`, 'ok');
-      const usage = data.usageMetadata;
-      if (usage) {
-        chrome.storage.local.get('tokenUsage', stored => {
-          const cur = stored.tokenUsage || { input: 0, cached: 0, output: 0 };
-          chrome.storage.local.set({ tokenUsage: {
-            input:  cur.input  + (usage.promptTokenCount        ?? 0),
-            cached: cur.cached + (usage.cachedContentTokenCount ?? 0),
-            output: cur.output + (usage.candidatesTokenCount    ?? 0)
-          }});
-        });
-      }
+      incrementTokenUsage(data.usageMetadata);
     } else {
       const err = await res.json().catch(() => ({}));
       setExtractStatus(`Error ${res.status}: ${err?.error?.message ?? 'unknown'}`, 'err');
@@ -204,10 +210,10 @@ el('test').addEventListener('click', async () => {
   setStatus('Testing...');
   try {
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': apiKey },
         body: JSON.stringify({
           contents: [{ parts: [{ text: 'Reply with the single word: ok' }] }]
         })

@@ -152,6 +152,15 @@
     </ul>
 
 
+    <h3>v02.017 — atomic token counter + header auth + dead-code cleanup [PARTIAL]</h3>
+    <ul>
+      <li><strong>Atomic token counter:</strong> <code>incrementTokenUsage()</code> helper in both <code>background.js</code> and <code>options.js</code> serializes get→set through a per-context promise chain. Fixes a race where concurrent scoreJob/extraction calls could lose increments (lost-update on read-modify-write).</li>
+      <li><strong>Header auth:</strong> All Gemini calls switched from <code>?key=${apiKey}</code> query string to <code>X-Goog-Api-Key</code> header (scoring, cache create+delete, PDF extract, test). Keeps the key out of browser history and fetch logs. Touches: <code>background.js</code>, <code>content.js</code>, <code>options.js</code>.</li>
+      <li><strong>Dead code:</strong> Removed unused <code>currentTheme</code> variable in <code>content.js</code> (set, never read — leftover from an abandoned per-element class-toggle design).</li>
+      <li><strong>Remaining for v02.017 (next session):</strong> network retry in scoreJob, remove cache-creation console.logs, shape validation in loadScores, reset detectedPageSize in clearScores, history-v02.html drift fixes (PDF cap 20→5 MB note, "both call sites" wording).</li>
+    </ul>
+
+
     <h2>Known v01 issues NOT fixed yet</h2>
 
     <dl>

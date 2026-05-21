@@ -17,7 +17,6 @@ let allPostingIds = [];   // ordered list from selectAll — used for page navig
 let aborted = false;
 let detectedPageSize = 50; // refined upward from observed row counts
 let cacheName = null;      // context cache name for the current scan session
-let currentTheme = 'dark'; // synced from chrome.storage.local 'theme'
 
 if (!window.__wwExtensionInjected) {
   window.__wwExtensionInjected = true;
@@ -32,7 +31,6 @@ if (!window.__wwExtensionInjected) {
 // ── Theme ─────────────────────────────────────────────────────────────────────
 
 function applyThemeToContent(theme) {
-  currentTheme = theme;
   const isLight = theme === 'light';
   document.documentElement.classList.toggle('ww-light', isLight);
   document.getElementById('ww-ext-sidebar')?.classList.toggle('ww-light', isLight);
@@ -237,10 +235,10 @@ async function scanAllJobs() {
     cacheName = null;
     try {
       const cacheRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/cachedContents?key=${settings.apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/cachedContents`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': settings.apiKey },
           body: JSON.stringify({
             model: `models/${settings.model || 'gemini-2.5-flash'}`,
             systemInstruction: { parts: [{ text: SYSTEM_TEXT }] },
@@ -339,8 +337,8 @@ async function scanAllJobs() {
   } finally {
     if (cacheName && scanApiKey) {
       fetch(
-        `https://generativelanguage.googleapis.com/v1beta/${cacheName}?key=${scanApiKey}`,
-        { method: 'DELETE' }
+        `https://generativelanguage.googleapis.com/v1beta/${cacheName}`,
+        { method: 'DELETE', headers: { 'X-Goog-Api-Key': scanApiKey } }
       ).catch(() => {});
       cacheName = null;
     }

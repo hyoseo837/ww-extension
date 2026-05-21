@@ -34,7 +34,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 
 async function scoreJob({ meta, descriptionText, cvText, preferences, cacheName, apiKey, model }) {
   const resolvedModel = model || 'gemini-2.5-flash';
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${resolvedModel}:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${resolvedModel}:generateContent`;
 
   const jobPart = `${preferences ? `Candidate Preferences:\n${preferences}\n\n` : ''}Job: ${meta.title} at ${meta.org}\nDescription:\n${descriptionText}`;
 
@@ -63,7 +63,7 @@ async function scoreJob({ meta, descriptionText, cvText, preferences, cacheName,
     try {
       res = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': apiKey },
         body
       });
     } catch (e) {
@@ -81,17 +81,7 @@ async function scoreJob({ meta, descriptionText, cvText, preferences, cacheName,
     }
 
     const data = await res.json();
-    const usage = data.usageMetadata;
-    if (usage) {
-      chrome.storage.local.get('tokenUsage', stored => {
-        const cur = stored.tokenUsage || { input: 0, cached: 0, output: 0 };
-        chrome.storage.local.set({ tokenUsage: {
-          input:  cur.input  + (usage.promptTokenCount        ?? 0),
-          cached: cur.cached + (usage.cachedContentTokenCount ?? 0),
-          output: cur.output + (usage.candidatesTokenCount    ?? 0)
-        }});
-      });
-    }
+    incrementTokenUsage(data.usageMetadata);
     const raw = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
 
     let parsed;
@@ -121,3 +111,19 @@ function validate(p) {
 
 function fail(code, error) { return { ok: false, code, error }; }
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// Serialize get→set so concurrent scoreJob calls don't lose increments.
+let tokenWriteChain = Promise.resolve();
+function incrementTokenUsage(usage) {
+  if (!usage) return;
+  tokenWriteChain = tokenWriteChain.then(() => new Promise(resolve => {
+    chrome.storage.local.get('tokenUsage', stored => {
+      const cur = stored.tokenUsage || { input: 0, cached: 0, output: 0 };
+      chrome.storage.local.set({ tokenUsage: {
+        input:  cur.input  + (usage.promptTokenCount        ?? 0),
+        cached: cur.cached + (usage.cachedContentTokenCount ?? 0),
+        output: cur.output + (usage.candidatesTokenCount    ?? 0)
+      }}, resolve);
+    });
+  }));
+}
