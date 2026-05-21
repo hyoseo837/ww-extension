@@ -7,10 +7,10 @@
     <meta name="major-version" content="v02" />
     <meta name="author" content="Hyoseo Lee" />
     <meta name="status" content="in progress — v02.001 next" />
-    <meta name="last-updated" content="2026-05-20" />
+    <meta name="last-updated" content="2026-05-21" />
     <meta
       name="goal"
-      content="v02 enhances the v01 extension with higher-quality candidate context (PDF profile + soft preferences), better filtering, and additional QoL features TBD."
+      content="v02 enhances the v01 extension with higher-quality candidate context (PDF profile + soft preferences) and cost-efficient Gemini usage (context caching + responseSchema)."
     />
     <title>Plan — ww-extension v02</title>
   </head>
@@ -96,6 +96,41 @@
       included in the Gemini scoring prompt as its own labelled section,
       omitted entirely when empty so users who don't fill it pay no token
       cost.
+    </p>
+
+
+    <h3>v02.004 — Context caching + responseSchema</h3>
+
+    <p>
+      v02.002 will make the per-call profile large (inline PDF = 5,000–20,000+ tokens).
+      Without intervention a 200-job scan after v02.002 would cost 10–40× what it
+      costs today. v02.004 fixes this in two moves:
+    </p>
+    <ul>
+      <li>
+        <strong>responseSchema</strong> — replace the "respond as JSON…" prose
+        in the prompt with Gemini's native structured-output config.
+        Saves ~50 tokens/call and eliminates JSON parse failures.
+      </li>
+      <li>
+        <strong>Context caching</strong> — upload the stable portion (system
+        instruction + profile) once per scan session via
+        <code>POST /v1beta/cachedContents</code>. Each subsequent scoring call
+        references the cache name; cached tokens are billed at ~25% of normal
+        input rate. Job descriptions and preferences (small, variable) are
+        always sent inline.
+      </li>
+    </ul>
+    <p>
+      Caching must come after v02.002 because Gemini 2.5 Flash has a 1,024-token
+      minimum for cached content — the text CV alone (~550 tokens) is below the
+      floor; the PDF profile easily clears it. Cache lifetime is per scan session
+      (TTL 30 min), not persisted to <code>chrome.storage</code>.
+    </p>
+    <p>
+      Batching multiple jobs per request was considered and rejected: it achieves the
+      same token savings as caching but at the cost of relative-scoring bias and
+      worse per-job error recovery.
     </p>
 
 

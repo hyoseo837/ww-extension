@@ -6,7 +6,7 @@
     <meta name="type" content="implementation-plan" />
     <meta name="major-version" content="v02" />
     <meta name="author" content="Hyoseo Lee" />
-    <meta name="last-updated" content="2026-05-20" />
+    <meta name="last-updated" content="2026-05-21" />
     <meta name="status" content="in progress — v02.001 next" />
     <title>Implementation Plan — ww-extension v02</title>
   </head>
@@ -102,12 +102,42 @@
       <li>Verify: when empty, the <code>Candidate Preferences:</code> block is absent from the request body (check DevTools Network).</li>
     </ul>
 
-    <h3>v02.004+ — TBD</h3>
-    <p>
-      The user mentioned "several parts" to enhance beyond what's above. Check
-      with them before assuming the next phase. No further v02 features are
-      confirmed yet.
-    </p>
+    <h3>v02.004 — Context caching + responseSchema [pending v02.003]</h3>
+    <ul>
+      <li>
+        <strong>responseSchema</strong>: In <code>src/background.js</code>, drop the "Respond with ONLY a JSON object…" prose
+        and field bullets from the prompt. Add <code>responseMimeType: 'application/json'</code> and
+        <code>responseSchema</code> (type object, properties score/verdict/reason with integer/enum/string constraints)
+        to <code>generationConfig</code>. Remove the markdown-fence stripping on the raw response.
+        Keep the existing <code>validate()</code> check — schema doesn't guarantee semantic validity.
+      </li>
+      <li>
+        <strong>Cache create</strong>: In <code>src/content.js</code>, add a module-level <code>let cacheName = null</code>.
+        At the start of <code>scanAllJobs()</code>, after loading settings, POST to
+        <code>/v1beta/cachedContents</code> with the system instruction + profile parts and
+        <code>ttl: "1800s"</code>. Store the returned <code>name</code> in <code>cacheName</code>.
+        On failure, log a warning and leave <code>cacheName</code> null (fall through to inline).
+      </li>
+      <li>
+        <strong>Per-call use</strong>: Thread <code>cacheName</code> through
+        <code>chrome.runtime.sendMessage</code> to <code>scoreJob</code> in
+        <code>src/background.js</code>. When <code>cachedContent</code> is present in the message,
+        switch the <code>generateContent</code> body to include <code>cachedContent</code> and send
+        only the job-description part as the user turn. When absent, fall back to the current
+        full inline body — no behavior change for callers without it.
+      </li>
+      <li>
+        <strong>Cache delete</strong>: In the <code>finally</code> block of <code>scanAllJobs()</code>,
+        best-effort DELETE <code>/v1beta/{cacheName}</code> if set. TTL handles the case if delete fails.
+        Reset <code>cacheName = null</code>.
+      </li>
+      <li>Touches: <code>src/background.js</code>, <code>src/content.js</code>.</li>
+      <li>
+        Verify: token log shows <code>cachedContentTokenCount</code> equal to profile size;
+        <code>promptTokenCount</code> is lower than uncached baseline. Fallback: force cache
+        creation to fail and confirm scan still completes at full token cost.
+      </li>
+    </ul>
 
 
     <h2>Known v01 issues NOT fixed yet</h2>
