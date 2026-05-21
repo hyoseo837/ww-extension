@@ -72,27 +72,41 @@
       v02.001.
     </p>
 
-    <h3>v02.001 — Profile from PDF + Preferences [NEXT]</h3>
-    <ul>
-      <li>Plan: <code>~/.claude/plans/tidy-orbiting-nova.md</code> (read before implementing)</li>
-      <li>Touches: <code>popup.html</code>, <code>src/popup.js</code>, <code>src/background.js</code>, <code>src/content.js</code></li>
-      <li>Key choices already confirmed: single-PDF upload (not ZIP, not multi-file), editable textarea after extraction, preferences as a separate prompt section that's omitted entirely when empty</li>
-      <li>Storage key for the profile stays <code>cvText</code> (backwards-compat). New key: <code>preferences</code></li>
-      <li>No new permissions / no new web_accessible_resources</li>
-    </ul>
-
     <p>
-      Verify per the plan file's Verification section: extraction populates the
-      textarea, both fields persist, scan request body includes
-      <code>Candidate Profile:</code> always and <code>Candidate Preferences:</code>
-      only when preferences is non-empty.
+      Full per-phase design notes (file changes, code snippets, verification
+      steps, definition of done) live in
+      <code>~/.claude/plans/tidy-orbiting-nova.md</code>. Each phase has its own
+      section. Implement one phase per session if needed.
     </p>
 
-    <h3>v02.002+ — TBD</h3>
+    <h3>v02.001 — Options page replaces popup [NEXT]</h3>
+    <ul>
+      <li>Pure UI migration; no behavior changes. Must be first — v02.002/003 need the bigger UI surface.</li>
+      <li>Touches: <code>manifest.json</code> (remove <code>action.default_popup</code>, add <code>options_ui.open_in_tab: true</code>), new <code>options.html</code> + <code>src/options.js</code>, <code>src/background.js</code> (action.onClicked + onMessage 'openOptions'), <code>src/content.js</code> (sidebar ⚙ button), <code>src/sidebar.css</code> (button style). Delete <code>popup.html</code> + <code>src/popup.js</code>.</li>
+      <li>Verify: toolbar icon opens options tab; sidebar ⚙ also opens it; all v01 settings round-trip; Scan All Jobs still works end-to-end.</li>
+    </ul>
+
+    <h3>v02.002 — PDF upload + AI extraction [pending v02.001]</h3>
+    <ul>
+      <li>Adds file input + Extract button to <code>options.html</code> only.</li>
+      <li>Touches: <code>options.html</code>, <code>src/options.js</code>.</li>
+      <li>Confirmed choices: single PDF (not ZIP, not multi-file); editable textarea after extraction; Gemini multimodal via <code>inline_data</code>; 20MB file size cap.</li>
+      <li>Storage key for the profile stays <code>cvText</code> (backwards-compat). Label changes to "Profile" in UI.</li>
+      <li>Verify: real PDF extraction populates textarea; oversized files rejected; manual textarea entry still works.</li>
+    </ul>
+
+    <h3>v02.003 — Preferences field + prompt wiring [pending v02.002]</h3>
+    <ul>
+      <li>Touches: <code>options.html</code> (new textarea), <code>src/options.js</code> (load/save), <code>src/content.js</code> (pass through), <code>src/background.js</code> (prompt template + conditional include).</li>
+      <li>New storage key: <code>preferences</code>. Empty means omitted from prompt entirely.</li>
+      <li>Verify: when empty, the <code>Candidate Preferences:</code> block is absent from the request body (check DevTools Network).</li>
+    </ul>
+
+    <h3>v02.004+ — TBD</h3>
     <p>
-      Further v02 features will be added here as the user confirms them. The user
-      mentioned "several parts" to enhance after v02.001; check with them before
-      assuming the next phase.
+      The user mentioned "several parts" to enhance beyond what's above. Check
+      with them before assuming the next phase. No further v02 features are
+      confirmed yet.
     </p>
 
 

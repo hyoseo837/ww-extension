@@ -47,38 +47,55 @@
     </p>
 
 
-    <h2>Confirmed v02 features</h2>
-
-    <h3>v02.001 — Profile from PDF + Preferences</h3>
+    <h2>Confirmed v02 features (in implementation order)</h2>
 
     <p>
-      Replace the single plain-text <code>cvText</code> popup field with two
-      structured inputs:
+      All three phases below are designed to be small and independently
+      committable. Each leaves the extension in a fully working state so a
+      session that runs out of context mid-feature can resume cleanly at the
+      next phase. Full design notes for every phase live in
+      <code>~/.claude/plans/tidy-orbiting-nova.md</code> — read that before
+      implementing.
     </p>
 
-    <ol>
-      <li>
-        <strong>Application package PDF upload.</strong> WaterlooWorks lets students
-        export a combined PDF containing résumé, grade report, and co-op work
-        history. The popup accepts that single PDF, sends it to Gemini's
-        multimodal endpoint with an "extract as plain text" prompt, and populates
-        an editable textarea with the result. The textarea remains the source of
-        truth — the user can clean it up before saving, or skip the upload
-        entirely and type from scratch.
-      </li>
-      <li>
-        <strong>Preferences textarea.</strong> A free-form soft-constraints field
-        ("prefer Waterloo, Toronto OK, no San Francisco; backend or data roles
-        only"). Stored separately and included in the Gemini scoring prompt as
-        its own labelled section, omitted entirely when empty so users who don't
-        fill it pay no token cost.
-      </li>
-    </ol>
+    <h3>v02.001 — Options page replaces popup</h3>
 
     <p>
-      Full design notes for v02.001 live at
-      <code>~/.claude/plans/tidy-orbiting-nova.md</code>. Read that before
-      implementing.
+      The browser-action popup disappears when the user clicks anywhere
+      outside it, which the user finds repeatedly frustrating. v02.001
+      removes the popup entirely and replaces it with an Options page that
+      opens in a real browser tab. The toolbar icon opens it; a new ⚙
+      Settings button in the WW sidebar header also opens it.
+    </p>
+
+    <p>
+      This phase is a <strong>pure UI migration with no behavior
+      changes</strong> — all existing settings (apiKey, model, cvText) work
+      identically, and the v01 Scan All Jobs flow is untouched. It must come
+      first because the next two phases need more vertical real estate than
+      the 320px popup affords.
+    </p>
+
+    <h3>v02.002 — Profile from PDF</h3>
+
+    <p>
+      WaterlooWorks lets students export a combined PDF containing résumé,
+      grade report, and co-op work history. The Options page accepts that
+      single PDF, sends it to Gemini's multimodal endpoint with an
+      "extract as plain text" prompt, and populates the existing
+      <code>cvText</code> textarea with the result. The textarea remains the
+      source of truth — the user can clean it up before saving, or skip the
+      upload entirely and type from scratch.
+    </p>
+
+    <h3>v02.003 — Preferences field</h3>
+
+    <p>
+      A free-form soft-constraints textarea ("prefer Waterloo, Toronto OK,
+      no San Francisco; backend or data roles only"). Stored separately and
+      included in the Gemini scoring prompt as its own labelled section,
+      omitted entirely when empty so users who don't fill it pay no token
+      cost.
     </p>
 
 
