@@ -217,6 +217,14 @@ ww-extension/
       <li>Handles distant pages not in visible pagination window, sort-order mismatch with selectAll order, and stale allPostingIds — all via the same fallback</li>
     </ul>
 
+    <h3>v01.017 — Verdict filter + TDZ hotfix [DONE]</h3>
+    <ul>
+      <li>Three verdict pill toggles (Apply / Consider / Skip) below the Score ≥ input; defaults Apply ✓, Consider ✓, Skip ✗</li>
+      <li>Filter is the intersection of score ≥ N AND verdict ∈ selected</li>
+      <li>Visual state via <code>:has(input:checked)</code> — no extra JS listeners</li>
+      <li>Hotfix: moved module-level <code>const</code>/<code>let</code> declarations above the init block (v01.016 regression — <code>waitForTable</code> body referenced <code>TABLE_SEL</code> while in TDZ)</li>
+    </ul>
+
 
     <h2>Key Technical Decisions</h2>
 

@@ -140,6 +140,39 @@
     </dl>
 
 
+    <h2>v01.017 — Verdict filter + TDZ hotfix (2026-05-20)</h2>
+
+    <dl>
+      <dt>Module constants must precede the init block — TDZ regression from v01.016</dt>
+      <dd>
+        v01.016 added <code>const TABLE_SEL</code> AFTER the <code>if (!__wwExtensionInjected) {
+        waitForTable() }</code> block. <code>waitForTable</code> is a function declaration so it's
+        hoisted — but its body references <code>TABLE_SEL</code>, which is in the temporal dead
+        zone when the synchronous init call runs. Result: ReferenceError, content script
+        dead on arrival. Fix: hoist all const/let declarations above the init block.
+      </dd>
+    </dl>
+
+
+    <h3>Verdict filter</h3>
+
+    <dl>
+      <dt>Three pill toggles (Apply / Consider / Skip) compose with the Score ≥ threshold</dt>
+      <dd>
+        Filter is the intersection: <code>score &gt;= min &amp;&amp; verdicts.has(verdict)</code>.
+        Defaults to Apply ✓ Consider ✓ Skip ✗ — Skip is rarely something the user wants
+        to save into a folder, but leaving it as a toggle keeps the workflow flexible.
+      </dd>
+      <dt>Pure-CSS toggle state via :has(input:checked)</dt>
+      <dd>
+        No JS event listeners on the checkboxes — the label-with-hidden-checkbox pattern
+        plus <code>:has()</code> drives the visual state. Chrome 105+ (Aug 2022), which is
+        below the floor for any user on current WaterlooWorks anyway. Verdict colors
+        match the badge palette so the toggles visually identify what they filter.
+      </dd>
+    </dl>
+
+
     <h2>scrollToRow — robust page navigation (2026-05-20)</h2>
 
     <dl>

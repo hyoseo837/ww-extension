@@ -1,13 +1,3 @@
-if (!window.__wwExtensionInjected) {
-  window.__wwExtensionInjected = true;
-  waitForTable().then(async () => {
-    injectBridge();
-    injectSidebar();
-    startTableObserver();
-    await loadScores();
-  });
-}
-
 const TABLE_SEL      = '#dataViewerPlaceholder table.data-viewer-table';
 const ROW_SEL        = `${TABLE_SEL} tbody tr.table__row--body`;
 const DESC_CHAR_CAP  = 6000;
@@ -19,6 +9,16 @@ const scores = new Map(); // postingId → {score, verdict, reason, title, org}
 let allPostingIds = [];   // ordered list from selectAll — used for page navigation
 let aborted = false;
 let detectedPageSize = 50; // refined upward from observed row counts
+
+if (!window.__wwExtensionInjected) {
+  window.__wwExtensionInjected = true;
+  waitForTable().then(async () => {
+    injectBridge();
+    injectSidebar();
+    startTableObserver();
+    await loadScores();
+  });
+}
 
 // ── Bridge ────────────────────────────────────────────────────────────────────
 
@@ -436,9 +436,22 @@ function injectSidebar() {
       <div id="ww-ext-save-row">
         <label for="ww-ext-min-score">Score ≥</label>
         <input id="ww-ext-min-score" type="number" min="1" max="10" value="7">
-        <button id="ww-ext-save-all">Save to Folder</button>
       </div>
-      <button id="ww-ext-clear">Clear</button>
+      <div id="ww-ext-verdict-row">
+        <label class="ww-ext-verdict-toggle" data-v="apply">
+          <input type="checkbox" data-verdict="Apply" checked>Apply
+        </label>
+        <label class="ww-ext-verdict-toggle" data-v="consider">
+          <input type="checkbox" data-verdict="Consider" checked>Consider
+        </label>
+        <label class="ww-ext-verdict-toggle" data-v="skip">
+          <input type="checkbox" data-verdict="Skip">Skip
+        </label>
+      </div>
+      <div id="ww-ext-action-row">
+        <button id="ww-ext-save-all">Save to Folder</button>
+        <button id="ww-ext-clear">Clear</button>
+      </div>
       <div id="ww-ext-progress"></div>
     </div>
     <ul id="ww-ext-results"></ul>
@@ -451,10 +464,13 @@ function injectSidebar() {
   document.getElementById('ww-ext-stop').addEventListener('click', () => { aborted = true; });
   document.getElementById('ww-ext-save-all').addEventListener('click', () => {
     const min = Number(document.getElementById('ww-ext-min-score').value);
+    const verdicts = new Set(
+      [...document.querySelectorAll('#ww-ext-verdict-row input:checked')].map(c => c.dataset.verdict)
+    );
     const ids = [...scores.entries()]
-      .filter(([, { score }]) => score >= min)
+      .filter(([, { score, verdict }]) => score >= min && verdicts.has(verdict))
       .map(([id]) => id);
-    if (!ids.length) { setProgress('No jobs at that threshold.', true); return; }
+    if (!ids.length) { setProgress('No jobs match the filter.', true); return; }
     sendBridge('openFolderSidebarBulk', { postingIds: ids });
   });
   document.getElementById('ww-ext-clear').addEventListener('click', clearScores);
