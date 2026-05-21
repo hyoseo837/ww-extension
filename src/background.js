@@ -56,6 +56,8 @@ ${descriptionText}`;
     }
 
     const data = await res.json();
+    const usage = data.usageMetadata;
+    if (usage) console.log(`[ww] tokens — prompt: ${usage.promptTokenCount}, output: ${usage.candidatesTokenCount}, total: ${usage.totalTokenCount}`);
     const raw = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
     const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
 

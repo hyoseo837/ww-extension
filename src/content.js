@@ -224,7 +224,12 @@ async function scanAllJobs() {
       try {
         const html = await sendBridge('fetchOverview', { postingId }, FETCH_TIMEOUT);
         const doc  = new DOMParser().parseFromString(html, 'text/html');
-        descriptionText = doc.body.textContent.trim().slice(0, DESC_CHAR_CAP);
+        let rawText = doc.body.textContent.replace(/\s+/g, ' ').trim();
+        const summaryIdx = rawText.indexOf('Job Summary');
+        if (summaryIdx > 0) rawText = rawText.slice(summaryIdx);
+        const appInfoIdx = rawText.indexOf('Application Information');
+        if (appInfoIdx > 0) rawText = rawText.slice(0, appInfoIdx).trim();
+        descriptionText = rawText.slice(0, DESC_CHAR_CAP);
         extractedTitle  = doc.querySelector('h1, h2, h3')?.textContent.trim() ?? '';
       } catch (e) {
         failed++; lastError = `fetch: ${e.message}`; continue;
