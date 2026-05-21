@@ -19,7 +19,43 @@
       the same pattern applied to v01.001 through v01.020.
     </p>
 
-    <h2>v02.017 — atomic token counter + header auth (partial, 2026-05-21)</h2>
+    <h2>v02.018 — remaining audit fixes + doc drift (2026-05-21)</h2>
+
+    <p>
+      <code>scoreJob</code> now retries network errors on the same backoff
+      schedule as HTTP 429 (was: immediate <code>NETWORK</code> failure).
+      A transient connection blip during a scan no longer marks the job
+      failed when one of the next three retries would have succeeded.
+      The behaviour is now consistent with the rate-limit path — both
+      transient classes get up to three retries with 2/4/8s delays.
+    </p>
+    <p>
+      Cache-create logs in <code>content.js</code> removed (matches the
+      v02.016 intent to move observability from console to UI). Cache health
+      is already visible via the cached-tokens column in the API tab — if it
+      stays at 0 during a scan, the cache silently fell back to inline.
+      Kept the catch blocks themselves (with brief comments) so failures
+      still don't propagate, just no longer pollute the page console.
+    </p>
+    <p>
+      <code>loadScores</code> now shape-checks each stored entry (integer
+      score, known verdict, string reason) before re-inserting. Corrupted
+      storage from an earlier schema or external tampering no longer crashes
+      <code>injectRowScores</code> downstream. <code>clearScores</code> also
+      now resets <code>detectedPageSize</code> to the default 50, so the
+      pagination estimate doesn't carry stale values across a clear.
+    </p>
+    <p>
+      Doc fixes applied to the historical record itself: the v02.002 entry
+      now mentions that v02.007 dropped the PDF cap 20 → 5 MB (it previously
+      claimed 20 MB as final), and v02.016 was corrected to say "the two
+      billing-significant call sites" rather than "both call sites covered"
+      — the Test API Key handler also hits Gemini, but is intentionally
+      not counted (one-shot ~5-token validation ping; counting it would
+      conflate "did the user check their key" with actual scoring cost).
+    </p>
+
+    <h2>v02.017 — atomic token counter + header auth (2026-05-21)</h2>
 
     <p>
       Token accumulation in v02.016 used <code>chrome.storage.local.get</code>
@@ -70,11 +106,14 @@
       Token usage is accumulated in <code>chrome.storage.local</code> (key
       <code>tokenUsage</code>) rather than sent to a UI event because the scoring
       runs in the background service worker, which has no direct DOM access.
-      Both call sites that hit the Gemini API are covered — <code>background.js</code>
-      (scoring) and <code>options.js</code> (PDF extraction); the extraction path
-      was easy to miss since it bypasses the message-passing layer entirely.
-      The display updates live via <code>chrome.storage.onChanged</code>, so the
-      counter ticks up in real time during a scan without any polling.
+      Tracked at the two billing-significant call sites: <code>background.js</code>
+      (per-job scoring) and <code>options.js</code> (PDF extraction). The
+      Test API Key handler in <code>options.js</code> also hits Gemini but is
+      intentionally not tracked — it's a one-shot validation ping (~5 input
+      tokens) and counting it would conflate "did the user check their key"
+      with actual scoring cost. The display updates live via
+      <code>chrome.storage.onChanged</code>, so the counter ticks up in real
+      time during a scan without any polling.
     </p>
 
     <h2>v02.005 — Context caching + responseSchema (2026-05-21)</h2>
@@ -119,8 +158,11 @@
     <p>
       Extraction uses <code>inline_data</code> with the full base64 PDF — no
       Files API upload step. This keeps the implementation self-contained in
-      the options page and avoids a separate upload round-trip; the 20 MB cap
-      matches Gemini's inline-data ceiling. <code>FileReader.readAsDataURL</code>
+      the options page and avoids a separate upload round-trip. The initial
+      cap was 20 MB (Gemini's inline-data ceiling); v02.007 reduced it to 5 MB
+      because a real CV/coop package never approaches the ceiling and the
+      smaller limit gives faster, more obvious feedback on accidental uploads.
+      <code>FileReader.readAsDataURL</code>
       is used (instead of <code>readAsArrayBuffer</code> + manual btoa) because
       it handles the base64 encoding in one step; the <code>data:…;base64,</code>
       prefix is stripped with a regex before sending. Extraction status is a

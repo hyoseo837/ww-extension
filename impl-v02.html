@@ -7,7 +7,7 @@
     <meta name="major-version" content="v02" />
     <meta name="author" content="Hyoseo Lee" />
     <meta name="last-updated" content="2026-05-21" />
-    <meta name="status" content="v02 complete" />
+    <meta name="status" content="v02 complete through v02.018" />
     <title>Implementation Plan — ww-extension v02</title>
   </head>
   <body>
@@ -152,12 +152,21 @@
     </ul>
 
 
-    <h3>v02.017 — atomic token counter + header auth + dead-code cleanup [PARTIAL]</h3>
+    <h3>v02.017 — atomic token counter + header auth + dead-code cleanup [DONE]</h3>
     <ul>
-      <li><strong>Atomic token counter:</strong> <code>incrementTokenUsage()</code> helper in both <code>background.js</code> and <code>options.js</code> serializes get→set through a per-context promise chain. Fixes a race where concurrent scoreJob/extraction calls could lose increments (lost-update on read-modify-write).</li>
-      <li><strong>Header auth:</strong> All Gemini calls switched from <code>?key=${apiKey}</code> query string to <code>X-Goog-Api-Key</code> header (scoring, cache create+delete, PDF extract, test). Keeps the key out of browser history and fetch logs. Touches: <code>background.js</code>, <code>content.js</code>, <code>options.js</code>.</li>
-      <li><strong>Dead code:</strong> Removed unused <code>currentTheme</code> variable in <code>content.js</code> (set, never read — leftover from an abandoned per-element class-toggle design).</li>
-      <li><strong>Remaining for v02.017 (next session):</strong> network retry in scoreJob, remove cache-creation console.logs, shape validation in loadScores, reset detectedPageSize in clearScores, history-v02.html drift fixes (PDF cap 20→5 MB note, "both call sites" wording).</li>
+      <li><strong>Atomic token counter:</strong> <code>incrementTokenUsage()</code> helper in <code>background.js</code> and <code>options.js</code> serializes get→set through a per-context promise chain. Fixes a lost-update race in the v02.016 accumulation.</li>
+      <li><strong>Header auth:</strong> All Gemini calls switched from <code>?key=${apiKey}</code> query string to <code>X-Goog-Api-Key</code> header (scoring, cache create+delete, PDF extract, test). Keeps the key out of browser history and fetch logs.</li>
+      <li><strong>Dead code:</strong> Removed unused <code>currentTheme</code> variable in <code>content.js</code>.</li>
+    </ul>
+
+    <h3>v02.018 — remaining audit fixes + doc drift cleanup [DONE]</h3>
+    <ul>
+      <li><strong>Network retry:</strong> <code>scoreJob</code> now retries network errors on the same backoff as HTTP 429 (was: immediate <code>NETWORK</code> failure on the first hiccup).</li>
+      <li><strong>Console cleanup:</strong> Removed cache-create <code>console.log</code>/<code>console.warn</code> lines in <code>content.js</code>. Cached-tokens column in the API tab is now the single source of truth for cache health.</li>
+      <li><strong>Shape validation:</strong> <code>loadScores</code> drops entries missing valid score/verdict/reason. Guards against corrupted storage and future schema migrations.</li>
+      <li><strong>Reset detectedPageSize:</strong> <code>clearScores</code> resets the pagination estimate to the default 50 instead of leaving stale state.</li>
+      <li><strong>Doc drift:</strong> v02.002 history entry now notes v02.007 dropped the PDF cap from 20 → 5 MB; v02.016 history corrected — only the two scoring/extraction call sites are tracked, Test API Key intentionally not counted.</li>
+      <li>Touches: <code>src/content.js</code>, <code>src/background.js</code>, <code>impl-v02.html</code>, <code>history-v02.html</code>.</li>
     </ul>
 
 

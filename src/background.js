@@ -67,7 +67,8 @@ async function scoreJob({ meta, descriptionText, cvText, preferences, cacheName,
         body
       });
     } catch (e) {
-      return fail('NETWORK', `Network error: ${e.message}`);
+      if (attempt < RETRY_DELAYS.length) { await sleep(RETRY_DELAYS[attempt]); continue; }
+      return fail('NETWORK', `Network error after retries: ${e.message}`);
     }
 
     if (res.status === 429) {

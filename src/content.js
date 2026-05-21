@@ -86,6 +86,7 @@ function waitForTable() {
 function clearScores() {
   scores.clear();
   allPostingIds = [];
+  detectedPageSize = 50;
   chrome.storage.local.remove(['ww_scores', 'ww_posting_ids']);
   document.querySelectorAll('.ww-ext-badge').forEach(el => el.remove());
   renderSidebarList();
@@ -101,8 +102,17 @@ function saveScores() {
 async function loadScores() {
   const data = await chrome.storage.local.get(['ww_scores', 'ww_posting_ids']);
   if (data.ww_scores) {
-    for (const [id, entry] of Object.entries(data.ww_scores)) scores.set(id, entry);
-    allPostingIds = data.ww_posting_ids ?? [];
+    // Drop entries that don't match the current shape — guards against
+    // corrupted storage or future schema migrations.
+    for (const [id, entry] of Object.entries(data.ww_scores)) {
+      if (entry && typeof entry === 'object'
+          && Number.isInteger(entry.score)
+          && VERDICT_ORDER[entry.verdict] !== undefined
+          && typeof entry.reason === 'string') {
+        scores.set(id, entry);
+      }
+    }
+    allPostingIds = Array.isArray(data.ww_posting_ids) ? data.ww_posting_ids : [];
     injectRowScores();
   }
   renderSidebarList();
@@ -250,12 +260,11 @@ async function scanAllJobs() {
       if (cacheRes.ok) {
         const cd = await cacheRes.json();
         cacheName = cd.name ?? null;
-        if (cacheName) console.log(`[ww] context cache created: ${cacheName}`);
-      } else {
-        console.warn('[ww] context cache creation failed, using inline');
       }
+      // Cache create failures fall through silently — token counter shows the
+      // impact (cached column stays at 0) and scoring proceeds inline.
     } catch (e) {
-      console.warn('[ww] context cache error:', e.message);
+      // Network error on cache create — same fallback as above.
     }
 
     allPostingIds = postingIds.map(String);
