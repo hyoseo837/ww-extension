@@ -7,7 +7,7 @@
     <meta name="major-version" content="v02" />
     <meta name="author" content="Hyoseo Lee" />
     <meta name="last-updated" content="2026-05-21" />
-    <meta name="status" content="in progress — v02.001 next" />
+    <meta name="status" content="in progress — v02.002 next" />
     <title>Implementation Plan — ww-extension v02</title>
   </head>
   <body>
@@ -79,14 +79,14 @@
       section. Implement one phase per session if needed.
     </p>
 
-    <h3>v02.001 — Options page replaces popup [NEXT]</h3>
+    <h3>v02.001 — Options page replaces popup [DONE]</h3>
     <ul>
       <li>Pure UI migration; no behavior changes. Must be first — v02.002/003 need the bigger UI surface.</li>
       <li>Touches: <code>manifest.json</code> (remove <code>action.default_popup</code>, add <code>options_ui.open_in_tab: true</code>), new <code>options.html</code> + <code>src/options.js</code>, <code>src/background.js</code> (action.onClicked + onMessage 'openOptions'), <code>src/content.js</code> (sidebar ⚙ button), <code>src/sidebar.css</code> (button style). Delete <code>popup.html</code> + <code>src/popup.js</code>.</li>
       <li>Verify: toolbar icon opens options tab; sidebar ⚙ also opens it; all v01 settings round-trip; Scan All Jobs still works end-to-end.</li>
     </ul>
 
-    <h3>v02.002 — PDF upload + AI extraction [pending v02.001]</h3>
+    <h3>v02.002 — PDF upload + AI extraction [NEXT]</h3>
     <ul>
       <li>Adds file input + Extract button to <code>options.html</code> only.</li>
       <li>Touches: <code>options.html</code>, <code>src/options.js</code>.</li>

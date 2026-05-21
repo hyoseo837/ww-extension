@@ -200,7 +200,7 @@ async function scanAllJobs() {
 
     const settings = await chrome.storage.local.get(['apiKey', 'model', 'cvText']);
     if (!settings.apiKey || !settings.cvText) {
-      setProgress('Open extension popup to set API key and CV.', true);
+      setProgress('Open Settings (⚙) to set API key and Profile.', true);
       return;
     }
 
@@ -476,7 +476,10 @@ function injectSidebar() {
   sidebar.innerHTML = `
     <div id="ww-ext-header">
       <span>WW AI Scorer</span>
-      <button id="ww-ext-close">&#x2715;</button>
+      <div class="ww-ext-header-btns">
+        <button id="ww-ext-settings" title="Settings">&#9881;</button>
+        <button id="ww-ext-close">&#x2715;</button>
+      </div>
     </div>
     <div id="ww-ext-controls">
       <button id="ww-ext-scan">Scan All Jobs</button>
@@ -508,6 +511,9 @@ function injectSidebar() {
 
   toggle.addEventListener('click', () => sidebar.classList.toggle('open'));
   document.getElementById('ww-ext-close').addEventListener('click', () => sidebar.classList.remove('open'));
+  document.getElementById('ww-ext-settings').addEventListener('click', () => {
+    chrome.runtime.sendMessage({ type: 'openOptions' });
+  });
   document.getElementById('ww-ext-scan').addEventListener('click', scanAllJobs);
   document.getElementById('ww-ext-stop').addEventListener('click', () => { aborted = true; });
   document.getElementById('ww-ext-save-all').addEventListener('click', () => {

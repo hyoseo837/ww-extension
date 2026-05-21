@@ -1,7 +1,15 @@
 const VALID_VERDICTS = new Set(['Apply', 'Consider', 'Skip']);
 const RETRY_DELAYS = [2000, 4000, 8000];
 
+chrome.action.onClicked.addListener(() => {
+  chrome.runtime.openOptionsPage();
+});
+
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  if (msg.type === 'openOptions') {
+    chrome.runtime.openOptionsPage();
+    return;
+  }
   if (msg.type !== 'scoreJob') return;
   scoreJob(msg).then(sendResponse);
   return true; // keep message channel open for async response

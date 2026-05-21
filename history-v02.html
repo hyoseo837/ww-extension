@@ -19,8 +19,25 @@
       the same pattern applied to v01.001 through v01.020.
     </p>
 
+    <h2>v02.001 — Options page replaces popup (2026-05-21)</h2>
+
     <p>
-      (No v02 phases have landed yet. v02.001 is the next commit.)
+      Pure UI migration. <code>popup.html</code> + <code>src/popup.js</code>
+      deleted; <code>options.html</code> + <code>src/options.js</code> created
+      with identical storage logic. Manifest swaps <code>action.default_popup</code>
+      for <code>options_ui.open_in_tab: true</code>. Background gains
+      <code>action.onClicked</code> → <code>openOptionsPage()</code> and an
+      <code>'openOptions'</code> message case for the sidebar button.
+      Sidebar header gets a ⚙ button that posts <code>{type:'openOptions'}</code>
+      through the background. No behavior changes to scan flow or storage.
+    </p>
+
+    <p>
+      Sidebar CSS merged <code>#ww-ext-settings</code> and <code>#ww-ext-close</code>
+      into a shared rule — identical style, keeps the selector list short.
+      Header buttons wrapped in <code>.ww-ext-header-btns</code> to avoid
+      <code>justify-content: space-between</code> pushing them apart when there
+      were three flex children.
     </p>
 
   </body>
