@@ -6,7 +6,7 @@
     <meta name="type" content="implementation-plan" />
     <meta name="author" content="Hyoseo Lee" />
     <meta name="last-updated" content="2026-05-20" />
-    <meta name="status" content="complete — v01.016 done" />
+    <meta name="status" content="complete — v01.018 done" />
     <title>Implementation Plan — ww-extension</title>
   </head>
   <body>
@@ -215,6 +215,14 @@ ww-extension/
       <li><code>detectedPageSize</code> module cache — max row count observed, never shrinks (fixes partial-last-page bug)</li>
       <li>Two-stage navigation: direct page-button click first; if row doesn't appear, reset to page 1 and walk forward via Next (max 40 hops)</li>
       <li>Handles distant pages not in visible pagination window, sort-order mismatch with selectAll order, and stale allPostingIds — all via the same fallback</li>
+    </ul>
+
+    <h3>v01.018 — scrollToRow: watch active page (faster + correct) [DONE]</h3>
+    <ul>
+      <li>Watch <code>ul.pagination__list</code> for active-class flip instead of waiting for the row to appear — resolves in ~1 frame</li>
+      <li>Per-hop budget cut from 1500ms to ~50ms (fast path); 5-hop walk now ~250ms instead of 9.5s</li>
+      <li>Next-button detection: numeric next, else aria-label / text matching <code>next|›|»|→</code> (was previously falling through to "Last")</li>
+      <li>Honour <code>aria-disabled</code> in addition to <code>.disabled</code></li>
     </ul>
 
     <h3>v01.017 — Verdict filter + TDZ hotfix [DONE]</h3>

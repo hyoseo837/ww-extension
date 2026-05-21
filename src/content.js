@@ -326,36 +326,70 @@ function renderSidebarList() {
 function paginationItems() {
   return [...document.querySelectorAll('ul.pagination__list li.pagination__item')];
 }
-function pageNumberItem(n) {
-  return paginationItems().find(li => li.textContent.trim() === String(n));
-}
 function activePageItem() {
   return paginationItems().find(li => li.classList.contains('active'));
+}
+function activePageText() {
+  return activePageItem()?.textContent.trim();
+}
+function isItemDisabled(li) {
+  // Active items also carry `disabled` per WW's pattern — that's fine for our
+  // "is this a no-op click" guard since clicking the active page does nothing.
+  return li.classList.contains('disabled') || li.getAttribute('aria-disabled') === 'true';
+}
+function pageNumberItem(n) {
+  return paginationItems().find(li => li.textContent.trim() === String(n));
 }
 function nextPageItem() {
   const items = paginationItems();
   const activeIdx = items.findIndex(li => li.classList.contains('active'));
   if (activeIdx < 0) return null;
-  // Prefer the next numeric page; otherwise fall back to the last item (Next/Last button).
+  // 1: next visible numeric page after active.
   for (let i = activeIdx + 1; i < items.length; i++) {
     if (/^\d+$/.test(items[i].textContent.trim())) return items[i];
   }
-  return activeIdx < items.length - 1 ? items[items.length - 1] : null;
+  // 2: a "Next" button (›, », →, aria-label="next").
+  for (const li of items) {
+    const lbl = (li.getAttribute('aria-label') || li.textContent.trim()).toLowerCase();
+    if (/next|›|»|→/.test(lbl) && !isItemDisabled(li)) return li;
+  }
+  return null;
 }
-function clickPaginationItem(li) {
-  if (!li || li.classList.contains('disabled')) return false;
+function clickItem(li) {
+  if (!li || isItemDisabled(li)) return false;
   (li.querySelector('a, button') ?? li).click();
   return true;
 }
-function waitForRowOrIdle(table, selector, timeout) {
+
+// Watch pagination's active page text. Resolves as soon as predicate(active) is true,
+// or after `timeout`. Fast path: ~1 frame for client-side DataViewer page changes.
+function waitActive(predicate, timeout = 800) {
   return new Promise(resolve => {
-    if (document.querySelector(selector)) { resolve(true); return; }
+    if (predicate(activePageText())) { resolve(true); return; }
+    const pag = document.querySelector('ul.pagination__list');
+    if (!pag) { resolve(false); return; }
     const obs = new MutationObserver(() => {
-      if (document.querySelector(selector)) { obs.disconnect(); resolve(true); }
+      if (predicate(activePageText())) { obs.disconnect(); resolve(true); }
     });
-    obs.observe(table, { childList: true, subtree: true });
+    obs.observe(pag, {
+      subtree: true, childList: true,
+      attributes: true, attributeFilter: ['class']
+    });
     setTimeout(() => { obs.disconnect(); resolve(false); }, timeout);
   });
+}
+
+async function goToPage(pageNum) {
+  const target = String(pageNum);
+  if (activePageText() === target) return true;
+  if (!clickItem(pageNumberItem(pageNum))) return false;
+  return waitActive(t => t === target);
+}
+
+async function goNext() {
+  const prev = activePageText();
+  if (!clickItem(nextPageItem())) return false;
+  return waitActive(t => t !== prev);
 }
 
 async function scrollToRow(postingId) {
@@ -368,37 +402,30 @@ async function scrollToRow(postingId) {
 
   let input = document.querySelector(selector);
 
-  // 1. Try direct page-button click using selectAll order + detected page size.
+  // 1. Direct jump using selectAll order + detected page size.
   if (!input && allPostingIds.length) {
     const idx = allPostingIds.indexOf(postingId);
     if (idx >= 0) {
       const targetPage = Math.floor(idx / detectedPageSize) + 1;
-      const onTarget = activePageItem()?.textContent.trim() === String(targetPage);
-      if (!onTarget && clickPaginationItem(pageNumberItem(targetPage))) {
-        await waitForRowOrIdle(table, selector, 2000);
+      if (await goToPage(targetPage)) {
+        // Active page changed — give the tbody one frame to render the new rows.
+        await new Promise(r => requestAnimationFrame(r));
+        input = document.querySelector(selector);
       }
-      input = document.querySelector(selector);
     }
   }
 
-  // 2. Fallback: row didn't show up where we expected (target page missing from
-  //    pagination, sort order differs from selectAll, or list is stale).
-  //    Reset to page 1 and walk forward.
+  // 2. Fallback: row isn't on the page we computed (sort mismatch, distant page
+  //    not in the visible pagination window, or stale allPostingIds). Walk from
+  //    page 1 forward — each hop is ~1 frame.
   if (!input) {
-    if (activePageItem()?.textContent.trim() !== '1') {
-      if (clickPaginationItem(pageNumberItem(1))) {
-        await waitForRowOrIdle(table, selector, 1500);
-      }
-    }
+    await goToPage(1);
+    await new Promise(r => requestAnimationFrame(r));
     input = document.querySelector(selector);
-
     for (let hop = 0; !input && hop < 40; hop++) {
-      const prevActive = activePageItem();
-      if (!clickPaginationItem(nextPageItem())) break;
-      await waitForRowOrIdle(table, selector, 1500);
+      if (!(await goNext())) break;
+      await new Promise(r => requestAnimationFrame(r));
       input = document.querySelector(selector);
-      // Safety: bail if the active page didn't actually change.
-      if (!input && activePageItem() === prevActive) break;
     }
   }
 

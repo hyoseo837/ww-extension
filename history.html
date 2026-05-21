@@ -140,6 +140,40 @@
     </dl>
 
 
+    <h2>v01.018 — scrollToRow: watch active page, not the row (2026-05-20)</h2>
+
+    <dl>
+      <dt>Wrong wait target — we watched for the row, not the navigation</dt>
+      <dd>
+        waitForRowOrIdle observed the table for the target <code>input[value="..."]</code>
+        to appear. If the destination page didn't contain the row (sort mismatch, stale
+        order, or direct click landed on the wrong page), the observer never fired and we
+        burned the full 2000ms timeout before falling through. Then the fallback waited
+        another 1500ms per hop. 5-page walk = ~9.5 seconds.
+      </dd>
+      <dt>Watch pagination's active-page text instead</dt>
+      <dd>
+        DataViewer page changes flip the <code>active</code> class on the new page item in
+        the same render cycle. Watching that with attributeFilter:['class'] resolves in
+        ~1 frame regardless of where the row actually ended up. We then check separately
+        whether the row is on the new page; if not, walk forward. New per-hop budget:
+        ~50ms instead of 1500ms.
+      </dd>
+      <dt>Next-button detection beyond just "next numeric li"</dt>
+      <dd>
+        Previous nextPageItem() fell back to <code>items[items.length - 1]</code> which
+        is "Last", not "Next". Now also matches by aria-label / text against
+        <code>next|›|»|→</code> and skips disabled items. Important when the active page
+        is the last visible numeric item in a windowed pagination ("…1 2 3 4 5 next»").
+      </dd>
+      <dt>aria-disabled honoured in addition to .disabled</dt>
+      <dd>
+        Some WW pagination items may use the ARIA attribute instead of the class.
+        isItemDisabled() checks both.
+      </dd>
+    </dl>
+
+
     <h2>v01.017 — Verdict filter + TDZ hotfix (2026-05-20)</h2>
 
     <dl>
