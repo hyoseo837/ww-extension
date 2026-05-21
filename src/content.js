@@ -204,8 +204,8 @@ async function scanAllJobs() {
       return;
     }
 
-    allPostingIds = postingIds;
-    const toScore = postingIds.filter(id => !scores.has(id));
+    allPostingIds = postingIds.map(String);
+    const toScore = allPostingIds.filter(id => !scores.has(id));
     if (!toScore.length) {
       setProgress('All jobs already scored.');
       return;
@@ -399,18 +399,21 @@ async function goNext() {
 }
 
 async function scrollToRow(postingId) {
-  const escId = CSS.escape(postingId);
-  const selector = `${TABLE_SEL} tbody input[value="${escId}"]`;
+  const idStr = String(postingId);
+  // Posting IDs are numeric strings — no escaping needed for an attribute-value
+  // selector. Lock to name="dataViewerSelection" so we never match a stray input.
+  const selector = `${TABLE_SEL} tbody input[name="dataViewerSelection"][value="${idStr}"]`;
   const table = document.querySelector(TABLE_SEL);
   if (!table) return;
 
   refreshPageSize();
+  const startPage = activePageText();
 
   let input = document.querySelector(selector);
 
   // 1. Direct jump using selectAll order + detected page size.
   if (!input && allPostingIds.length) {
-    const idx = allPostingIds.indexOf(postingId);
+    const idx = allPostingIds.indexOf(idStr);
     if (idx >= 0) {
       const targetPage = Math.floor(idx / detectedPageSize) + 1;
       if (await goToPage(targetPage)) {
@@ -435,7 +438,14 @@ async function scrollToRow(postingId) {
     }
   }
 
-  if (!input) return;
+  if (!input) {
+    setProgress(`Posting ${idStr} not in current view — filter or sort may have changed.`, true);
+    // Don't leave the user stranded on whatever page the walk ended on.
+    if (startPage && activePageText() !== startPage) {
+      await goToPage(Number(startPage));
+    }
+    return;
+  }
   const row = input.closest('tr.table__row--body');
   if (!row) return;
   row.scrollIntoView({ block: 'center', behavior: 'smooth' });

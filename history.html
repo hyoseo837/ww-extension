@@ -140,6 +140,36 @@
     </dl>
 
 
+    <h2>v01.020 — scrollToRow: tighter selector + restore-on-failure (2026-05-20)</h2>
+
+    <dl>
+      <dt>Drop CSS.escape, lock the selector to <code>name="dataViewerSelection"</code></dt>
+      <dd>
+        Posting IDs are numeric strings — no escaping is needed for an attribute-value
+        selector. CSS.escape's <code>\34 </code> form is technically valid inside a
+        quoted attribute value but is needless churn and was the prime suspect for
+        "walk goes through all pages, finds nothing." Selector now reads
+        <code>input[name="dataViewerSelection"][value="${idStr}"]</code>.
+      </dd>
+      <dt>String-normalize <code>allPostingIds</code> on scan</dt>
+      <dd>
+        <code>data.resultIds</code> from selectAll could be strings or numbers depending
+        on WW's JSON serialization. <code>card.dataset.postingId</code> is always a string,
+        so a number-typed allPostingIds means <code>allPostingIds.indexOf(idStr)</code>
+        silently returns -1, skipping the direct jump. <code>postingIds.map(String)</code>
+        forces consistency.
+      </dd>
+      <dt>Save start page, restore on failure, surface error</dt>
+      <dd>
+        Previously: if the walk failed to find the row, the user was stranded on the
+        last page reached with no feedback. Now: stash <code>activePageText()</code>
+        at entry; if the row isn't found after the walk, surface
+        "Posting X not in current view — filter or sort may have changed" via
+        setProgress, then navigate back to the start page.
+      </dd>
+    </dl>
+
+
     <h2>v01.019 — scrollToRow: read active/disabled from the &lt;a&gt;, not the &lt;li&gt; (2026-05-20)</h2>
 
     <dl>
