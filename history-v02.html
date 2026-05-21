@@ -19,6 +19,38 @@
       the same pattern applied to v01.001 through v01.020.
     </p>
 
+    <h2>v02.016 — light/dark theme + cumulative token usage (2026-05-21)</h2>
+
+    <p>
+      Options page uses <code>body.light</code> for theme overrides (dark vars stay
+      on <code>:root</code> as baseline, so no FOUC on the default dark mode before
+      the storage read resolves). Two previously hardcoded values were promoted to
+      vars — <code>--primary-glow</code> and <code>--on-primary</code> — because
+      they differ between palettes and would have been invisible to a class override
+      if left inline.
+    </p>
+    <p>
+      Sidebar theming uses a two-tier variable scheme: <code>--s-*</code> vars defined
+      on <code>#ww-ext-sidebar</code> cascade to all sidebar descendants; <code>--ww-*</code>
+      vars defined on <code>:root</code> cover elements that live outside the sidebar
+      in the WW DOM (table badges, row highlight). The toggle button and badge tooltip
+      are overridden via <code>:root.ww-light #ww-ext-toggle</code> descendant selectors
+      rather than adding extra classes per element — single <code>.ww-light</code> class
+      on <code>document.documentElement</code> drives everything outside the sidebar.
+      <code>chrome.storage.onChanged</code> in the content script keeps the WW page
+      in sync if the user changes the theme in the options tab without reloading.
+    </p>
+    <p>
+      Token usage is accumulated in <code>chrome.storage.local</code> (key
+      <code>tokenUsage</code>) rather than sent to a UI event because the scoring
+      runs in the background service worker, which has no direct DOM access.
+      Both call sites that hit the Gemini API are covered — <code>background.js</code>
+      (scoring) and <code>options.js</code> (PDF extraction); the extraction path
+      was easy to miss since it bypasses the message-passing layer entirely.
+      The display updates live via <code>chrome.storage.onChanged</code>, so the
+      counter ticks up in real time during a scan without any polling.
+    </p>
+
     <h2>v02.005 — Context caching + responseSchema (2026-05-21)</h2>
 
     <p>

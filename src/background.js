@@ -82,7 +82,16 @@ async function scoreJob({ meta, descriptionText, cvText, preferences, cacheName,
 
     const data = await res.json();
     const usage = data.usageMetadata;
-    if (usage) console.log(`[ww] tokens — prompt: ${usage.promptTokenCount}, cached: ${usage.cachedContentTokenCount ?? 0}, output: ${usage.candidatesTokenCount}, total: ${usage.totalTokenCount}`);
+    if (usage) {
+      chrome.storage.local.get('tokenUsage', stored => {
+        const cur = stored.tokenUsage || { input: 0, cached: 0, output: 0 };
+        chrome.storage.local.set({ tokenUsage: {
+          input:  cur.input  + (usage.promptTokenCount        ?? 0),
+          cached: cur.cached + (usage.cachedContentTokenCount ?? 0),
+          output: cur.output + (usage.candidatesTokenCount    ?? 0)
+        }});
+      });
+    }
     const raw = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
 
     let parsed;

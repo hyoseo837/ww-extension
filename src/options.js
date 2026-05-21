@@ -31,13 +31,59 @@ function setProfileStatus(msg, type) {
   s.className = 'status-line' + (type ? ' ' + type : '');
 }
 
+// ── Token usage ───────────────────────────────────────────────────────────────
+
+function fmt(n) { return typeof n === 'number' ? n.toLocaleString() : '—'; }
+
+function renderTokens(usage) {
+  el('tokIn').textContent     = fmt(usage?.input);
+  el('tokOut').textContent    = fmt(usage?.output);
+  el('tokCached').textContent = fmt(usage?.cached);
+}
+
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === 'local' && changes.tokenUsage) renderTokens(changes.tokenUsage.newValue);
+});
+
+el('resetTokens').addEventListener('click', () => {
+  const zero = { input: 0, cached: 0, output: 0 };
+  chrome.storage.local.set({ tokenUsage: zero }, () => renderTokens(zero));
+});
+
+// ── Theme toggle ──────────────────────────────────────────────────────────────
+
+function applyTheme(theme) {
+  const isLight = theme === 'light';
+  document.body.classList.toggle('light', isLight);
+  const pill = el('themeToggle');
+  if (pill) {
+    pill.classList.toggle('on', isLight);
+    pill.setAttribute('aria-checked', String(isLight));
+  }
+  const dark  = el('themeOptDark');
+  const light = el('themeOptLight');
+  if (dark && light) {
+    dark.classList.toggle('active', !isLight);
+    light.classList.toggle('active', isLight);
+  }
+}
+
+el('themeToggle').addEventListener('click', () => {
+  const isLight = !document.body.classList.contains('light');
+  const theme = isLight ? 'light' : 'dark';
+  applyTheme(theme);
+  chrome.storage.local.set({ theme });
+});
+
 // ── Load saved settings ───────────────────────────────────────────────────────
 
-chrome.storage.local.get(['apiKey', 'model', 'cvText', 'preferences'], data => {
+chrome.storage.local.get(['apiKey', 'model', 'cvText', 'preferences', 'theme', 'tokenUsage'], data => {
   if (data.apiKey)      el('apiKey').value        = data.apiKey;
   if (data.model)       el('model').value          = data.model;
   if (data.cvText)      el('extractedText').value  = data.cvText;
   if (data.preferences) el('preferences').value    = data.preferences;
+  if (data.theme)       applyTheme(data.theme);
+  renderTokens(data.tokenUsage);
 });
 
 // ── Save handlers ─────────────────────────────────────────────────────────────
@@ -127,6 +173,17 @@ el('extract').addEventListener('click', async () => {
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
       el('extractedText').value = text;
       setExtractStatus(`Extracted ${text.length.toLocaleString()} characters.`, 'ok');
+      const usage = data.usageMetadata;
+      if (usage) {
+        chrome.storage.local.get('tokenUsage', stored => {
+          const cur = stored.tokenUsage || { input: 0, cached: 0, output: 0 };
+          chrome.storage.local.set({ tokenUsage: {
+            input:  cur.input  + (usage.promptTokenCount        ?? 0),
+            cached: cur.cached + (usage.cachedContentTokenCount ?? 0),
+            output: cur.output + (usage.candidatesTokenCount    ?? 0)
+          }});
+        });
+      }
     } else {
       const err = await res.json().catch(() => ({}));
       setExtractStatus(`Error ${res.status}: ${err?.error?.message ?? 'unknown'}`, 'err');

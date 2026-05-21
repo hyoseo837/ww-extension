@@ -17,6 +17,7 @@ let allPostingIds = [];   // ordered list from selectAll — used for page navig
 let aborted = false;
 let detectedPageSize = 50; // refined upward from observed row counts
 let cacheName = null;      // context cache name for the current scan session
+let currentTheme = 'dark'; // synced from chrome.storage.local 'theme'
 
 if (!window.__wwExtensionInjected) {
   window.__wwExtensionInjected = true;
@@ -27,6 +28,19 @@ if (!window.__wwExtensionInjected) {
     await loadScores();
   });
 }
+
+// ── Theme ─────────────────────────────────────────────────────────────────────
+
+function applyThemeToContent(theme) {
+  currentTheme = theme;
+  const isLight = theme === 'light';
+  document.documentElement.classList.toggle('ww-light', isLight);
+  document.getElementById('ww-ext-sidebar')?.classList.toggle('ww-light', isLight);
+}
+
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === 'local' && changes.theme) applyThemeToContent(changes.theme.newValue ?? 'dark');
+});
 
 // ── Bridge ────────────────────────────────────────────────────────────────────
 
@@ -559,6 +573,9 @@ function injectSidebar() {
     <ul id="ww-ext-results"></ul>
   `;
   document.body.appendChild(sidebar);
+
+  // Apply saved theme
+  chrome.storage.local.get('theme', data => { if (data.theme) applyThemeToContent(data.theme); });
 
   // Badge reason tooltip
   const tooltip = document.createElement('div');

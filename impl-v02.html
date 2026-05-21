@@ -140,6 +140,18 @@
     </ul>
 
 
+    <h3>v02.016 — light/dark theme + cumulative token usage [DONE]</h3>
+    <ul>
+      <li><strong>Theme toggle:</strong> Settings nav tab in <code>options.html</code> with Dark/Light pill. Storage key <code>theme</code> — <code>'dark'</code> (default) or <code>'light'</code>.</li>
+      <li>Light palette from <code>stitch_waterlooworks_ai_optimizer/stealth_light/DESIGN.md</code>; dark is Stealth Obsidian (unchanged).</li>
+      <li><code>src/sidebar.css</code> fully converted to CSS vars: <code>--s-*</code> on <code>#ww-ext-sidebar</code> for sidebar internals; <code>--ww-*</code> on <code>:root</code> for badges and row highlight (must reach elements outside the sidebar). <code>:root.ww-light</code> handles the toggle button and badge tooltip via descendant selectors.</li>
+      <li><code>src/content.js</code> — <code>applyThemeToContent()</code> toggles <code>.ww-light</code> on <code>document.documentElement</code> and <code>#ww-ext-sidebar</code>; <code>chrome.storage.onChanged</code> keeps the WW page in sync when settings tab is open.</li>
+      <li><strong>Token usage:</strong> Cumulative input/output/cached token counter displayed on the API tab. Counter persists in storage key <code>tokenUsage: {input, cached, output}</code>; Reset Counter button zeros it.</li>
+      <li>Tokens accumulated in <code>src/background.js</code> (scoring) and <code>src/options.js</code> (PDF extraction) — both call sites covered. Display updates live via <code>chrome.storage.onChanged</code>.</li>
+      <li>Touches: <code>options.html</code>, <code>src/options.js</code>, <code>src/background.js</code>, <code>src/sidebar.css</code>, <code>src/content.js</code>.</li>
+    </ul>
+
+
     <h2>Known v01 issues NOT fixed yet</h2>
 
     <dl>
