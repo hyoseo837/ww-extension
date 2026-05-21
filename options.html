@@ -25,6 +25,7 @@
       #extractStatus { font-size: 12px; min-height: 16px; color: #555; margin-top: 4px; }
       #extractStatus.ok { color: green; }
       #extractStatus.err { color: red; }
+      #extractedText { background: #f8f8f8; color: #444; cursor: default; }
     </style>
   </head>
   <body>
@@ -45,6 +46,9 @@
     </div>
     <div id="extractStatus"></div>
     <small>Your PDF is sent to Google's Gemini API for text extraction.</small>
+    <label>Extracted Text
+      <textarea id="extractedText" readonly placeholder="Extracted text will appear here..."></textarea>
+    </label>
     <label>Profile
       <textarea id="cvText" placeholder="Paste your CV / resume summary here..."></textarea>
     </label>

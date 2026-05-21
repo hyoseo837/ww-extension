@@ -66,8 +66,8 @@ el('extract').addEventListener('click', async () => {
     if (res.ok) {
       const data = await res.json();
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-      el('cvText').value = text;
-      setExtractStatus(`Extracted ${text.length.toLocaleString()} characters. Review and Save.`, 'ok');
+      el('extractedText').value = text;
+      setExtractStatus(`Extracted ${text.length.toLocaleString()} characters.`, 'ok');
     } else {
       const err = await res.json().catch(() => ({}));
       setExtractStatus(`Error ${res.status}: ${err?.error?.message ?? 'unknown'}`, 'err');
