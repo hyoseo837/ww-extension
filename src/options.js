@@ -1,5 +1,14 @@
 const el = id => document.getElementById(id);
 
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    el('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
 function setStatus(msg, type) {
   const s = el('status');
   s.textContent = msg;
