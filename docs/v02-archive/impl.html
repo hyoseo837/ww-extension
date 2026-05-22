@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="implementation-plan" />
+    <meta name="major-version" content="v02" />
+    <meta name="author" content="Hyoseo Lee" />
+    <meta name="last-updated" content="2026-05-21" />
+    <meta name="status" content="v02 complete through v02.018" />
+    <title>Implementation Plan — ww-extension v02</title>
+  </head>
+  <body>
+
+    <h1>ww-extension — v02 Implementation Plan</h1>
+
+    <p>
+      Read these in order before writing v02 code:
+    </p>
+    <ol>
+      <li><strong>docs/plan.html</strong> — v02 vision, where v01 ended, confirmed v02 features</li>
+      <li><strong>~/.claude/plans/tidy-orbiting-nova.md</strong> — full design notes for v02.001 (the next phase)</li>
+      <li><strong>docs/impl.html</strong> (this file) — build order, phase status</li>
+      <li><strong>docs/history.html</strong> — decisions recorded as v02 phases land</li>
+    </ol>
+
+    <p>
+      v01 docs in <code>docs/v01-archive/</code> (<code>plan.html</code>,
+      <code>impl.html</code>, <code>history.html</code>) are historical.
+      Reference them only when you need to understand pre-existing
+      behavior; do not extend them.
+    </p>
+
+
+    <h2>Inherited State (from v01.020)</h2>
+
+    <h3>Files (working tree)</h3>
+    <ul>
+      <li><code>manifest.json</code> — MV3; v02.001 removes <code>action.default_popup</code> and adds <code>options_ui</code> (<code>open_in_tab: true</code>)</li>
+      <li><code>popup.html</code> + <code>src/popup.js</code> — settings UI (will gain file input, extract button, preferences textarea)</li>
+      <li><code>src/content.js</code> — main content script: bridge injection, sidebar, scan flow, scrollToRow</li>
+      <li><code>src/background.js</code> — Gemini client (will gain preferences in scoreJob signature + prompt)</li>
+      <li><code>src/page-bridge.js</code> — page-context bridge for extractTokens / fetchOverview / openFolderSidebar(Bulk)</li>
+      <li><code>src/sidebar.css</code> — all extension styling</li>
+      <li><code>docs/examples/exampleWW.html</code> (553KB, don't read) and <code>docs/examples/exampleWW-compact.html</code> (15KB extract) — WW DOM/JS reference</li>
+    </ul>
+
+    <h3>chrome.storage.local keys in use</h3>
+    <ul>
+      <li><code>apiKey</code>, <code>model</code>, <code>cvText</code> — settings (popup-managed)</li>
+      <li><code>ww_scores</code> — Map of postingId → {score, verdict, reason, title, org}</li>
+      <li><code>ww_posting_ids</code> — array from selectAll, used for cross-page navigation</li>
+    </ul>
+
+    <h3>Key v01 architectural decisions to preserve</h3>
+    <ul>
+      <li>page-bridge.js runs in page context to access <code>dataViewerApp</code>, <code>getPostingOverview</code>, action tokens. Content script ↔ page bridge via postMessage with reqId namespacing.</li>
+      <li>Bridge bypasses <code>getPostingOverview()</code> and hits <code>/myAccount/co-op/full/jobs.htm</code> directly with cached tokens — kills the overlay flicker during scans. Don't revert this.</li>
+      <li>MutationObserver on the <code>&lt;table&gt;</code> (not <code>&lt;tbody&gt;</code>) with rAF-debounced wipe+reinject of badges — DataViewer reuses <code>&lt;tr&gt;</code> elements on page change, in-place badges would leak otherwise.</li>
+      <li>WW pagination puts <code>active</code> / <code>disabled</code> / aria-label on the inner <code>&lt;a class="pagination__link"&gt;</code>, not the <code>&lt;li&gt;</code>. scrollToRow's helpers operate on the <code>&lt;a&gt;</code> directly.</li>
+      <li>Pagination anchors are <code>&lt;a href="javascript:void(0);"&gt;</code> — use <code>dispatchEvent(new MouseEvent('click', …))</code> not <code>.click()</code> or CSP fires on the javascript: URL.</li>
+      <li>background.js validates Gemini response shape (score 1–10, verdict ∈ {Apply, Consider, Skip}, reason non-empty); returns structured <code>{ok, code, error}</code> with code ∈ {NETWORK, RATE_LIMIT, HTTP, PARSE, SHAPE}.</li>
+      <li>Gemini 2.5 Flash thinking mode is disabled (<code>thinkingConfig: { thinkingBudget: 0 }</code>) — thinking tokens otherwise eat the maxOutputTokens budget.</li>
+    </ul>
+
+
+    <h2>Build Phases</h2>
+
+    <p>
+      Versioning rules unchanged (per <code>.claude/rules.html</code> §5):
+      every commit is <code>vXX.YYY</code>, second number increments per commit,
+      first number incremented for new feature or restructuring. v02 begins at
+      v02.001.
+    </p>
+
+    <p>
+      Full per-phase design notes (file changes, code snippets, verification
+      steps, definition of done) live in
+      <code>~/.claude/plans/tidy-orbiting-nova.md</code>. Each phase has its own
+      section. Implement one phase per session if needed.
+    </p>
+
+    <h3>v02.001 — Options page replaces popup [DONE]</h3>
+    <ul>
+      <li>Pure UI migration; no behavior changes. Must be first — v02.002/003 need the bigger UI surface.</li>
+      <li>Touches: <code>manifest.json</code> (remove <code>action.default_popup</code>, add <code>options_ui.open_in_tab: true</code>), new <code>options.html</code> + <code>src/options.js</code>, <code>src/background.js</code> (action.onClicked + onMessage 'openOptions'), <code>src/content.js</code> (sidebar ⚙ button), <code>src/sidebar.css</code> (button style). Delete <code>popup.html</code> + <code>src/popup.js</code>.</li>
+      <li>Verify: toolbar icon opens options tab; sidebar ⚙ also opens it; all v01 settings round-trip; Scan All Jobs still works end-to-end.</li>
+    </ul>
+
+    <h3>v02.002 — PDF upload + AI extraction [DONE]</h3>
+    <ul>
+      <li>Adds file input + Extract button to <code>options.html</code> only.</li>
+      <li>Touches: <code>options.html</code>, <code>src/options.js</code>.</li>
+      <li>Confirmed choices: single PDF (not ZIP, not multi-file); editable textarea after extraction; Gemini multimodal via <code>inline_data</code>; 20MB file size cap.</li>
+      <li>Storage key for the profile stays <code>cvText</code> (backwards-compat). Label changes to "Profile" in UI.</li>
+      <li>Verify: real PDF extraction populates textarea; oversized files rejected; manual textarea entry still works.</li>
+    </ul>
+
+    <h3>v02.004 — Preferences field + prompt wiring [DONE]</h3>
+    <ul>
+      <li>Touches: <code>options.html</code> (new textarea), <code>src/options.js</code> (load/save), <code>src/content.js</code> (pass through), <code>src/background.js</code> (prompt template + conditional include).</li>
+      <li>New storage key: <code>preferences</code>. Empty means omitted from prompt entirely.</li>
+      <li>Verify: when empty, the <code>Candidate Preferences:</code> block is absent from the request body (check DevTools Network).</li>
+    </ul>
+
+    <h3>v02.005 — Context caching + responseSchema [DONE]</h3>
+    <ul>
+      <li>
+        <strong>responseSchema</strong>: In <code>src/background.js</code>, drop the "Respond with ONLY a JSON object…" prose
+        and field bullets from the prompt. Add <code>responseMimeType: 'application/json'</code> and
+        <code>responseSchema</code> (type object, properties score/verdict/reason with integer/enum/string constraints)
+        to <code>generationConfig</code>. Remove the markdown-fence stripping on the raw response.
+        Keep the existing <code>validate()</code> check — schema doesn't guarantee semantic validity.
+      </li>
+      <li>
+        <strong>Cache create</strong>: In <code>src/content.js</code>, add a module-level <code>let cacheName = null</code>.
+        At the start of <code>scanAllJobs()</code>, after loading settings, POST to
+        <code>/v1beta/cachedContents</code> with the system instruction + profile parts and
+        <code>ttl: "1800s"</code>. Store the returned <code>name</code> in <code>cacheName</code>.
+        On failure, log a warning and leave <code>cacheName</code> null (fall through to inline).
+      </li>
+      <li>
+        <strong>Per-call use</strong>: Thread <code>cacheName</code> through
+        <code>chrome.runtime.sendMessage</code> to <code>scoreJob</code> in
+        <code>src/background.js</code>. When <code>cachedContent</code> is present in the message,
+        switch the <code>generateContent</code> body to include <code>cachedContent</code> and send
+        only the job-description part as the user turn. When absent, fall back to the current
+        full inline body — no behavior change for callers without it.
+      </li>
+      <li>
+        <strong>Cache delete</strong>: In the <code>finally</code> block of <code>scanAllJobs()</code>,
+        best-effort DELETE <code>/v1beta/{cacheName}</code> if set. TTL handles the case if delete fails.
+        Reset <code>cacheName = null</code>.
+      </li>
+      <li>Touches: <code>src/background.js</code>, <code>src/content.js</code>.</li>
+      <li>
+        Verify: token log shows <code>cachedContentTokenCount</code> equal to profile size;
+        <code>promptTokenCount</code> is lower than uncached baseline. Fallback: force cache
+        creation to fail and confirm scan still completes at full token cost.
+      </li>
+    </ul>
+
+
+    <h3>v02.016 — light/dark theme + cumulative token usage [DONE]</h3>
+    <ul>
+      <li><strong>Theme toggle:</strong> Settings nav tab in <code>options.html</code> with Dark/Light pill. Storage key <code>theme</code> — <code>'dark'</code> (default) or <code>'light'</code>.</li>
+      <li>Light palette from <code>stitch_waterlooworks_ai_optimizer/stealth_light/DESIGN.md</code>; dark is Stealth Obsidian (unchanged).</li>
+      <li><code>src/sidebar.css</code> fully converted to CSS vars: <code>--s-*</code> on <code>#ww-ext-sidebar</code> for sidebar internals; <code>--ww-*</code> on <code>:root</code> for badges and row highlight (must reach elements outside the sidebar). <code>:root.ww-light</code> handles the toggle button and badge tooltip via descendant selectors.</li>
+      <li><code>src/content.js</code> — <code>applyThemeToContent()</code> toggles <code>.ww-light</code> on <code>document.documentElement</code> and <code>#ww-ext-sidebar</code>; <code>chrome.storage.onChanged</code> keeps the WW page in sync when settings tab is open.</li>
+      <li><strong>Token usage:</strong> Cumulative input/output/cached token counter displayed on the API tab. Counter persists in storage key <code>tokenUsage: {input, cached, output}</code>; Reset Counter button zeros it.</li>
+      <li>Tokens accumulated in <code>src/background.js</code> (scoring) and <code>src/options.js</code> (PDF extraction) — both call sites covered. Display updates live via <code>chrome.storage.onChanged</code>.</li>
+      <li>Touches: <code>options.html</code>, <code>src/options.js</code>, <code>src/background.js</code>, <code>src/sidebar.css</code>, <code>src/content.js</code>.</li>
+    </ul>
+
+
+    <h3>v02.017 — atomic token counter + header auth + dead-code cleanup [DONE]</h3>
+    <ul>
+      <li><strong>Atomic token counter:</strong> <code>incrementTokenUsage()</code> helper in <code>background.js</code> and <code>options.js</code> serializes get→set through a per-context promise chain. Fixes a lost-update race in the v02.016 accumulation.</li>
+      <li><strong>Header auth:</strong> All Gemini calls switched from <code>?key=${apiKey}</code> query string to <code>X-Goog-Api-Key</code> header (scoring, cache create+delete, PDF extract, test). Keeps the key out of browser history and fetch logs.</li>
+      <li><strong>Dead code:</strong> Removed unused <code>currentTheme</code> variable in <code>content.js</code>.</li>
+    </ul>
+
+    <h3>v02.018 — remaining audit fixes + doc drift cleanup [DONE]</h3>
+    <ul>
+      <li><strong>Network retry:</strong> <code>scoreJob</code> now retries network errors on the same backoff as HTTP 429 (was: immediate <code>NETWORK</code> failure on the first hiccup).</li>
+      <li><strong>Console cleanup:</strong> Removed cache-create <code>console.log</code>/<code>console.warn</code> lines in <code>content.js</code>. Cached-tokens column in the API tab is now the single source of truth for cache health.</li>
+      <li><strong>Shape validation:</strong> <code>loadScores</code> drops entries missing valid score/verdict/reason. Guards against corrupted storage and future schema migrations.</li>
+      <li><strong>Reset detectedPageSize:</strong> <code>clearScores</code> resets the pagination estimate to the default 50 instead of leaving stale state.</li>
+      <li><strong>Doc drift:</strong> v02.002 history entry now notes v02.007 dropped the PDF cap from 20 → 5 MB; v02.016 history corrected — only the two scoring/extraction call sites are tracked, Test API Key intentionally not counted.</li>
+      <li>Touches: <code>src/content.js</code>, <code>src/background.js</code>, <code>docs/impl.html</code>, <code>docs/history.html</code>.</li>
+    </ul>
+
+
+    <h2>Known v01 issues NOT fixed yet</h2>
+
+    <dl>
+      <dt>scrollToRow occasionally walks all pages and lands on page 4 saying "not in current view" even though the row IS visible</dt>
+      <dd>
+        Reported by user just before v02 cutoff. Not reproduced in lab; possibly
+        related to allPostingIds being stale when the user has applied a filter
+        since their last scan, or to a subtle selector mismatch we haven't tracked
+        down. v01.020 added the "restore start page + error message" UX so the
+        user isn't stranded silently, but the underlying detection bug remains.
+        Treat as known limitation; revisit if user complaints persist.
+      </dd>
+    </dl>
+
+  </body>
+</html>

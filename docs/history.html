@@ -4,192 +4,107 @@
     <meta charset="UTF-8" />
     <meta name="project" content="ww-extension" />
     <meta name="type" content="session-history" />
-    <meta name="major-version" content="v02" />
-    <meta name="session-date" content="2026-05-20" />
-    <title>Session History — ww-extension v02</title>
+    <meta name="major-version" content="v03" />
+    <meta name="session-date" content="2026-05-22" />
+    <title>Session History — ww-extension v03</title>
   </head>
   <body>
 
-    <h1>Session History — ww-extension v02</h1>
+    <h1>Session History — ww-extension v03</h1>
 
     <p>
-      This file records decisions made during v02 phases. Append a new section
+      This file records decisions made during v03 phases. Append a new section
       after each phase commit. Record only crucial decisions or non-obvious
-      choices — not a step-by-step log. See v01's <code>history.html</code> for
-      the same pattern applied to v01.001 through v01.020.
+      choices — not a step-by-step log. See <code>docs/v02-archive/history.html</code>
+      for the same pattern applied to v02.001 through v02.022.
     </p>
 
-    <h2>v02.018 — remaining audit fixes + doc drift (2026-05-21)</h2>
+    <h2>v03.005 — Sidebar empty-state guide (2026-05-22)</h2>
 
     <p>
-      <code>scoreJob</code> now retries network errors on the same backoff
-      schedule as HTTP 429 (was: immediate <code>NETWORK</code> failure).
-      A transient connection blip during a scan no longer marks the job
-      failed when one of the next three retries would have succeeded.
-      The behaviour is now consistent with the rate-limit path — both
-      transient classes get up to three retries with 2/4/8s delays.
+      The plain "No jobs scored yet" text was replaced with a three-step guide card
+      rendered inside the same <code>&lt;li class="ww-ext-empty"&gt;</code> element,
+      so no structural change to <code>renderSidebarList()</code> was needed beyond
+      the innerHTML swap.
     </p>
     <p>
-      Cache-create logs in <code>content.js</code> removed (matches the
-      v02.016 intent to move observability from console to UI). Cache health
-      is already visible via the cached-tokens column in the API tab — if it
-      stays at 0 during a scan, the cache silently fell back to inline.
-      Kept the catch blocks themselves (with brief comments) so failures
-      still don't propagate, just no longer pollute the page console.
+      Steps 1 and 2 use live checkmarks driven by a single
+      <code>chrome.storage.local.get(['apiKey', 'cvText'])</code> call at render time,
+      plus the existing <code>chrome.storage.onChanged</code> listener (already present
+      for theme syncing) — no new listener was added. <code>updateGuideSteps()</code>
+      is a no-op when the empty-state card is not in the DOM, so the listener is safe
+      to leave active at all times.
     </p>
     <p>
-      <code>loadScores</code> now shape-checks each stored entry (integer
-      score, known verdict, string reason) before re-inserting. Corrupted
-      storage from an earlier schema or external tampering no longer crashes
-      <code>injectRowScores</code> downstream. <code>clearScores</code> also
-      now resets <code>detectedPageSize</code> to the default 50, so the
-      pagination estimate doesn't carry stale values across a clear.
-    </p>
-    <p>
-      Doc fixes applied to the historical record itself: the v02.002 entry
-      now mentions that v02.007 dropped the PDF cap 20 → 5 MB (it previously
-      claimed 20 MB as final), and v02.016 was corrected to say "the two
-      billing-significant call sites" rather than "both call sites covered"
-      — the Test API Key handler also hits Gemini, but is intentionally
-      not counted (one-shot ~5-token validation ping; counting it would
-      conflate "did the user check their key" with actual scoring cost).
+      The step number circles use the same Apply-green color token (<code>--s-apply-bg</code>,
+      <code>--s-apply-c</code>, <code>--s-apply-bdr</code>) for the "done" state — consistent
+      with the rest of the extension's positive-outcome visual language.
     </p>
 
-    <h2>v02.017 — atomic token counter + header auth (2026-05-21)</h2>
+    <h2>v03.004 — Sidebar controls restructure + help tooltip (2026-05-22)</h2>
 
     <p>
-      Token accumulation in v02.016 used <code>chrome.storage.local.get</code>
-      followed by <code>set</code> with no serialization — concurrent calls
-      (extraction during a scan, or back-to-back scoreJob handlers) could read
-      the same starting value and the later write would clobber earlier
-      increments. Fix: a module-level <code>tokenWriteChain = Promise.resolve()</code>
-      in each context, with <code>incrementTokenUsage</code> appending the
-      next get→set to the chain. Within a context, increments are now serial.
-      Cross-context races (background ↔ options) remain theoretically possible
-      but require simultaneous activity in both contexts — rare for this UX.
+      <code>#ww-ext-controls</code> was a single <code>flex-wrap: wrap</code> block
+      with no visual hierarchy. Switching to <code>flex-direction: column</code> with
+      <code>.ww-ext-section</code> children (each with its own padding and a top border
+      divider) lets sections be independently styled without breaking the existing
+      event-listener bindings, which all target stable IDs.
     </p>
     <p>
-      All Gemini calls now send the API key as <code>X-Goog-Api-Key</code>
-      rather than the <code>?key=</code> query string. Query-string keys land
-      in browser history (for options-page calls) and any fetch instrumentation;
-      header auth keeps the key contained to the request body itself.
+      "Save to Folder" was chosen as the second section name rather than "Filter"
+      because the Score ≥ input and verdict pills are purely save-scoping controls —
+      they do not filter the displayed result list. Grouping them under the same label
+      as the Save/Clear buttons makes their purpose self-explanatory.
     </p>
     <p>
-      Removed <code>currentTheme</code> in <code>content.js</code> — set on
-      every theme change, never read. Vestigial from an earlier design that
-      gated per-badge class toggling on the current theme; the
-      <code>:root.ww-light</code> CSS-var approach made that unnecessary.
-    </p>
-
-    <h2>v02.016 — light/dark theme + cumulative token usage (2026-05-21)</h2>
-
-    <p>
-      Options page uses <code>body.light</code> for theme overrides (dark vars stay
-      on <code>:root</code> as baseline, so no FOUC on the default dark mode before
-      the storage read resolves). Two previously hardcoded values were promoted to
-      vars — <code>--primary-glow</code> and <code>--on-primary</code> — because
-      they differ between palettes and would have been invisible to a class override
-      if left inline.
+      A separate <code>#ww-ext-help-tooltip</code> element was added rather than
+      reusing <code>#ww-ext-badge-tooltip</code>. The badge tooltip is
+      <code>pointer-events: none</code> (display-only), while the help tooltip may
+      eventually contain links. Keeping them separate avoids coupling their display
+      states and CSS. The click handler toggle-logic checks <code>dataset.open</code>
+      so clicking the same <code>?</code> twice closes it (instead of re-opening).
     </p>
     <p>
-      Sidebar theming uses a two-tier variable scheme: <code>--s-*</code> vars defined
-      on <code>#ww-ext-sidebar</code> cascade to all sidebar descendants; <code>--ww-*</code>
-      vars defined on <code>:root</code> cover elements that live outside the sidebar
-      in the WW DOM (table badges, row highlight). The toggle button and badge tooltip
-      are overridden via <code>:root.ww-light #ww-ext-toggle</code> descendant selectors
-      rather than adding extra classes per element — single <code>.ww-light</code> class
-      on <code>document.documentElement</code> drives everything outside the sidebar.
-      <code>chrome.storage.onChanged</code> in the content script keeps the WW page
-      in sync if the user changes the theme in the options tab without reloading.
-    </p>
-    <p>
-      Token usage is accumulated in <code>chrome.storage.local</code> (key
-      <code>tokenUsage</code>) rather than sent to a UI event because the scoring
-      runs in the background service worker, which has no direct DOM access.
-      Tracked at the two billing-significant call sites: <code>background.js</code>
-      (per-job scoring) and <code>options.js</code> (PDF extraction). The
-      Test API Key handler in <code>options.js</code> also hits Gemini but is
-      intentionally not tracked — it's a one-shot validation ping (~5 input
-      tokens) and counting it would conflate "did the user check their key"
-      with actual scoring cost. The display updates live via
-      <code>chrome.storage.onChanged</code>, so the counter ticks up in real
-      time during a scan without any polling.
+      The header <code>?</code> button reuses the same CSS selector group as the
+      existing <code>#ww-ext-settings</code> and <code>#ww-ext-close</code> buttons
+      (shared size/padding/hover style), keeping the three-button cluster visually
+      consistent. Its ID is <code>ww-ext-help-open</code> to distinguish it from
+      the in-controls <code>.ww-ext-help-btn</code> elements.
     </p>
 
-    <h2>v02.005 — Context caching + responseSchema (2026-05-21)</h2>
+    <h2>v03.003 — First-run welcome page (2026-05-22)</h2>
 
     <p>
-      <code>SYSTEM_TEXT</code> is duplicated in both <code>background.js</code>
-      and <code>content.js</code> — they are separate MV3 execution contexts and
-      cannot share modules, so duplication is intentional. The cache body in
-      <code>content.js</code> uses the same text so the cached system instruction
-      is identical to what the inline fallback sends.
+      <code>welcome.html</code> is a standalone extension page (no separate JS bundle)
+      with three numbered step cards, two CTA buttons, and a footer with creator,
+      GitHub, and privacy links. It reads <code>theme</code> from
+      <code>chrome.storage.local</code> on load to match the user's existing dark/light
+      preference, avoiding a jarring mismatch on first install.
     </p>
     <p>
-      <code>scanApiKey</code> is hoisted outside the <code>try</code> block so
-      the <code>finally</code> cache-delete can reference it without capturing
-      <code>settings</code> (which is declared inside the try). The delete is
-      fire-and-forget (<code>.catch(() => {})</code>) — the 30-minute TTL covers
-      the case where it fails.
+      The <code>onInstalled</code> listener uses a <code>welcomeShown</code> storage
+      flag rather than relying solely on <code>details.reason === 'install'</code>
+      because dev reloads ("Update") also fire <code>onInstalled</code> with reason
+      <code>'update'</code> — the flag ensures the welcome tab never appears during
+      development without explicitly clearing it.
     </p>
     <p>
-      Markdown-fence stripping removed from the parse step — <code>responseSchema</code>
-      guarantees the model returns bare JSON. <code>validate()</code> kept for
-      semantic checks (score bounds, verdict membership) that the schema alone
-      cannot enforce. Token log now includes <code>cachedContentTokenCount</code>
-      to make cache hits visible in DevTools.
+      <code>chrome.tabs.create</code> (used for both the install hook and the
+      <code>openWelcome</code> message handler) does not require the <code>tabs</code>
+      manifest permission — that permission gates reading tab properties, not creating tabs.
     </p>
 
-    <h2>v02.004 — Preferences field + prompt wiring (2026-05-21)</h2>
+    <h2>v03.002 — Archive v02 docs + open v03 docs (2026-05-22)</h2>
 
     <p>
-      Preferences live in a dedicated third tab ("Preferences") rather than
-      appended to the Context tab — keeps each tab focused and makes the
-      upcoming v02.005 caching phase easier to reason about (preferences are
-      a per-call inline field, not part of the cached content).
-      The conditional ternary in the prompt template ensures the
-      <code>Candidate Preferences:</code> block, including its surrounding
-      blank lines, is entirely absent when the field is empty — no token cost
-      for users who don't fill it in.
+      v02 docs copied to <code>docs/v02-archive/</code> before being overwritten.
+      This follows the same pattern as the v01 → v02 transition. The v03 docs
+      (plan, impl, history) reset the phase tracking and storage-key inventory to
+      the v02.022 baseline.
     </p>
-
-    <h2>v02.002 — PDF upload and Gemini multimodal extraction (2026-05-21)</h2>
-
     <p>
-      Extraction uses <code>inline_data</code> with the full base64 PDF — no
-      Files API upload step. This keeps the implementation self-contained in
-      the options page and avoids a separate upload round-trip. The initial
-      cap was 20 MB (Gemini's inline-data ceiling); v02.007 reduced it to 5 MB
-      because a real CV/coop package never approaches the ceiling and the
-      smaller limit gives faster, more obvious feedback on accidental uploads.
-      <code>FileReader.readAsDataURL</code>
-      is used (instead of <code>readAsArrayBuffer</code> + manual btoa) because
-      it handles the base64 encoding in one step; the <code>data:…;base64,</code>
-      prefix is stripped with a regex before sending. Extraction status is a
-      separate <code>#extractStatus</code> element so the main Save/Test
-      <code>#status</code> is unaffected. The textarea remains editable after
-      extraction — the user must still click Save to persist.
-    </p>
-
-    <h2>v02.001 — Options page replaces popup (2026-05-21)</h2>
-
-    <p>
-      Pure UI migration. <code>popup.html</code> + <code>src/popup.js</code>
-      deleted; <code>options.html</code> + <code>src/options.js</code> created
-      with identical storage logic. Manifest swaps <code>action.default_popup</code>
-      for <code>options_ui.open_in_tab: true</code>. Background gains
-      <code>action.onClicked</code> → <code>openOptionsPage()</code> and an
-      <code>'openOptions'</code> message case for the sidebar button.
-      Sidebar header gets a ⚙ button that posts <code>{type:'openOptions'}</code>
-      through the background. No behavior changes to scan flow or storage.
-    </p>
-
-    <p>
-      Sidebar CSS merged <code>#ww-ext-settings</code> and <code>#ww-ext-close</code>
-      into a shared rule — identical style, keeps the selector list short.
-      Header buttons wrapped in <code>.ww-ext-header-btns</code> to avoid
-      <code>justify-content: space-between</code> pushing them apart when there
-      were three flex children.
+      v03.000 commit message said "docs reorg" but the actual doc migration was not
+      performed at that time. v03.002 closes that gap.
     </p>
 
   </body>

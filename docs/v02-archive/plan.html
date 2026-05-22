@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="project-plan" />
+    <meta name="major-version" content="v02" />
+    <meta name="author" content="Hyoseo Lee" />
+    <meta name="status" content="in progress — v02.001 next" />
+    <meta name="last-updated" content="2026-05-21" />
+    <meta
+      name="goal"
+      content="v02 enhances the v01 extension with higher-quality candidate context (PDF profile + soft preferences) and cost-efficient Gemini usage (context caching + responseSchema)."
+    />
+    <title>Plan — ww-extension v02</title>
+  </head>
+  <body>
+    <h1>ww-extension — v02 Project Plan</h1>
+
+    <h2>Where v01 ended</h2>
+
+    <p>
+      v01 (commits v01.001 through v01.020) shipped the working core: scan all jobs
+      via selectAll, fetch each posting overview via a page-bridge, score against
+      a pasted CV with Gemini, render badges inline in the table and a ranked
+      sidebar, persist scores across reloads, click-to-navigate to any job's row
+      with cross-page support, per-job and bulk Save-to-Folder, score-and-verdict
+      filtering on bulk save, full polish on errors / empty states / loading
+      overlay flicker. The user designated v01.020 as "first complete version."
+    </p>
+
+    <p>
+      v01 documents (<code>docs/v01-archive/plan.html</code>,
+      <code>impl.html</code>, <code>history.html</code>) are kept as
+      historical reference and should not be extended. All new work is
+      documented in this file and its siblings <code>docs/impl.html</code> /
+      <code>docs/history.html</code>.
+    </p>
+
+
+    <h2>v02 Vision</h2>
+
+    <p>
+      v01 proved the workflow but the candidate context is weak: it's a single
+      hand-typed textarea. v02 raises the quality of that context (PDF upload +
+      AI extraction, soft preferences) so scoring decisions are sharper. Further
+      v02 features are TBD and will be added here as the user confirms them.
+    </p>
+
+
+    <h2>Confirmed v02 features (in implementation order)</h2>
+
+    <p>
+      All three phases below are designed to be small and independently
+      committable. Each leaves the extension in a fully working state so a
+      session that runs out of context mid-feature can resume cleanly at the
+      next phase. Full design notes for every phase live in
+      <code>~/.claude/plans/tidy-orbiting-nova.md</code> — read that before
+      implementing.
+    </p>
+
+    <h3>v02.001 — Options page replaces popup</h3>
+
+    <p>
+      The browser-action popup disappears when the user clicks anywhere
+      outside it, which the user finds repeatedly frustrating. v02.001
+      removes the popup entirely and replaces it with an Options page that
+      opens in a real browser tab. The toolbar icon opens it; a new ⚙
+      Settings button in the WW sidebar header also opens it.
+    </p>
+
+    <p>
+      This phase is a <strong>pure UI migration with no behavior
+      changes</strong> — all existing settings (apiKey, model, cvText) work
+      identically, and the v01 Scan All Jobs flow is untouched. It must come
+      first because the next two phases need more vertical real estate than
+      the 320px popup affords.
+    </p>
+
+    <h3>v02.002 — Profile from PDF</h3>
+
+    <p>
+      WaterlooWorks lets students export a combined PDF containing résumé,
+      grade report, and co-op work history. The Options page accepts that
+      single PDF, sends it to Gemini's multimodal endpoint with an
+      "extract as plain text" prompt, and populates the existing
+      <code>cvText</code> textarea with the result. The textarea remains the
+      source of truth — the user can clean it up before saving, or skip the
+      upload entirely and type from scratch.
+    </p>
+
+    <h3>v02.003 — Preferences field</h3>
+
+    <p>
+      A free-form soft-constraints textarea ("prefer Waterloo, Toronto OK,
+      no San Francisco; backend or data roles only"). Stored separately and
+      included in the Gemini scoring prompt as its own labelled section,
+      omitted entirely when empty so users who don't fill it pay no token
+      cost.
+    </p>
+
+
+    <h3>v02.004 — Context caching + responseSchema</h3>
+
+    <p>
+      v02.002 will make the per-call profile large (inline PDF = 5,000–20,000+ tokens).
+      Without intervention a 200-job scan after v02.002 would cost 10–40× what it
+      costs today. v02.004 fixes this in two moves:
+    </p>
+    <ul>
+      <li>
+        <strong>responseSchema</strong> — replace the "respond as JSON…" prose
+        in the prompt with Gemini's native structured-output config.
+        Saves ~50 tokens/call and eliminates JSON parse failures.
+      </li>
+      <li>
+        <strong>Context caching</strong> — upload the stable portion (system
+        instruction + profile) once per scan session via
+        <code>POST /v1beta/cachedContents</code>. Each subsequent scoring call
+        references the cache name; cached tokens are billed at ~25% of normal
+        input rate. Job descriptions and preferences (small, variable) are
+        always sent inline.
+      </li>
+    </ul>
+    <p>
+      Caching must come after v02.002 because Gemini 2.5 Flash has a 1,024-token
+      minimum for cached content — the text CV alone (~550 tokens) is below the
+      floor; the PDF profile easily clears it. Cache lifetime is per scan session
+      (TTL 30 min), not persisted to <code>chrome.storage</code>.
+    </p>
+    <p>
+      Batching multiple jobs per request was considered and rejected: it achieves the
+      same token savings as caching but at the cost of relative-scoring bias and
+      worse per-job error recovery.
+    </p>
+
+
+    <h2>Out of scope (still)</h2>
+
+    <p>
+      Same as v01: auto-apply, cover-letter generation, non-Gemini providers,
+      backend server, mobile/desktop apps. Cross-session score persistence is
+      now in scope (already shipped in v01).
+    </p>
+  </body>
+</html>

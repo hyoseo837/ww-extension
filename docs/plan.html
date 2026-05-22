@@ -4,143 +4,183 @@
     <meta charset="UTF-8" />
     <meta name="project" content="ww-extension" />
     <meta name="type" content="project-plan" />
-    <meta name="major-version" content="v02" />
+    <meta name="major-version" content="v03" />
     <meta name="author" content="Hyoseo Lee" />
-    <meta name="status" content="in progress — v02.001 next" />
-    <meta name="last-updated" content="2026-05-21" />
+    <meta name="status" content="in progress — v03.002 next" />
+    <meta name="last-updated" content="2026-05-22" />
     <meta
       name="goal"
-      content="v02 enhances the v01 extension with higher-quality candidate context (PDF profile + soft preferences) and cost-efficient Gemini usage (context caching + responseSchema)."
+      content="v03 focuses on UX: first-run onboarding, in-extension help, info/about/privacy, and sidebar control grouping so the extension feels self-contained and polished."
     />
-    <title>Plan — ww-extension v02</title>
+    <title>Plan — ww-extension v03</title>
   </head>
   <body>
-    <h1>ww-extension — v02 Project Plan</h1>
+    <h1>ww-extension — v03 Project Plan</h1>
 
-    <h2>Where v01 ended</h2>
+    <h2>Where v02 ended</h2>
 
     <p>
-      v01 (commits v01.001 through v01.020) shipped the working core: scan all jobs
-      via selectAll, fetch each posting overview via a page-bridge, score against
-      a pasted CV with Gemini, render badges inline in the table and a ranked
-      sidebar, persist scores across reloads, click-to-navigate to any job's row
-      with cross-page support, per-job and bulk Save-to-Folder, score-and-verdict
-      filtering on bulk save, full polish on errors / empty states / loading
-      overlay flicker. The user designated v01.020 as "first complete version."
+      v02 (commits v02.001 through v02.022) added high-quality candidate context
+      (PDF profile upload + Gemini multimodal extraction, soft preferences field),
+      cost-efficient Gemini usage (context caching, responseSchema), light/dark
+      theming, and a cumulative token-usage counter. The extension is feature-complete
+      and functionally solid, but it assumes the user has read the README: there is
+      no in-extension guidance, no privacy/about info, and the sidebar mixes the
+      primary "Scan" action with the secondary "Save to Folder" feature in one
+      undifferentiated block.
     </p>
 
     <p>
-      v01 documents (<code>docs/v01-archive/plan.html</code>,
-      <code>impl.html</code>, <code>history.html</code>) are kept as
-      historical reference and should not be extended. All new work is
+      v02 documents are archived at <code>docs/v02-archive/</code>. All new work is
       documented in this file and its siblings <code>docs/impl.html</code> /
       <code>docs/history.html</code>.
     </p>
 
-
-    <h2>v02 Vision</h2>
-
     <p>
-      v01 proved the workflow but the candidate context is weak: it's a single
-      hand-typed textarea. v02 raises the quality of that context (PDF upload +
-      AI extraction, soft preferences) so scoring decisions are sharper. Further
-      v02 features are TBD and will be added here as the user confirms them.
+      Scratchpad plan used during v03 design session:
+      <code>~/.claude/plans/let-s-do-some-planning-declarative-lemur.md</code>.
     </p>
 
 
-    <h2>Confirmed v02 features (in implementation order)</h2>
+    <h2>v03 Vision</h2>
 
     <p>
-      All three phases below are designed to be small and independently
-      committable. Each leaves the extension in a fully working state so a
-      session that runs out of context mid-feature can resume cleanly at the
-      next phase. Full design notes for every phase live in
-      <code>~/.claude/plans/tidy-orbiting-nova.md</code> — read that before
-      implementing.
-    </p>
-
-    <h3>v02.001 — Options page replaces popup</h3>
-
-    <p>
-      The browser-action popup disappears when the user clicks anywhere
-      outside it, which the user finds repeatedly frustrating. v02.001
-      removes the popup entirely and replaces it with an Options page that
-      opens in a real browser tab. The toolbar icon opens it; a new ⚙
-      Settings button in the WW sidebar header also opens it.
-    </p>
-
-    <p>
-      This phase is a <strong>pure UI migration with no behavior
-      changes</strong> — all existing settings (apiKey, model, cvText) work
-      identically, and the v01 Scan All Jobs flow is untouched. It must come
-      first because the next two phases need more vertical real estate than
-      the 320px popup affords.
-    </p>
-
-    <h3>v02.002 — Profile from PDF</h3>
-
-    <p>
-      WaterlooWorks lets students export a combined PDF containing résumé,
-      grade report, and co-op work history. The Options page accepts that
-      single PDF, sends it to Gemini's multimodal endpoint with an
-      "extract as plain text" prompt, and populates the existing
-      <code>cvText</code> textarea with the result. The textarea remains the
-      source of truth — the user can clean it up before saving, or skip the
-      upload entirely and type from scratch.
-    </p>
-
-    <h3>v02.003 — Preferences field</h3>
-
-    <p>
-      A free-form soft-constraints textarea ("prefer Waterloo, Toronto OK,
-      no San Francisco; backend or data roles only"). Stored separately and
-      included in the Gemini scoring prompt as its own labelled section,
-      omitted entirely when empty so users who don't fill it pay no token
-      cost.
+      v03 makes the extension feel self-contained and finished. A new user should be
+      able to install it, understand what it does, complete setup, and trust it —
+      entirely without leaving the extension or reading the README. Day-to-day users
+      get a cleaner sidebar where the main action (Scan) is visually dominant and
+      the folder workflow is its own clearly labelled section.
     </p>
 
 
-    <h3>v02.004 — Context caching + responseSchema</h3>
+    <h2>Confirmed v03 features (in implementation order)</h2>
+
+    <h3>v03.002 — Archive v02 docs + open v03 docs (this phase)</h3>
 
     <p>
-      v02.002 will make the per-call profile large (inline PDF = 5,000–20,000+ tokens).
-      Without intervention a 200-job scan after v02.002 would cost 10–40× what it
-      costs today. v02.004 fixes this in two moves:
+      Moves the current v02 docs into <code>docs/v02-archive/</code> and writes
+      fresh <code>docs/plan.html</code>, <code>docs/impl.html</code>, and
+      <code>docs/history.html</code> for v03. No code changes.
+    </p>
+
+    <h3>v03.003 — First-run welcome page</h3>
+
+    <p>
+      A new <code>welcome.html</code> extension page with three numbered steps:
+      (1) Get a Gemini API key, (2) Paste key + upload CV, (3) Open WaterlooWorks
+      and scan. Two CTAs: "Open Settings" and "Skip for now". The page matches
+      the extension's dark/light design and reads <code>theme</code> from storage
+      to apply the correct palette.
+    </p>
+    <p>
+      <code>src/background.js</code> gains a <code>chrome.runtime.onInstalled</code>
+      listener that opens <code>welcome.html</code> in a new tab on first install.
+      A <code>welcomeShown</code> storage flag prevents re-opening on dev reloads.
+      A new <code>openWelcome</code> message type in the background lets any context
+      open the welcome page later.
+    </p>
+    <p>
+      Re-entry points: a <code>?</code> header button in the WW sidebar (between
+      the settings gear and close buttons), and a "Show welcome page again" button
+      added to the Settings tab in v03.005.
+    </p>
+
+    <h3>v03.004 — Sidebar controls restructure</h3>
+
+    <p>
+      Restructures <code>#ww-ext-controls</code> from a flat flex-wrap block into
+      two named sections: <strong>Scan</strong> (Scan All Jobs + Stop) and
+      <strong>Save to Folder</strong> (Score ≥ filter + verdict pills + Save to Folder
+      + Clear). A section label and a border-top divider separate the two.
+    </p>
+    <p>
+      Scan All Jobs gets taller (44 px) and larger font (15 px) to visually dominate
+      the panel. Save to Folder and its filter controls are visually subordinate —
+      smaller section label, secondary styling. The per-card folder icon (previously
+      <code>opacity: 0.3</code>) bumps to <code>0.55</code> for discoverability.
+    </p>
+    <p>
+      A <code>?</code> button on the "Save to Folder" section label opens an inline
+      tooltip explaining score threshold + verdict meanings. Uses a new
+      <code>#ww-ext-help-tooltip</code> element (separate from the badge tooltip).
+    </p>
+
+    <h3>v03.005 — Sidebar empty-state guide</h3>
+
+    <p>
+      Replaces the plain "No jobs scored yet" text with a three-step get-started
+      card. Steps 1 and 2 show live status — a checkmark circle if the API key is
+      set / CV text is present, an unlit number otherwise. Step 3 lights up after
+      the first scan completes. An inline "Settings" link opens the options page.
+    </p>
+    <p>
+      The guide updates in real-time via <code>chrome.storage.onChanged</code> so
+      the checkmarks appear immediately when the user fills in the options page in
+      another tab.
+    </p>
+
+    <h3>v03.006 — Options page: (?) help icons</h3>
+
+    <p>
+      Small <code>?</code> buttons added next to three confusing elements in the
+      options page. Each toggles a caret-popover on click; clicking outside dismisses
+      it. No external library — pure CSS + a few lines of JS.
+    </p>
+    <ul>
+      <li><strong>Model dropdown</strong> — "Flash is cheaper and fast. Pro is more accurate but roughly 10× the cost per token."</li>
+      <li><strong>Token Usage card</strong> — explains Input / Output / Cached columns and links to Gemini pricing.</li>
+      <li><strong>Custom Match Criteria</strong> — example: "Only remote roles in Canada; no Web3 companies."</li>
+    </ul>
+
+    <h3>v03.007 — Options page: Clear CV text button</h3>
+
+    <p>
+      A "Clear CV text" secondary button on the Profile &amp; Context tab, next to
+      the "Extracted Profile" card heading. On click: <code>confirm()</code> prompt,
+      then clears <code>cvText</code> from storage and empties the textarea. Scoped
+      to CV text only — does not touch the API key, preferences, token counter,
+      or scores.
+    </p>
+
+    <h3>v03.008 — Options page: Settings tab expansion</h3>
+
+    <p>
+      The Settings tab currently has only the theme toggle. Two new cards are added:
     </p>
     <ul>
       <li>
-        <strong>responseSchema</strong> — replace the "respond as JSON…" prose
-        in the prompt with Gemini's native structured-output config.
-        Saves ~50 tokens/call and eliminates JSON parse failures.
+        <strong>How to use</strong> (top) — four-step recap of the setup and scan flow,
+        plus a "Show welcome page again" button that opens <code>welcome.html</code>
+        in a new tab.
       </li>
       <li>
-        <strong>Context caching</strong> — upload the stable portion (system
-        instruction + profile) once per scan session via
-        <code>POST /v1beta/cachedContents</code>. Each subsequent scoring call
-        references the cache name; cached tokens are billed at ~25% of normal
-        input rate. Job descriptions and preferences (small, variable) are
-        always sent inline.
+        <strong>About</strong> (bottom) — version number (read live from
+        <code>chrome.runtime.getManifest().version</code>), creator link
+        (<a href="https://hyoseo.dev">hyoseo.dev</a>), GitHub link
+        (<a href="https://github.com/hyoseo837/ww-extension">hyoseo837/ww-extension</a>),
+        privacy policy link
+        (<a href="https://hyoseo.dev/privacy-policy/ww-extension/">hyoseo.dev/privacy-policy/ww-extension/</a>),
+        Ko-fi link (<a href="https://ko-fi.com/hyoseo">ko-fi.com/hyoseo</a>),
+        and a one-paragraph plain-English data handling summary.
       </li>
     </ul>
-    <p>
-      Caching must come after v02.002 because Gemini 2.5 Flash has a 1,024-token
-      minimum for cached content — the text CV alone (~550 tokens) is below the
-      floor; the PDF profile easily clears it. Cache lifetime is per scan session
-      (TTL 30 min), not persisted to <code>chrome.storage</code>.
-    </p>
-    <p>
-      Batching multiple jobs per request was considered and rejected: it achieves the
-      same token savings as caching but at the cost of relative-scoring bias and
-      worse per-job error recovery.
-    </p>
 
 
-    <h2>Out of scope (still)</h2>
+    <h2>Out of scope</h2>
 
     <p>
-      Same as v01: auto-apply, cover-letter generation, non-Gemini providers,
-      backend server, mobile/desktop apps. Cross-session score persistence is
-      now in scope (already shipped in v01).
+      Continued from v01/v02: auto-apply, cover-letter generation, non-Gemini
+      providers, backend server.
     </p>
+    <p>
+      v03-specific exclusions (deliberately deferred):
+    </p>
+    <ul>
+      <li>Auto-open sidebar on WW jobs page load.</li>
+      <li>Toolbar-icon shortcut to trigger a scan (icon still opens Options).</li>
+      <li>Collapsible "Save to Folder" panel in sidebar (visual grouping only).</li>
+      <li>Full "reset all extension data" destructive button (targeted Clear CV is enough).</li>
+      <li>Fix for the <code>scrollToRow</code> "not in current view" papercut from v01 — remains a known limitation.</li>
+    </ul>
   </body>
 </html>
