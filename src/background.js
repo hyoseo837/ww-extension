@@ -27,12 +27,69 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     chrome.runtime.openOptionsPage();
     return;
   }
-  if (msg.type !== 'scoreJob') return;
-  scoreJob(msg).then(sendResponse);
-  return true; // keep message channel open for async response
+  if (msg.type === 'scoreJob') {
+    scoreJob(msg).then(sendResponse);
+    return true; // keep message channel open for async response
+  }
+  if (msg.type === 'createCache') {
+    createCache(msg).then(sendResponse);
+    return true;
+  }
+  if (msg.type === 'deleteCache') {
+    deleteCache(msg.cacheName);
+    return; // fire-and-forget
+  }
+  if (msg.type === 'addTokens') {
+    incrementTokenUsage(msg.usage);
+    return; // fire-and-forget
+  }
 });
 
-async function scoreJob({ meta, descriptionText, cvText, preferences, cacheName, apiKey, model }) {
+// API key stays in background context — never sent over chrome.runtime
+// messages or exposed to the page's Network tab.
+async function createCache({ cvText, model }) {
+  try {
+    const { apiKey } = await chrome.storage.local.get('apiKey');
+    if (!apiKey) return { ok: false };
+    const res = await fetch(
+      'https://generativelanguage.googleapis.com/v1beta/cachedContents',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': apiKey },
+        body: JSON.stringify({
+          model: `models/${model || 'gemini-2.5-flash'}`,
+          systemInstruction: { parts: [{ text: SYSTEM_TEXT }] },
+          contents: [{ role: 'user', parts: [{ text: `Candidate Profile:\n${cvText}` }] }],
+          ttl: '1800s'
+        })
+      }
+    );
+    if (!res.ok) return { ok: false };
+    const data = await res.json();
+    return { ok: true, cacheName: data.name ?? null };
+  } catch {
+    return { ok: false };
+  }
+}
+
+async function deleteCache(cacheName) {
+  if (!cacheName) return;
+  try {
+    const { apiKey } = await chrome.storage.local.get('apiKey');
+    if (!apiKey) return;
+    await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/${cacheName}`,
+      { method: 'DELETE', headers: { 'X-Goog-Api-Key': apiKey } }
+    );
+  } catch {
+    // Cleanup failure is non-fatal — cache will expire on its 1800s TTL.
+  }
+}
+
+async function scoreJob({ meta, descriptionText, cvText, preferences, cacheName, model }) {
+  const { apiKey } = await chrome.storage.local.get('apiKey');
+  if (!apiKey) return fail('NO_KEY', 'API key not configured');
+
   const resolvedModel = model || 'gemini-2.5-flash';
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${resolvedModel}:generateContent`;
 
@@ -103,7 +160,9 @@ function validate(p) {
   if (!p || typeof p !== 'object') return null;
   const score   = Number(p.score);
   const verdict = String(p.verdict ?? '');
-  const reason  = String(p.reason  ?? '');
+  // Cap at 1000 chars to keep chrome.storage.local from bloating if the
+  // model ever ignores the "2–3 sentences" instruction.
+  const reason  = String(p.reason  ?? '').slice(0, 1000);
   if (!Number.isInteger(score) || score < 1 || score > 10) return null;
   if (!VALID_VERDICTS.has(verdict)) return null;
   if (!reason) return null;

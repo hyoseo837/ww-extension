@@ -5,13 +5,6 @@ const SCAN_DELAY_MS  = 600;
 const FETCH_TIMEOUT  = 15000;
 const VERDICT_ORDER  = { Apply: 0, Consider: 1, Skip: 2 };
 
-const SYSTEM_TEXT =
-`You are a job-fit scorer. Score how well the candidate fits the job.
-
-score: 1–10 (10 = perfect fit)
-verdict: Apply if strong fit, Consider if marginal, Skip if poor fit
-reason: 2–3 sentences explaining the score`;
-
 const scores = new Map(); // postingId → {score, verdict, reason, title, org}
 let allPostingIds = [];   // ordered list from selectAll — used for page navigation
 let aborted = false;
@@ -209,8 +202,6 @@ async function scanAllJobs() {
   stopBtn.disabled = false;
   aborted = false;
 
-  let scanApiKey = null;
-
   try {
     const tokens = await sendBridge('extractTokens');
     if (!tokens.selectAll) {
@@ -238,33 +229,22 @@ async function scanAllJobs() {
       return;
     }
 
-    scanApiKey = settings.apiKey;
-
-    // Try to create a context cache for this scan session.
+    // Ask background to create a context cache for this scan session.
+    // The API key stays in the background context and is never sent through
+    // chrome.runtime messages or exposed in the page's Network tab.
     // Requires ≥ 1,024 tokens of cached content — falls back to inline if it fails.
     cacheName = null;
     try {
-      const cacheRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/cachedContents`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': settings.apiKey },
-          body: JSON.stringify({
-            model: `models/${settings.model || 'gemini-2.5-flash'}`,
-            systemInstruction: { parts: [{ text: SYSTEM_TEXT }] },
-            contents: [{ role: 'user', parts: [{ text: `Candidate Profile:\n${settings.cvText}` }] }],
-            ttl: '1800s'
-          })
-        }
-      );
-      if (cacheRes.ok) {
-        const cd = await cacheRes.json();
-        cacheName = cd.name ?? null;
-      }
+      const cacheReply = await chrome.runtime.sendMessage({
+        type:   'createCache',
+        cvText: settings.cvText,
+        model:  settings.model || 'gemini-2.5-flash'
+      });
+      if (cacheReply?.ok) cacheName = cacheReply.cacheName;
       // Cache create failures fall through silently — token counter shows the
       // impact (cached column stays at 0) and scoring proceeds inline.
     } catch (e) {
-      // Network error on cache create — same fallback as above.
+      // Messaging error — same fallback as above.
     }
 
     allPostingIds = postingIds.map(String);
@@ -312,7 +292,6 @@ async function scanAllJobs() {
         cvText:      settings.cvText,
         preferences: settings.preferences || '',
         cacheName,
-        apiKey:      settings.apiKey,
         model:       settings.model || 'gemini-2.5-flash'
       });
 
@@ -344,11 +323,8 @@ async function scanAllJobs() {
   } catch (e) {
     setProgress(`Error: ${e.message}`, true);
   } finally {
-    if (cacheName && scanApiKey) {
-      fetch(
-        `https://generativelanguage.googleapis.com/v1beta/${cacheName}`,
-        { method: 'DELETE', headers: { 'X-Goog-Api-Key': scanApiKey } }
-      ).catch(() => {});
+    if (cacheName) {
+      chrome.runtime.sendMessage({ type: 'deleteCache', cacheName }).catch(() => {});
       cacheName = null;
     }
     scanBtn.disabled = false;
@@ -532,7 +508,8 @@ async function scrollToRow(postingId) {
 
 function esc(value) {
   return String(value ?? '')
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────

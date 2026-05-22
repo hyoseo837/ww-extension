@@ -41,20 +41,12 @@ function renderTokens(usage) {
   el('tokCached').textContent = fmt(usage?.cached);
 }
 
-// Serialize get→set so concurrent API calls don't lose increments.
-let tokenWriteChain = Promise.resolve();
+// Route through background so there's a single serialized writer to
+// tokenUsage — prevents lost updates when an options-page PDF extract
+// races with a content-script scan.
 function incrementTokenUsage(usage) {
   if (!usage) return;
-  tokenWriteChain = tokenWriteChain.then(() => new Promise(resolve => {
-    chrome.storage.local.get('tokenUsage', stored => {
-      const cur = stored.tokenUsage || { input: 0, cached: 0, output: 0 };
-      chrome.storage.local.set({ tokenUsage: {
-        input:  cur.input  + (usage.promptTokenCount        ?? 0),
-        cached: cur.cached + (usage.cachedContentTokenCount ?? 0),
-        output: cur.output + (usage.candidatesTokenCount    ?? 0)
-      }}, resolve);
-    });
-  }));
+  chrome.runtime.sendMessage({ type: 'addTokens', usage }).catch(() => {});
 }
 
 chrome.storage.onChanged.addListener((changes, area) => {
