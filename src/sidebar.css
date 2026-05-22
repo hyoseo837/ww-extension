@@ -256,10 +256,10 @@
 #ww-ext-min-score {
   width: 46px;
   padding: 5px 6px;
-  background: var(--s-input-bg);
-  border: 1px solid var(--s-border);
+  background: var(--s-input-bg) !important;
+  border: 1px solid var(--s-border) !important;
   border-radius: 4px;
-  color: var(--s-on);
+  color: var(--s-on) !important;
   font: 12px monospace;
   text-align: center;
   outline: none;
