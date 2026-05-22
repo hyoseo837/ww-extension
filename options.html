@@ -566,6 +566,19 @@
         <h1 class="page-title">Settings</h1>
         <p class="page-subtitle">Customize your extension experience.</p>
 
+        <!-- How to use -->
+        <div class="card">
+          <span class="field-label">How to Use</span>
+          <ol style="margin:0; padding-left:20px; display:flex; flex-direction:column; gap:8px; font-size:13px; color:var(--on-surface); line-height:1.6;">
+            <li>Go to <b>API Configuration</b> and paste your <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--primary-dim);">Gemini API key</a>. Click Save.</li>
+            <li>Go to <b>Profile &amp; Context</b>, drop in your CV PDF, click <b>Extract Profile</b>, then <b>Update Profile</b>.</li>
+            <li>Optionally add <b>Custom Match Criteria</b> (e.g. "Remote only, no Web3") to sharpen scoring.</li>
+            <li>Navigate to the <a href="https://waterlooworks.uwaterloo.ca/myAccount/co-op/full/jobs.htm" target="_blank" style="color:var(--primary-dim);">WaterlooWorks jobs list</a>, click the purple <b>AI Score</b> tab on the right edge, then hit <b>Scan All Jobs</b>.</li>
+          </ol>
+          <button class="btn-secondary" id="showWelcome" style="margin-top:16px; width:auto; padding:7px 16px;">Show welcome page again</button>
+        </div>
+
+        <!-- Theme -->
         <div class="card">
           <div class="setting-row">
             <div>
@@ -578,6 +591,27 @@
               <span class="theme-opt" id="themeOptLight">Light</span>
             </div>
           </div>
+        </div>
+
+        <!-- About -->
+        <div class="card">
+          <span class="field-label">About</span>
+          <div style="display:flex; align-items:baseline; gap:10px; margin-bottom:14px;">
+            <span style="font-size:15px; font-weight:600; color:var(--on-surface);">WW Extension</span>
+            <span id="extVersion" style="font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--on-surface-dim);"></span>
+          </div>
+          <div style="display:flex; flex-wrap:wrap; gap:10px 20px; font-size:13px; margin-bottom:16px;">
+            <a href="https://hyoseo.dev" target="_blank" style="color:var(--primary-dim); text-decoration:none;">hyoseo.dev</a>
+            <a href="https://github.com/hyoseo837/ww-extension" target="_blank" style="color:var(--primary-dim); text-decoration:none;">GitHub</a>
+            <a href="https://hyoseo.dev/privacy-policy/ww-extension/" target="_blank" style="color:var(--primary-dim); text-decoration:none;">Privacy Policy</a>
+            <a href="https://ko-fi.com/hyoseo" target="_blank" style="color:var(--primary-dim); text-decoration:none;">Buy me a coffee</a>
+          </div>
+          <p style="font-size:12px; color:var(--on-surface-dim); line-height:1.65; margin:0;">
+            All settings, your CV text, and scoring results are stored locally in your browser via
+            <code style="font-size:11px;">chrome.storage.local</code>.
+            Job descriptions and your profile are sent to Google's Gemini API for scoring.
+            No data is sent to any server controlled by the developer.
+          </p>
         </div>
       </div>
 

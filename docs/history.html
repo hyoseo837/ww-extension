@@ -19,6 +19,29 @@
       for the same pattern applied to v02.001 through v02.022.
     </p>
 
+    <h2>v03.008 — Options page: Settings tab expansion (2026-05-22)</h2>
+
+    <p>
+      The Settings tab now has three cards: How to Use (top), Theme (middle),
+      About (bottom). This ordering puts the actionable guidance first, keeps the
+      familiar Theme toggle in the middle, and leaves static attribution at the bottom
+      where it is out of the way for returning users.
+    </p>
+    <p>
+      Version number is read live from <code>chrome.runtime.getManifest().version</code>
+      rather than hardcoded, so it stays accurate across releases without a source
+      edit. The "Show welcome page again" button calls <code>chrome.tabs.create</code>
+      directly from the options context (no background message needed, since options
+      pages have full chrome.tabs access).
+    </p>
+    <p>
+      The About card links (hyoseo.dev, GitHub, Privacy Policy, Ko-fi) open in new
+      tabs via <code>target="_blank"</code>. No <code>rel="noopener"</code> is needed
+      here because the extension has no page context that an opened tab could exploit.
+      The data-handling summary is kept deliberately short and plain-English rather
+      than legal-style — matching the informal tone of the rest of the extension.
+    </p>
+
     <h2>v03.007 — Options page: Clear CV text (2026-05-22)</h2>
 
     <p>

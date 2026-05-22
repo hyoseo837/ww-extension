@@ -111,7 +111,7 @@
       <li>Verify: button appears only when CV text is present (or always — simpler); after confirm, textarea empty and storage cleared.</li>
     </ul>
 
-    <h3>v03.008 — Options page: Settings tab expansion [TODO]</h3>
+    <h3>v03.008 — Options page: Settings tab expansion [DONE]
     <ul>
       <li><code>options.html</code>: add "How to use" card (top of Settings tab) with 4-step recap + "Show welcome page again" button. Add "About" card (bottom) with version, creator/GitHub/privacy/Ko-fi links, data-handling summary.</li>
       <li><code>src/options.js</code>: render <code>chrome.runtime.getManifest().version</code> into the version element. Wire "Show welcome page again" → <code>chrome.tabs.create</code> for <code>welcome.html</code>.</li>

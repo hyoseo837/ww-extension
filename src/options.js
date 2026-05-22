@@ -230,6 +230,14 @@ el('test').addEventListener('click', async () => {
   }
 });
 
+// ── About / Settings tab ──────────────────────────────────────────────────────
+
+el('extVersion').textContent = 'v' + chrome.runtime.getManifest().version;
+
+el('showWelcome').addEventListener('click', () => {
+  chrome.tabs.create({ url: chrome.runtime.getURL('welcome.html') });
+});
+
 // ── Clear CV text ─────────────────────────────────────────────────────────────
 
 el('clearCv').addEventListener('click', () => {
