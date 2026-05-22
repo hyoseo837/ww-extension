@@ -14,7 +14,7 @@ Score every co-op posting against your CV in seconds. See which jobs are worth a
 
 ---
 
-![Sidebar in action on WaterlooWorks](design/waterlooworks_with_stealth_sidebar_integration/screen.png)
+![Sidebar in action on WaterlooWorks](screenshots/wwextsidebar.png)
 
 ## What it does
 
@@ -43,8 +43,8 @@ Scores appear as inline badges directly in the WaterlooWorks job table and persi
 
 <table>
 <tr>
-<td width="50%"><b>Profile & CV setup</b><br/><img src="design/profile_context/screen.png" alt="Profile and context settings" /></td>
-<td width="50%"><b>Sidebar on WW</b><br/><img src="design/waterlooworks_with_stealth_sidebar_integration/screen.png" alt="Sidebar integrated with WaterlooWorks" /></td>
+<td width="50%"><b>Profile & CV setup</b><br/><img src="screenshots/wwextprofile.png" alt="Profile and context settings" /></td>
+<td width="50%"><b>API key & token usage</b><br/><img src="screenshots/wwextoption.png" alt="API configuration and token counter" /></td>
 </tr>
 </table>
 
