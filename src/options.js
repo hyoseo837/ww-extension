@@ -230,6 +230,18 @@ el('test').addEventListener('click', async () => {
   }
 });
 
+// ── Clear CV text ─────────────────────────────────────────────────────────────
+
+el('clearCv').addEventListener('click', () => {
+  if (!confirm('Clear extracted CV text? You will need to re-upload your PDF to score new jobs.')) return;
+  chrome.storage.local.remove('cvText', () => {
+    el('extractedText').value = '';
+    el('fileName').textContent = '';
+    droppedFile = null;
+    setExtractStatus('CV text cleared.', 'ok');
+  });
+});
+
 // ── Help popover toggle ───────────────────────────────────────────────────────
 
 const helpPopover = el('opts-help-popover');

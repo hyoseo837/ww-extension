@@ -19,6 +19,21 @@
       for the same pattern applied to v02.001 through v02.022.
     </p>
 
+    <h2>v03.007 — Options page: Clear CV text (2026-05-22)</h2>
+
+    <p>
+      Button scoped to <code>cvText</code> only — does not touch the API key,
+      preferences, token counter, or scores. This matches the user's preference
+      against a full "reset all data" button (confirmed during planning). The
+      <code>confirm()</code> guard prevents accidental clicks; the status line
+      reports success in the same <code>#extractStatus</code> element used by
+      the Extract flow so there is no new status element to manage.
+    </p>
+    <p>
+      <code>droppedFile</code> is also cleared so a subsequent "Extract" click
+      cannot re-extract from the file that was already cleared without re-dropping it.
+    </p>
+
     <h2>v03.006 — Options page: (?) help icons (2026-05-22)</h2>
 
     <p>
