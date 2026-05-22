@@ -16,6 +16,10 @@ Score every co-op posting against your CV in seconds. See which jobs are worth a
 
 ---
 
+![Demo](screenshots/demoVideo.gif)
+
+[▶ Full walkthrough on YouTube](https://www.youtube.com/watch?v=YURcZTqKS5U)
+
 ![Sidebar in action on WaterlooWorks](screenshots/wwextsidebar.png)
 
 ## What it does
