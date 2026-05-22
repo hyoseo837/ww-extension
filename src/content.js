@@ -369,7 +369,7 @@ function renderSidebarList() {
         </div>
         <div class="ww-ext-guide-step" id="ww-ext-step-cv">
           <span class="ww-ext-step-num">2</span>
-          <div>Upload your CV in Profile &amp; Context</div>
+          <div>Upload your application package in Profile &amp; Context</div>
         </div>
         <div class="ww-ext-guide-step">
           <span class="ww-ext-step-num">3</span>

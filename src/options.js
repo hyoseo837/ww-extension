@@ -5,7 +5,7 @@ const el = id => document.getElementById(id);
 const HELP_CONTENT = {
   model:    'Flash: faster and cheaper (~$0.15 / 1M input tokens). Pro: more accurate, better reasoning, but ~10× the cost. Flash is recommended — it scores jobs very well.',
   tokens:   'Input: tokens you send to Gemini (job + profile). Output: tokens in the AI\'s reply. Cached: input tokens that hit a server-side cache, billed at ~25% of normal — already counted inside Input. Reset the counter anytime; it\'s only stored locally.',
-  criteria: 'Free-form preferences the AI weighs when scoring. Examples: "Remote or hybrid only", "Toronto preferred", "No Web3 or crypto". Leave empty to score purely on CV fit — no extra token cost.'
+  criteria: 'Free-form preferences the AI weighs when scoring. Examples: "Remote or hybrid only", "Toronto preferred", "No Web3 or crypto". Leave empty to score purely on profile fit — no extra token cost.'
 };
 
 // ── Tab navigation ────────────────────────────────────────────────────────────
@@ -241,12 +241,12 @@ el('showWelcome').addEventListener('click', () => {
 // ── Clear CV text ─────────────────────────────────────────────────────────────
 
 el('clearCv').addEventListener('click', () => {
-  if (!confirm('Clear extracted CV text? You will need to re-upload your PDF to score new jobs.')) return;
+  if (!confirm('Clear extracted profile text? You will need to re-upload your application package to score new jobs.')) return;
   chrome.storage.local.remove('cvText', () => {
     el('extractedText').value = '';
     el('fileName').textContent = '';
     droppedFile = null;
-    setExtractStatus('CV text cleared.', 'ok');
+    setExtractStatus('Profile text cleared.', 'ok');
   });
 });
 

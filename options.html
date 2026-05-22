@@ -514,13 +514,13 @@
       <!-- ── Profile & Context ── -->
       <div id="tab-context" class="tab-panel">
         <h1 class="page-title">Profile & Context</h1>
-        <p class="page-subtitle">Upload your CV to let AI extract your profile, then set custom match criteria.</p>
+        <p class="page-subtitle">Upload your application package to let AI extract your profile, then set custom match criteria.</p>
 
         <div class="two-col">
 
           <div>
             <div class="card">
-              <span class="field-label">Import CV (PDF)</span>
+              <span class="field-label">Import Application Package (PDF)</span>
               <div class="drop-zone" id="dropZone">
                 <input id="packageFile" type="file" accept=".pdf" />
                 <div class="drop-zone-icon">📄</div>
@@ -534,7 +534,7 @@
             <div class="card ai-card">
               <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
                 <span class="field-label" style="margin-bottom:0;">Extracted Profile</span>
-                <button class="btn-secondary" id="clearCv" style="margin-top:0; padding:4px 12px; font-size:12px;">Clear CV text</button>
+                <button class="btn-secondary" id="clearCv" style="margin-top:0; padding:4px 12px; font-size:12px;">Clear profile text</button>
               </div>
               <textarea id="extractedText" readonly placeholder="Extracted text will appear here after clicking Extract Profile..."></textarea>
             </div>
@@ -571,7 +571,7 @@
           <span class="field-label">How to Use</span>
           <ol style="margin:0; padding-left:20px; display:flex; flex-direction:column; gap:8px; font-size:13px; color:var(--on-surface); line-height:1.6;">
             <li>Go to <b>API Configuration</b> and paste your <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--primary-dim);">Gemini API key</a>. Click Save.</li>
-            <li>Go to <b>Profile &amp; Context</b>, drop in your CV PDF, click <b>Extract Profile</b>, then <b>Update Profile</b>.</li>
+            <li>Go to <b>Profile &amp; Context</b>, drop in your application package PDF (from WaterlooWorks Documents), click <b>Extract Profile</b>, then <b>Update Profile</b>.</li>
             <li>Optionally add <b>Custom Match Criteria</b> (e.g. "Remote only, no Web3") to sharpen scoring.</li>
             <li>Navigate to the <a href="https://waterlooworks.uwaterloo.ca/myAccount/co-op/full/jobs.htm" target="_blank" style="color:var(--primary-dim);">WaterlooWorks jobs list</a>, click the purple <b>AI Score</b> tab on the right edge, then hit <b>Scan All Jobs</b>.</li>
           </ol>
@@ -607,7 +607,7 @@
             <a href="https://ko-fi.com/hyoseo" target="_blank" style="color:var(--primary-dim); text-decoration:none;">Buy me a coffee</a>
           </div>
           <p style="font-size:12px; color:var(--on-surface-dim); line-height:1.65; margin:0;">
-            All settings, your CV text, and scoring results are stored locally in your browser via
+            All settings, your extracted profile text, and scoring results are stored locally in your browser via
             <code style="font-size:11px;">chrome.storage.local</code>.
             Job descriptions and your profile are sent to Google's Gemini API for scoring.
             No data is sent to any server controlled by the developer.
