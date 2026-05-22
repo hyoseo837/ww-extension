@@ -28,12 +28,14 @@
     <ul>
       <li>
         <strong>Current (v02, since 2026-05-20)</strong>:
-        <code>plan-v02.html</code>, <code>impl-v02.html</code>,
-        <code>history-v02.html</code>. All new work documents itself here.
+        <code>docs/plan.html</code>, <code>docs/impl.html</code>,
+        <code>docs/history.html</code>. All new work documents itself here.
       </li>
       <li>
         <strong>Archived (v01.001 → v01.020)</strong>:
-        <code>plan.html</code>, <code>impl.html</code>, <code>history.html</code>.
+        <code>docs/v01-archive/plan.html</code>,
+        <code>docs/v01-archive/impl.html</code>,
+        <code>docs/v01-archive/history.html</code>.
         Historical reference only. Do not extend.
       </li>
     </ul>
@@ -51,22 +53,53 @@
       abstraction.
     </p>
 
-    <h2>4. Document in history.html after each phase</h2>
+    <h2>4. Document in docs/history.html after each phase</h2>
     <p>
       After completing each implementation phase, add a concise entry to
-      <code>history.html</code>. Record only crucial decisions or non-obvious choices
-      — not a step-by-step log. A decision is worth recording if a future agent
-      reading only history.html and plan.html would otherwise make a different
-      choice.
+      <code>docs/history.html</code>. Record only crucial decisions or
+      non-obvious choices — not a step-by-step log. A decision is worth
+      recording if a future agent reading only <code>docs/history.html</code>
+      and <code>docs/plan.html</code> would otherwise make a different choice.
     </p>
 
-    <h2>5. Versioning — vXX.XXX</h2>
+    <h2>5. Versioning — vXX.YZW</h2>
     <p>
       Every commit must include a version number in the message using the
-      format vXX.XXX. The first number is the major version — increment it when
-      adding a new feature or reconstructing the project structure. The second
-      number increments on every commit. Some versions may be non-functional;
-      that is expected and acceptable.
+      format <code>vXX.YZW</code> (three digits after the dot). The three
+      parts decompose as:
+    </p>
+    <ul>
+      <li>
+        <strong>XX — major version.</strong> Increment when adding a new
+        feature set or restructuring the project.
+      </li>
+      <li>
+        <strong>YZ — planned phase within the major version.</strong> Each
+        phase's first commit ends in <code>0</code>
+        (e.g. <code>v03.010</code>, <code>v03.020</code>,
+        <code>v03.030</code>).
+      </li>
+      <li>
+        <strong>W — sub-commit within a phase.</strong> If a phase needs more
+        than one commit, increment the last digit
+        (<code>v03.020</code> → <code>v03.021</code> →
+        <code>v03.022</code>). The next planned phase resets to
+        <code>0</code> (e.g. <code>v03.030</code>).
+      </li>
+    </ul>
+    <p>
+      Some versions may be non-functional; that is expected and acceptable.
+    </p>
+
+    <p>
+      <strong>manifest.json mirrors the commit version</strong>, translated to
+      the three-component form Chrome requires:
+      <code>vXX.YZW</code> → <code>XX.YZ.W</code>. Examples:
+      <code>v03.010</code> → <code>3.1.0</code>,
+      <code>v03.020</code> → <code>3.2.0</code>,
+      <code>v03.022</code> → <code>3.2.2</code>. Bump
+      <code>manifest.json</code>'s <code>version</code> field in the same
+      commit that introduces the new version number.
     </p>
   </body>
 </html>

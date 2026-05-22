@@ -18,15 +18,16 @@
       Read these in order before writing v02 code:
     </p>
     <ol>
-      <li><strong>plan-v02.html</strong> — v02 vision, where v01 ended, confirmed v02 features</li>
+      <li><strong>docs/plan.html</strong> — v02 vision, where v01 ended, confirmed v02 features</li>
       <li><strong>~/.claude/plans/tidy-orbiting-nova.md</strong> — full design notes for v02.001 (the next phase)</li>
-      <li><strong>impl-v02.html</strong> (this file) — build order, phase status</li>
-      <li><strong>history-v02.html</strong> — decisions recorded as v02 phases land</li>
+      <li><strong>docs/impl.html</strong> (this file) — build order, phase status</li>
+      <li><strong>docs/history.html</strong> — decisions recorded as v02 phases land</li>
     </ol>
 
     <p>
-      v01 docs (<code>plan.html</code>, <code>impl.html</code>, <code>history.html</code>)
-      are historical. Reference them only when you need to understand pre-existing
+      v01 docs in <code>docs/v01-archive/</code> (<code>plan.html</code>,
+      <code>impl.html</code>, <code>history.html</code>) are historical.
+      Reference them only when you need to understand pre-existing
       behavior; do not extend them.
     </p>
 
@@ -41,7 +42,7 @@
       <li><code>src/background.js</code> — Gemini client (will gain preferences in scoreJob signature + prompt)</li>
       <li><code>src/page-bridge.js</code> — page-context bridge for extractTokens / fetchOverview / openFolderSidebar(Bulk)</li>
       <li><code>src/sidebar.css</code> — all extension styling</li>
-      <li><code>exampleWW.html</code> (553KB, don't read) and <code>exampleWW-compact.html</code> (15KB extract) — WW DOM/JS reference</li>
+      <li><code>docs/examples/exampleWW.html</code> (553KB, don't read) and <code>docs/examples/exampleWW-compact.html</code> (15KB extract) — WW DOM/JS reference</li>
     </ul>
 
     <h3>chrome.storage.local keys in use</h3>
@@ -166,7 +167,7 @@
       <li><strong>Shape validation:</strong> <code>loadScores</code> drops entries missing valid score/verdict/reason. Guards against corrupted storage and future schema migrations.</li>
       <li><strong>Reset detectedPageSize:</strong> <code>clearScores</code> resets the pagination estimate to the default 50 instead of leaving stale state.</li>
       <li><strong>Doc drift:</strong> v02.002 history entry now notes v02.007 dropped the PDF cap from 20 → 5 MB; v02.016 history corrected — only the two scoring/extraction call sites are tracked, Test API Key intentionally not counted.</li>
-      <li>Touches: <code>src/content.js</code>, <code>src/background.js</code>, <code>impl-v02.html</code>, <code>history-v02.html</code>.</li>
+      <li>Touches: <code>src/content.js</code>, <code>src/background.js</code>, <code>docs/impl.html</code>, <code>docs/history.html</code>.</li>
     </ul>
 
 
