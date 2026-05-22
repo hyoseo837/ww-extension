@@ -1,5 +1,13 @@
 const el = id => document.getElementById(id);
 
+// ── Help popovers ─────────────────────────────────────────────────────────────
+
+const HELP_CONTENT = {
+  model:    'Flash: faster and cheaper (~$0.15 / 1M input tokens). Pro: more accurate, better reasoning, but ~10× the cost. Flash is recommended — it scores jobs very well.',
+  tokens:   'Input: tokens you send to Gemini (job + profile). Output: tokens in the AI\'s reply. Cached: input tokens that hit a server-side cache, billed at ~25% of normal — already counted inside Input. Reset the counter anytime; it\'s only stored locally.',
+  criteria: 'Free-form preferences the AI weighs when scoring. Examples: "Remote or hybrid only", "Toronto preferred", "No Web3 or crypto". Leave empty to score purely on CV fit — no extra token cost.'
+};
+
 // ── Tab navigation ────────────────────────────────────────────────────────────
 
 document.querySelectorAll('.nav-item').forEach(btn => {
@@ -219,5 +227,26 @@ el('test').addEventListener('click', async () => {
     }
   } catch (e) {
     setStatus(`Request failed: ${e.message}`, 'err');
+  }
+});
+
+// ── Help popover toggle ───────────────────────────────────────────────────────
+
+const helpPopover = el('opts-help-popover');
+
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.opts-help-btn');
+  if (btn) {
+    const key = btn.dataset.help;
+    const isSame = helpPopover.classList.contains('visible') && helpPopover.dataset.open === key;
+    if (isSame) { helpPopover.classList.remove('visible'); return; }
+    helpPopover.textContent = HELP_CONTENT[key] || '';
+    helpPopover.dataset.open = key;
+    const r = btn.getBoundingClientRect();
+    helpPopover.style.top  = (r.bottom + 8) + 'px';
+    helpPopover.style.left = Math.max(8, Math.min(r.left - 8, window.innerWidth - 300)) + 'px';
+    helpPopover.classList.add('visible');
+  } else if (!e.target.closest('#opts-help-popover')) {
+    helpPopover.classList.remove('visible');
   }
 });

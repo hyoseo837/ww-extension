@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "WW Extension",
-  "version": "3.0.4",
+  "version": "3.0.6",
   "description": "AI job scorer for WaterlooWorks",
   "permissions": ["storage"],
   "host_permissions": [

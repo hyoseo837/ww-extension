@@ -393,6 +393,44 @@
         transform: translateX(18px);
         background: #fff;
       }
+
+      /* ── Help popovers ───────────────────────────────────────────────────────── */
+      .opts-help-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: transparent;
+        border: 1px solid var(--outline);
+        color: var(--on-surface-dim);
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 10px;
+        font-weight: 600;
+        cursor: pointer;
+        padding: 0;
+        flex-shrink: 0;
+        transition: color 0.15s, border-color 0.15s;
+        vertical-align: middle;
+      }
+      .opts-help-btn:hover { color: var(--primary-dim); border-color: var(--primary); }
+
+      #opts-help-popover {
+        position: fixed;
+        z-index: 1000;
+        background: var(--surface-high);
+        border: 1px solid var(--outline);
+        border-radius: 8px;
+        padding: 12px 16px;
+        max-width: 280px;
+        font-size: 12px;
+        line-height: 1.65;
+        color: var(--on-surface);
+        box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+        display: none;
+      }
+      #opts-help-popover.visible { display: block; }
     </style>
   </head>
   <body>
@@ -431,8 +469,11 @@
             <input id="apiKey" type="password" placeholder="AIza..." />
           </div>
           <div class="field">
-            <span class="field-label">Model</span>
-            <select id="model">
+            <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
+              <span class="field-label" style="margin-bottom:0;">Model</span>
+              <button class="opts-help-btn" data-help="model">?</button>
+            </div>
+            <select id="model" style="margin-top:0;">
               <option value="gemini-2.5-flash">gemini-2.5-flash (default)</option>
               <option value="gemini-2.5-pro">gemini-2.5-pro</option>
             </select>
@@ -446,8 +487,9 @@
         <div id="status" class="status-line"></div>
 
         <div class="card" style="margin-top:20px;">
-          <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:16px;">
             <span class="field-label" style="margin:0; white-space:nowrap;">Cumulative Token Usage</span>
+            <button class="opts-help-btn" data-help="tokens">?</button>
             <div style="flex:1; height:1px; background:var(--outline);"></div>
           </div>
           <div class="token-stats">
@@ -498,8 +540,11 @@
           <div>
             <div class="card">
               <div class="field">
-                <span class="field-label">Custom Match Criteria</span>
-                <textarea id="preferences" style="min-height:180px;" placeholder="e.g. Only show remote roles, prioritize high salary, ignore Web3 companies..."></textarea>
+                <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
+                  <span class="field-label" style="margin-bottom:0;">Custom Match Criteria</span>
+                  <button class="opts-help-btn" data-help="criteria">?</button>
+                </div>
+                <textarea id="preferences" style="margin-top:0;" style="min-height:180px;" placeholder="e.g. Only show remote roles, prioritize high salary, ignore Web3 companies..."></textarea>
               </div>
               <button class="btn-primary" id="saveProfile">Update Profile</button>
               <div id="profileStatus" class="status-line"></div>
@@ -534,6 +579,8 @@
       </div>
 
     </main>
+
+    <div id="opts-help-popover"></div>
 
     <script src="src/options.js"></script>
   </body>

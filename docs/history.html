@@ -19,6 +19,30 @@
       for the same pattern applied to v02.001 through v02.022.
     </p>
 
+    <h2>v03.006 — Options page: (?) help icons (2026-05-22)</h2>
+
+    <p>
+      A single <code>#opts-help-popover</code> element is shared across all three
+      <code>?</code> buttons rather than one popover per button. The active key is
+      tracked in <code>dataset.open</code> so clicking the same <code>?</code> a
+      second time closes it (toggle behavior). Click-outside dismissal reuses the
+      document-level click handler pattern already present in the sidebar for the
+      badge and help tooltips.
+    </p>
+    <p>
+      The popover is <code>position: fixed</code> positioned from the button's
+      <code>getBoundingClientRect()</code> so it works regardless of scroll depth
+      in the options page. Left position is clamped to keep it on-screen on narrow
+      viewports.
+    </p>
+    <p>
+      The token usage help text deliberately avoids quoting current Gemini pricing
+      numbers because these change; it describes the cost model (cached = 25% of
+      normal input, included in the Input total) without hard dollar figures. The
+      model help text includes approximate figures only as a rough order-of-magnitude
+      guide, not as a commitment.
+    </p>
+
     <h2>v03.005 — Sidebar empty-state guide (2026-05-22)</h2>
 
     <p>
