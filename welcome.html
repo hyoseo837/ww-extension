@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Welcome — WW Extension</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@600;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+      :root {
+        --bg:         #0b1326;
+        --surface:    #131b2e;
+        --outline:    #494454;
+        --on:         #dae2fd;
+        --on-dim:     #8892a4;
+        --primary:    #a078ff;
+        --primary-dim:#d0bcff;
+        --on-primary: #1a0050;
+      }
+      body.light {
+        --bg:         #f7f9fb;
+        --surface:    #f2f4f6;
+        --outline:    #cbc3d7;
+        --on:         #191c1e;
+        --on-dim:     #7b7486;
+        --primary:    #6b38d4;
+        --primary-dim:#8455ef;
+        --on-primary: #ffffff;
+      }
+
+      body {
+        font-family: 'Inter', system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--on);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 20px;
+        font-size: 14px;
+        line-height: 20px;
+      }
+
+      .container { width: 100%; max-width: 540px; }
+
+      .logo-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 28px;
+      }
+      .logo-row img { width: 40px; height: 40px; border-radius: 8px; }
+      .logo-name {
+        font-family: 'Hanken Grotesk', sans-serif;
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+
+      h1 {
+        font-family: 'Hanken Grotesk', sans-serif;
+        font-size: 30px;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        margin-bottom: 10px;
+      }
+      .subtitle {
+        color: var(--on-dim);
+        font-size: 14px;
+        margin-bottom: 36px;
+        line-height: 1.6;
+      }
+
+      .steps {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-bottom: 36px;
+      }
+      .step {
+        display: flex;
+        align-items: flex-start;
+        gap: 14px;
+        background: var(--surface);
+        border: 1px solid var(--outline);
+        border-radius: 10px;
+        padding: 16px 18px;
+      }
+      .step-num {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: var(--primary);
+        color: var(--on-primary);
+        font-family: 'Hanken Grotesk', sans-serif;
+        font-size: 13px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        margin-top: 1px;
+      }
+      .step-title {
+        font-weight: 600;
+        font-size: 14px;
+        margin-bottom: 4px;
+      }
+      .step-desc {
+        font-size: 12px;
+        color: var(--on-dim);
+        line-height: 1.55;
+      }
+      .step-desc a { color: var(--primary-dim); text-decoration: none; }
+      .step-desc a:hover { text-decoration: underline; }
+
+      .ctas {
+        display: flex;
+        gap: 10px;
+      }
+      .btn-primary {
+        flex: 1;
+        background: var(--primary);
+        color: var(--on-primary);
+        border: none;
+        border-radius: 8px;
+        padding: 12px 24px;
+        font-family: 'Inter', sans-serif;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: opacity 0.15s;
+      }
+      .btn-primary:hover { opacity: 0.88; }
+      .btn-secondary {
+        flex: 1;
+        background: transparent;
+        color: var(--on-dim);
+        border: 1px solid var(--outline);
+        border-radius: 8px;
+        padding: 12px 24px;
+        font-family: 'Inter', sans-serif;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: border-color 0.15s, color 0.15s;
+      }
+      .btn-secondary:hover { color: var(--on); border-color: var(--primary-dim); }
+
+      .footer {
+        margin-top: 32px;
+        text-align: center;
+        font-size: 12px;
+        color: var(--on-dim);
+        line-height: 1.8;
+      }
+      .footer a { color: var(--on-dim); text-decoration: none; }
+      .footer a:hover { color: var(--primary-dim); }
+      .sep { margin: 0 6px; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="logo-row">
+        <img src="icons/icon48.png" alt="" />
+        <span class="logo-name">WW Extension</span>
+      </div>
+
+      <h1>Welcome!</h1>
+      <p class="subtitle">AI-powered job scoring for WaterlooWorks. Get set up in 3 steps.</p>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div>
+            <div class="step-title">Get a free Gemini API key</div>
+            <div class="step-desc">
+              Grab a free key from
+              <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a>.
+              The free tier is more than enough for scanning a full WW job board.
+            </div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div>
+            <div class="step-title">Paste your API key and upload your CV</div>
+            <div class="step-desc">
+              Open Settings (button below), go to <b>API Configuration</b> to save your key,
+              then go to <b>Profile &amp; Context</b> and drop in your PDF resume.
+              The AI uses your profile to score each job's fit.
+            </div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div>
+            <div class="step-title">Go to WaterlooWorks and scan</div>
+            <div class="step-desc">
+              Navigate to the
+              <a href="https://waterlooworks.uwaterloo.ca/myAccount/co-op/full/jobs.htm" target="_blank">co-op jobs list</a>,
+              click the purple <b>AI Score</b> tab on the right edge of the page,
+              then hit <b>Scan All Jobs</b>.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ctas">
+        <button class="btn-primary" id="openSettings">Open Settings</button>
+        <button class="btn-secondary" id="skip">Skip for now</button>
+      </div>
+
+      <div class="footer">
+        Made by <a href="https://hyoseo.dev" target="_blank">Hyoseo Lee</a>
+        <span class="sep">·</span>
+        <a href="https://github.com/hyoseo837/ww-extension" target="_blank">GitHub</a>
+        <span class="sep">·</span>
+        <a href="https://hyoseo.dev/privacy-policy/ww-extension/" target="_blank">Privacy</a>
+      </div>
+    </div>
+
+    <script>
+      chrome.storage.local.get('theme', d => {
+        if (d.theme === 'light') document.body.classList.add('light');
+      });
+      document.getElementById('openSettings').addEventListener('click', () => {
+        chrome.runtime.openOptionsPage();
+      });
+      document.getElementById('skip').addEventListener('click', () => window.close());
+    </script>
+  </body>
+</html>

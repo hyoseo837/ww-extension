@@ -18,6 +18,17 @@ const RESPONSE_SCHEMA = {
   required: ['score', 'verdict', 'reason']
 };
 
+chrome.runtime.onInstalled.addListener(details => {
+  if (details.reason === 'install') {
+    chrome.storage.local.get('welcomeShown', data => {
+      if (!data.welcomeShown) {
+        chrome.tabs.create({ url: chrome.runtime.getURL('welcome.html') });
+        chrome.storage.local.set({ welcomeShown: true });
+      }
+    });
+  }
+});
+
 chrome.action.onClicked.addListener(() => {
   chrome.runtime.openOptionsPage();
 });
@@ -25,6 +36,10 @@ chrome.action.onClicked.addListener(() => {
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.type === 'openOptions') {
     chrome.runtime.openOptionsPage();
+    return;
+  }
+  if (msg.type === 'openWelcome') {
+    chrome.tabs.create({ url: chrome.runtime.getURL('welcome.html') });
     return;
   }
   if (msg.type === 'scoreJob') {
