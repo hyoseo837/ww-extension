@@ -30,7 +30,13 @@ function applyThemeToContent(theme) {
 }
 
 chrome.storage.onChanged.addListener((changes, area) => {
-  if (area === 'local' && changes.theme) applyThemeToContent(changes.theme.newValue ?? 'dark');
+  if (area !== 'local') return;
+  if (changes.theme) applyThemeToContent(changes.theme.newValue ?? 'dark');
+  if (changes.apiKey || changes.cvText) {
+    chrome.storage.local.get(['apiKey', 'cvText'], data => {
+      updateGuideSteps(!!data.apiKey, !!(data.cvText && data.cvText.trim()));
+    });
+  }
 });
 
 // ── Bridge ────────────────────────────────────────────────────────────────────
@@ -354,7 +360,28 @@ function renderSidebarList() {
   const ul = document.getElementById('ww-ext-results');
   if (!ul) return;
   if (!scores.size) {
-    ul.innerHTML = `<li class="ww-ext-empty">No jobs scored yet. Click <b>Scan All Jobs</b> to start.</li>`;
+    ul.innerHTML = `
+      <li class="ww-ext-empty">
+        <div class="ww-ext-guide-title">Get started</div>
+        <div class="ww-ext-guide-step" id="ww-ext-step-key">
+          <span class="ww-ext-step-num">1</span>
+          <div>Set your API key in <button class="ww-ext-inline-link">Settings</button></div>
+        </div>
+        <div class="ww-ext-guide-step" id="ww-ext-step-cv">
+          <span class="ww-ext-step-num">2</span>
+          <div>Upload your CV in Profile &amp; Context</div>
+        </div>
+        <div class="ww-ext-guide-step">
+          <span class="ww-ext-step-num">3</span>
+          <div>Click <b>Scan All Jobs</b> above</div>
+        </div>
+      </li>`;
+    ul.querySelector('.ww-ext-inline-link')?.addEventListener('click', () => {
+      chrome.runtime.sendMessage({ type: 'openOptions' });
+    });
+    chrome.storage.local.get(['apiKey', 'cvText'], data => {
+      updateGuideSteps(!!data.apiKey, !!(data.cvText && data.cvText.trim()));
+    });
     return;
   }
   // Sort: score desc → verdict (Apply > Consider > Skip) → title asc, for stable rendering.
@@ -512,6 +539,12 @@ function esc(value) {
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
+// ── Sidebar help text ─────────────────────────────────────────────────────────
+
+const HELP_TEXTS = {
+  folder: 'Set filters for which scored jobs get saved to your WaterlooWorks shortlist. Score ≥ sets the minimum score (1–10). Verdict toggles further filter by AI rating — Apply = strong fit, Consider = marginal, Skip = poor fit.'
+};
+
 // ── Sidebar ───────────────────────────────────────────────────────────────────
 
 function injectSidebar() {
@@ -526,31 +559,41 @@ function injectSidebar() {
     <div id="ww-ext-header">
       <span>WW AI Scorer</span>
       <div class="ww-ext-header-btns">
+        <button id="ww-ext-help-open" title="How to use">?</button>
         <button id="ww-ext-settings" title="Settings">&#9881;</button>
         <button id="ww-ext-close">&#x2715;</button>
       </div>
     </div>
     <div id="ww-ext-controls">
-      <button id="ww-ext-scan">Scan All Jobs</button>
-      <button id="ww-ext-stop" disabled>Stop</button>
-      <div id="ww-ext-save-row">
-        <label for="ww-ext-min-score">Score ≥</label>
-        <input id="ww-ext-min-score" type="number" min="1" max="10" value="7">
+      <div class="ww-ext-section">
+        <div class="ww-ext-section-label">Scan</div>
+        <button id="ww-ext-scan">Scan All Jobs</button>
+        <button id="ww-ext-stop" disabled>Stop</button>
       </div>
-      <div id="ww-ext-verdict-row">
-        <label class="ww-ext-verdict-toggle" data-v="apply">
-          <input type="checkbox" data-verdict="Apply" checked>Apply
-        </label>
-        <label class="ww-ext-verdict-toggle" data-v="consider">
-          <input type="checkbox" data-verdict="Consider" checked>Consider
-        </label>
-        <label class="ww-ext-verdict-toggle" data-v="skip">
-          <input type="checkbox" data-verdict="Skip">Skip
-        </label>
-      </div>
-      <div id="ww-ext-action-row">
-        <button id="ww-ext-save-all">Save to Folder</button>
-        <button id="ww-ext-clear">Clear</button>
+      <div class="ww-ext-section">
+        <div class="ww-ext-section-label">
+          Save to Folder
+          <button class="ww-ext-help-btn" data-help="folder" title="What is this?">?</button>
+        </div>
+        <div id="ww-ext-save-row">
+          <label for="ww-ext-min-score">Score &ge;</label>
+          <input id="ww-ext-min-score" type="number" min="1" max="10" value="7">
+        </div>
+        <div id="ww-ext-verdict-row">
+          <label class="ww-ext-verdict-toggle" data-v="apply">
+            <input type="checkbox" data-verdict="Apply" checked>Apply
+          </label>
+          <label class="ww-ext-verdict-toggle" data-v="consider">
+            <input type="checkbox" data-verdict="Consider" checked>Consider
+          </label>
+          <label class="ww-ext-verdict-toggle" data-v="skip">
+            <input type="checkbox" data-verdict="Skip">Skip
+          </label>
+        </div>
+        <div id="ww-ext-action-row">
+          <button id="ww-ext-save-all">Save to Folder</button>
+          <button id="ww-ext-clear">Clear</button>
+        </div>
       </div>
       <div id="ww-ext-progress"></div>
     </div>
@@ -566,7 +609,13 @@ function injectSidebar() {
   tooltip.id = 'ww-ext-badge-tooltip';
   document.body.appendChild(tooltip);
 
+  // Help tooltip (for ? buttons inside controls)
+  const helpTooltip = document.createElement('div');
+  helpTooltip.id = 'ww-ext-help-tooltip';
+  document.body.appendChild(helpTooltip);
+
   document.addEventListener('click', e => {
+    // Badge tooltip
     const badge = e.target.closest('.ww-ext-badge[data-posting-id]');
     if (badge) {
       const reason = scores.get(badge.dataset.postingId)?.reason;
@@ -576,13 +625,34 @@ function injectSidebar() {
       tooltip.style.top  = (r.bottom + 6) + 'px';
       tooltip.style.left = Math.min(r.left, window.innerWidth - 300) + 'px';
       tooltip.classList.add('visible');
+      helpTooltip.classList.remove('visible');
     } else if (!e.target.closest('#ww-ext-badge-tooltip')) {
       tooltip.classList.remove('visible');
+    }
+
+    // Help tooltip
+    const helpBtn = e.target.closest('.ww-ext-help-btn');
+    if (helpBtn) {
+      e.stopPropagation();
+      const key = helpBtn.dataset.help;
+      const text = HELP_TEXTS[key] || '';
+      helpTooltip.textContent = text;
+      const r = helpBtn.getBoundingClientRect();
+      helpTooltip.style.top  = (r.bottom + 6) + 'px';
+      helpTooltip.style.left = Math.max(8, Math.min(r.left - 220, window.innerWidth - 300)) + 'px';
+      helpTooltip.classList.toggle('visible', !helpTooltip.classList.contains('visible') || helpTooltip.dataset.open !== key);
+      helpTooltip.dataset.open = key;
+      tooltip.classList.remove('visible');
+    } else if (!e.target.closest('#ww-ext-help-tooltip')) {
+      helpTooltip.classList.remove('visible');
     }
   });
 
   toggle.addEventListener('click', () => sidebar.classList.toggle('open'));
   document.getElementById('ww-ext-close').addEventListener('click', () => sidebar.classList.remove('open'));
+  document.getElementById('ww-ext-help-open').addEventListener('click', () => {
+    chrome.runtime.sendMessage({ type: 'openWelcome' });
+  });
   document.getElementById('ww-ext-settings').addEventListener('click', () => {
     chrome.runtime.sendMessage({ type: 'openOptions' });
   });
@@ -615,4 +685,17 @@ function injectSidebar() {
     const reason = e.target.closest('.ww-ext-card-reason');
     if (reason) reason.classList.toggle('ww-ext-expanded');
   });
+}
+
+function updateGuideSteps(hasKey, hasCv) {
+  const keyStep = document.getElementById('ww-ext-step-key');
+  const cvStep  = document.getElementById('ww-ext-step-cv');
+  if (keyStep) {
+    keyStep.querySelector('.ww-ext-step-num').textContent = hasKey ? '✓' : '1';
+    keyStep.classList.toggle('ww-ext-step-done', hasKey);
+  }
+  if (cvStep) {
+    cvStep.querySelector('.ww-ext-step-num').textContent = hasCv ? '✓' : '2';
+    cvStep.classList.toggle('ww-ext-step-done', hasCv);
+  }
 }

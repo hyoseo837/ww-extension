@@ -142,6 +142,7 @@
 
 .ww-ext-header-btns { display: flex; align-items: center; gap: 2px; }
 
+#ww-ext-help-open,
 #ww-ext-settings,
 #ww-ext-close {
   background: none;
@@ -154,31 +155,74 @@
   line-height: 1;
   transition: color 0.15s, background 0.15s;
 }
+#ww-ext-help-open:hover,
 #ww-ext-settings:hover,
 #ww-ext-close:hover { color: var(--s-on); background: var(--s-surface-hi); }
+
+#ww-ext-help-open {
+  font-weight: 700;
+  font-size: 13px;
+}
 
 /* ── Controls panel ──────────────────────────────────────────────────────────── */
 
 #ww-ext-controls {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-  padding: 12px 16px;
+  flex-direction: column;
   border-bottom: 1px solid var(--s-border);
   flex-shrink: 0;
   background: var(--s-surface);
 }
 
+.ww-ext-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px;
+}
+.ww-ext-section + .ww-ext-section {
+  border-top: 1px solid var(--s-border);
+}
+
+.ww-ext-section-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: 600 10px monospace;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--s-on-dim);
+}
+
+.ww-ext-help-btn {
+  background: none;
+  border: 1px solid var(--s-border);
+  border-radius: 99px;
+  color: var(--s-on-dim);
+  font: 600 10px monospace;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: color 0.15s, border-color 0.15s;
+  line-height: 1;
+}
+.ww-ext-help-btn:hover { color: var(--s-primary-dim); border-color: var(--s-primary); }
+
 #ww-ext-scan {
   background: var(--s-primary);
   color: var(--s-on-primary);
   border: none;
-  padding: 7px 14px;
+  padding: 11px 14px;
   border-radius: 6px;
   cursor: pointer;
-  font: 600 13px system-ui, sans-serif;
+  font: 600 15px system-ui, sans-serif;
   transition: opacity 0.15s;
+  width: 100%;
 }
 #ww-ext-scan:hover:not(:disabled) { opacity: 0.88; }
 #ww-ext-scan:disabled { opacity: 0.35; cursor: not-allowed; }
@@ -192,6 +236,7 @@
   cursor: pointer;
   font: 13px system-ui, sans-serif;
   transition: background 0.15s;
+  width: 100%;
 }
 #ww-ext-stop:hover:not(:disabled) { background: rgba(255,180,171,0.08); }
 #ww-ext-stop:disabled { color: var(--s-border); border-color: var(--s-border); cursor: not-allowed; }
@@ -200,7 +245,6 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  width: 100%;
 }
 #ww-ext-save-row label {
   font: 600 10px monospace;
@@ -223,7 +267,7 @@
 }
 #ww-ext-min-score:focus { border-color: var(--s-primary); }
 
-#ww-ext-verdict-row { display: flex; gap: 6px; width: 100%; }
+#ww-ext-verdict-row { display: flex; gap: 6px; flex-wrap: wrap; }
 
 .ww-ext-verdict-toggle {
   display: inline-flex;
@@ -243,7 +287,7 @@
 .ww-ext-verdict-toggle[data-v="consider"]:has(input:checked) { background: var(--s-consider-bg); color: var(--s-consider-c); border-color: var(--s-consider-bdr); }
 .ww-ext-verdict-toggle[data-v="skip"]:has(input:checked)     { background: var(--s-skip-bg);     color: var(--s-skip-c);     border-color: var(--s-skip-bdr); }
 
-#ww-ext-action-row { display: flex; gap: 8px; width: 100%; }
+#ww-ext-action-row { display: flex; gap: 8px; }
 
 #ww-ext-save-all {
   flex: 1;
@@ -271,22 +315,72 @@
 #ww-ext-clear:hover { border-color: var(--s-border); color: var(--s-on); }
 
 #ww-ext-progress {
-  width: 100%;
+  padding: 6px 16px;
   font: 11px monospace;
   color: var(--s-on-dim);
-  min-height: 16px;
+  min-height: 28px;
 }
 #ww-ext-progress.ww-ext-error { color: var(--s-error); font-weight: 500; }
 
 /* ── Results list ────────────────────────────────────────────────────────────── */
 
 .ww-ext-empty {
-  padding: 24px 16px;
-  text-align: center;
-  color: var(--s-on-dim);
-  font-size: 13px;
-  line-height: 1.6;
+  padding: 20px 16px;
+  list-style: none;
 }
+
+.ww-ext-guide-title {
+  font: 600 11px monospace;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--s-on-dim);
+  margin-bottom: 12px;
+}
+
+.ww-ext-guide-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 10px;
+  font-size: 13px;
+  color: var(--s-on-dim);
+  line-height: 1.5;
+}
+.ww-ext-guide-step:last-child { margin-bottom: 0; }
+.ww-ext-guide-step.ww-ext-step-done { color: var(--s-on); }
+
+.ww-ext-step-num {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--s-surface-hi);
+  border: 1px solid var(--s-border);
+  font: 600 11px monospace;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--s-on-dim);
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.ww-ext-step-done .ww-ext-step-num {
+  background: var(--s-apply-bg);
+  border-color: var(--s-apply-bdr);
+  color: var(--s-apply-c);
+}
+
+.ww-ext-inline-link {
+  background: none;
+  border: none;
+  color: var(--s-primary-dim);
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  transition: text-decoration-color 0.15s;
+}
+.ww-ext-inline-link:hover { text-decoration-color: var(--s-primary-dim); }
 
 #ww-ext-results {
   list-style: none;
@@ -317,7 +411,7 @@
   font-size: 13px;
   padding: 0 2px;
   line-height: 1;
-  opacity: 0.3;
+  opacity: 0.55;
   flex-shrink: 0;
   transition: opacity 0.15s;
 }
@@ -402,6 +496,30 @@ tr.ww-ext-highlight th {
 #ww-ext-badge-tooltip.visible { display: block; }
 
 :root.ww-light #ww-ext-badge-tooltip {
+  background: #ffffff;
+  border-color: #cbc3d7;
+  color: #191c1e;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
+
+/* ── Help tooltip ────────────────────────────────────────────────────────────── */
+
+#ww-ext-help-tooltip {
+  position: fixed;
+  z-index: 9950;
+  background: #131b2e;
+  border: 1px solid #494454;
+  border-radius: 6px;
+  padding: 10px 14px;
+  max-width: 260px;
+  font: 12px/1.55 system-ui, sans-serif;
+  color: #dae2fd;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  display: none;
+}
+#ww-ext-help-tooltip.visible { display: block; }
+
+:root.ww-light #ww-ext-help-tooltip {
   background: #ffffff;
   border-color: #cbc3d7;
   color: #191c1e;
