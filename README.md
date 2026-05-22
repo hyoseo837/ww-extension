@@ -10,6 +10,8 @@ Score every co-op posting against your CV in seconds. See which jobs are worth a
 
 <sub>Chrome · Manifest V3 · Google Gemini</sub>
 
+<sub><i>Not affiliated with the University of Waterloo or WaterlooWorks.</i></sub>
+
 </div>
 
 ---
@@ -28,16 +30,16 @@ Scores appear as inline badges directly in the WaterlooWorks job table and persi
 
 ## Features
 
-| | |
-|---|---|
-| **Bulk scan** | One click scans every posting in your current search and injects badges into the table as results come in. |
-| **Ranked sidebar** | A sortable, filterable list of all scored jobs. Click any entry to jump straight to its row. |
-| **CV extraction** | Drop in your CV PDF — Gemini extracts the relevant profile text automatically. Edit before saving. |
-| **Custom criteria** | Free-form match rules ("prefer remote", "ignore Web3 companies", "weight ML roles higher"). |
-| **Bulk save** | Filter by score threshold + verdict, then push matching jobs into a WW folder in one shot. |
-| **Context caching** | Your profile is cached server-side per scan, so each scoring call sends only the job description. |
-| **Token counter** | Cumulative input / output / cached tokens, so you know exactly what you're spending. |
-| **Light + dark** | Theme follows your preference and applies to both the options page and the sidebar. |
+|                     |                                                                                                            |
+| ------------------- | ---------------------------------------------------------------------------------------------------------- |
+| **Bulk scan**       | One click scans every posting in your current search and injects badges into the table as results come in. |
+| **Ranked sidebar**  | A sortable, filterable list of all scored jobs. Click any entry to jump straight to its row.               |
+| **CV extraction**   | Drop in your CV PDF — Gemini extracts the relevant profile text automatically. Edit before saving.         |
+| **Custom criteria** | Free-form match rules ("prefer remote", "ignore Web3 companies", "weight ML roles higher").                |
+| **Bulk save**       | Filter by score threshold + verdict, then push matching jobs into a WW folder in one shot.                 |
+| **Context caching** | Your profile is cached server-side per scan, so each scoring call sends only the job description.          |
+| **Token counter**   | Cumulative input / output / cached tokens, so you know exactly what you're spending.                       |
+| **Light + dark**    | Theme follows your preference and applies to both the options page and the sidebar.                        |
 
 ## Screenshots
 
@@ -53,7 +55,7 @@ Scores appear as inline badges directly in the WaterlooWorks job table and persi
 Not published to the Chrome Web Store — install in developer mode:
 
 ```bash
-git clone https://github.com/<you>/ww-extension.git
+git clone https://github.com/hyoseo837/ww-extension.git
 ```
 
 1. Open `chrome://extensions`
@@ -66,7 +68,7 @@ git clone https://github.com/<you>/ww-extension.git
 1. Grab a free [Gemini API key](https://aistudio.google.com/app/apikey).
 2. Click the extension icon to open the options page.
 3. **API Configuration** → paste your key, pick a model, save.
-4. **Profile & Context** → upload your CV PDF, click **Extract Profile**, optionally edit the text, then add any custom match criteria and **Update Profile**.
+4. **Profile & Context** → upload your _Application package PDF_, click **Extract Profile**, optionally edit the text, then add any custom match criteria and **Update Profile**.
 
 ## Usage
 
@@ -77,14 +79,26 @@ git clone https://github.com/<you>/ww-extension.git
 
 ## Models
 
-| Model | Notes |
-|---|---|
-| `gemini-2.5-flash` | Default. Fast, cheap, good enough for bulk triage. |
+| Model              | Notes                                                          |
+| ------------------ | -------------------------------------------------------------- |
+| `gemini-2.5-flash` | Default. Fast, cheap, good enough for bulk triage.             |
 | `gemini-2.5-pro`   | Higher-quality reasoning. Slower and more expensive per token. |
+
+A full scan of ~200 postings on `gemini-2.5-flash` typically costs well under **$0.05 USD** thanks to context caching. `gemini-2.5-pro` runs roughly 5–10× more expensive per token.
 
 ## Privacy
 
 Everything stays local. Your CV, API key, preferences, and scores live in `chrome.storage.local`. The only outbound traffic is direct browser → Gemini API. No analytics, no proxy, no third-party servers.
+
+Each scoring call sends to Gemini:
+
+- your extracted CV / profile text (cached server-side for the scan session)
+- your custom match criteria
+- the job's title, organization, and description excerpt (capped at 6,000 characters)
+
+Nothing else is transmitted.
+
+Full policy: <https://hyoseo.dev/privacy-policy/ww-extension/>
 
 ## Architecture
 
@@ -103,6 +117,10 @@ options.html              Options page (API key, CV, preferences, theme)
 ```
 
 Why a page bridge? WaterlooWorks gates posting detail requests behind dynamic CSRF-style tokens embedded in the page. The bridge runs in the page's JS context so it can read those tokens and reuse the user's session cookies — the content script alone can't.
+
+## Feedback
+
+Bugs and suggestions: [GitHub Issues](https://github.com/hyoseo837/ww-extension/issues).
 
 ## License
 
