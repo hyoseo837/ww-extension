@@ -26,6 +26,8 @@ Don't re-derive what these files already say. Don't duplicate them here.
   backend API contract)
 - `docs/archive/` — frozen old major versions (v01, v02, v03 used the
   older plan/impl/history shape)
+- `docs/whiteboard.md` — user's personal scratchpad for raw ideas.
+  Read for context; **do not edit without explicit permission**.
 
 ## Build / package
 

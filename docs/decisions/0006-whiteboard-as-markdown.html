@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-05-27" />
+    <meta name="amends" content="0001-html-over-markdown" />
+    <title>ADR 0006 — Whiteboard as Markdown (exception to ADR 0001)</title>
+  </head>
+  <body>
+    <h1>ADR 0006 — Whiteboard as Markdown (exception to ADR 0001)</h1>
+
+    <section id="context">
+      <h2>Context</h2>
+      <p>
+        ADR 0001 established HTML for all docs under <code>docs/</code>,
+        with exceptions only for files tooling requires by name
+        (<code>CLAUDE.md</code>, <code>README.md</code> at project root).
+        The rationale was semantic structure and metadata.
+      </p>
+      <p>
+        A new doc was needed: a low-friction whiteboard for the user to
+        jot raw ideas, possible changes, and future updates — entries
+        that haven't earned a place in <code>roadmap.html</code> yet.
+        Whiteboards work by being trivial to scribble on; any friction
+        in the edit path discourages use, and an unused whiteboard is
+        worse than no whiteboard.
+      </p>
+      <p>
+        HTML's ceremony (tags, attributes, restraint discipline) is
+        precisely the wrong fit for fleeting captures. Markdown's
+        looseness — bullets, headings, strikethrough — is the right
+        fit. The semantic-metadata argument that justifies HTML for
+        specs and ADRs does not apply to ephemeral notes that exist
+        to be promoted out or deleted.
+      </p>
+    </section>
+
+    <section id="decision">
+      <h2>Decision</h2>
+      <p>
+        <code>docs/whiteboard.md</code> is Markdown. This is a deliberate
+        exception to ADR 0001, joining <code>CLAUDE.md</code> and
+        <code>README.md</code> as the small set of files where edit
+        friction outweighs semantic structure.
+      </p>
+      <p>
+        No other doc under <code>docs/</code> is permitted to be
+        Markdown without a new ADR. The default remains HTML.
+      </p>
+    </section>
+
+    <section id="consequences">
+      <h2>Consequences</h2>
+      <ul>
+        <li><strong>+</strong> Whiteboard captures stay fast. The user
+          can jot a thought in seconds without thinking about tags.</li>
+        <li><strong>+</strong> Strikethrough (<code>~~text~~</code>)
+          gives a one-keystroke way to mark dropped ideas without
+          deleting the trail.</li>
+        <li><strong>−</strong> Format inconsistency under
+          <code>docs/</code>. Agents reading the tree must check
+          extensions. Mitigated by this exception being narrow and
+          documented.</li>
+        <li><strong>−</strong> Whiteboard entries lack the
+          <code>&lt;meta&gt;</code> status / date attributes that
+          specs and ADRs use. Acceptable because whiteboard entries
+          aren't queried — they're either promoted out or deleted.</li>
+        <li><strong>−</strong> Opens a small precedent for "this doc
+          should be Markdown too." Guarded by the explicit "no other
+          doc may be Markdown without a new ADR" clause.</li>
+      </ul>
+    </section>
+  </body>
+</html>

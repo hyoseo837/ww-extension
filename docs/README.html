@@ -50,7 +50,30 @@
       <dt><code>docs/archive/</code></dt>
       <dd>Frozen old major versions. v01/v02/v03 used the older
         plan/impl/history shape. Do not extend; reference only.</dd>
+
+      <dt><code>docs/whiteboard.md</code></dt>
+      <dd>User's personal scratchpad for raw ideas, possible changes,
+        future updates. Markdown by exception (see ADR 0006) for
+        low-friction editing. <strong>Agents: read for context;
+        do not edit without explicit permission.</strong> Entries
+        promoted out of here go to <code>roadmap.html</code> first.</dd>
     </dl>
+
+    <h2>Lifecycle of an idea</h2>
+
+    <pre><code>whiteboard.md
+   ↓ (matures into a real direction)
+roadmap.html
+   ↓ (scheduled into a phase)
+docs/specs/vX.Y.Z-*.html
+   ↓ (significant call made along the way)
+docs/decisions/NNNN-*.html</code></pre>
+
+    <p>
+      Not every idea travels the full path. Most whiteboard entries are
+      dropped or stay loose for a long time. Promotion happens only
+      when an entry earns it.
+    </p>
 
     <h2>Where to read for common tasks</h2>
 

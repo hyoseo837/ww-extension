@@ -13,7 +13,7 @@
 
     <p>All agents working on this project must follow these rules strictly.</p>
 
-    <h2>1. HTML for all documents</h2>
+    <h2>1. HTML for all documents (with three narrow exceptions)</h2>
     <p>
       Use HTML for all plans, documents, and written artifacts — not markdown.
       HTML is chosen because it can carry semantic structure and metadata that
@@ -24,6 +24,19 @@
       (<code>&lt;article&gt;</code>, <code>&lt;section&gt;</code>,
       <code>&lt;figure&gt;</code>, <code>&lt;dl&gt;</code>, <code>&lt;dfn&gt;</code>,
       <code>&lt;code&gt;</code>) instead of just how it looks.
+    </p>
+    <p>
+      <strong>Allowed Markdown files</strong> (do not convert these to HTML):
+    </p>
+    <ul>
+      <li><code>CLAUDE.md</code> — required by Claude Code's filename lookup.</li>
+      <li><code>README.md</code> — required by GitHub's filename lookup.</li>
+      <li><code>docs/whiteboard.md</code> — user's low-friction scratchpad.
+        Edit friction outweighs semantic structure here. See
+        <code>docs/decisions/0006-whiteboard-as-markdown.html</code>.</li>
+    </ul>
+    <p>
+      No other file may be Markdown without a new ADR.
     </p>
     <p>
       <strong>Use that expressiveness with restraint.</strong> More metadata
