@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-05-27" />
+    <title>ADR 0008 — Auth and database via Supabase</title>
+  </head>
+  <body>
+    <h1>ADR 0008 — Auth and database via Supabase</h1>
+
+    <section id="context">
+      <h2>Context</h2>
+      <p>
+        v4 needs user authentication and a Postgres database for the
+        credit ledger. Auth is constrained by the Chrome-extension
+        client: a thin UI inside the options page, no good place to
+        host a password-reset email flow, no incentive to roll bot
+        defense by hand.
+      </p>
+      <p>
+        Three viable auth shapes were considered:
+      </p>
+      <ol>
+        <li><strong>Own it.</strong> Google OAuth via
+          <code>chrome.identity.launchWebAuthFlow</code>, FastAPI
+          verifies the Google ID token and issues its own session JWT +
+          refresh token. Zero vendor cost, ~150 lines of FastAPI plus
+          token-refresh logic in the extension.</li>
+        <li><strong>Clerk.</strong> Managed auth with documented
+          Chrome-extension flows. Auth only — Postgres still has to be
+          hosted somewhere else.</li>
+        <li><strong>Supabase.</strong> Managed auth (Google OAuth
+          provider, refresh tokens, session storage) and managed
+          Postgres in one product. Documented Chrome-extension flow.</li>
+      </ol>
+      <p>
+        Email/password was rejected outright: friction on the extension
+        UI, hand-rolled password reset, and no upside over Google OAuth
+        for a Waterloo-student user base.
+      </p>
+    </section>
+
+    <section id="decision">
+      <h2>Decision</h2>
+      <p>
+        Use Supabase for both authentication and the credit ledger
+        Postgres database. The extension authenticates via
+        <code>chrome.identity.launchWebAuthFlow</code> against Supabase
+        Auth (Google OAuth provider), receives a Supabase session JWT,
+        and forwards that JWT to the FastAPI backend on every request.
+        FastAPI verifies the JWT against Supabase's JWKS and connects
+        to the same Supabase project's Postgres for credit-ledger
+        reads and writes.
+      </p>
+    </section>
+
+    <section id="consequences">
+      <h2>Consequences</h2>
+      <ul>
+        <li><strong>+</strong> Skip rolling password reset, refresh
+          token rotation, JWKS handling, and OAuth provider
+          integration.</li>
+        <li><strong>+</strong> One vendor for auth + DB — single bill,
+          single outage surface to monitor.</li>
+        <li><strong>+</strong> Free tier covers v4 launch; paid tier
+          starts at $25/mo if/when needed.</li>
+        <li><strong>+</strong> Supabase JWTs are stateless on the
+          FastAPI side — no session table in the backend.</li>
+        <li><strong>−</strong> Vendor lock. Migrating off Supabase
+          means re-doing both auth and DB.</li>
+        <li><strong>−</strong> Backend depends on Supabase
+          availability for both login and ledger reads.</li>
+        <li><strong>−</strong> Two regions to coordinate (Supabase +
+          DO App Platform). Match regions to keep cross-vendor latency
+          low.</li>
+        <li><strong>−</strong> Supabase Row-Level Security is tempting
+          but bypassed when FastAPI uses the service-role key — keep
+          ledger writes strictly server-side and document why RLS is
+          not the security boundary here.</li>
+      </ul>
+    </section>
+  </body>
+</html>

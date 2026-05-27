@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-05-27" />
+    <title>ADR 0009 — Backend stack: FastAPI on Python</title>
+  </head>
+  <body>
+    <h1>ADR 0009 — Backend stack: FastAPI on Python</h1>
+
+    <section id="context">
+      <h2>Context</h2>
+      <p>
+        The backend serves a small JSON API: auth handoff (verify
+        Supabase JWT, return <code>/me</code>), <code>/scan</code>
+        (forward posting payload to Gemini, debit credit, return
+        score), credit-balance reads, and Stripe webhooks. No
+        long-running background jobs in v4 scope.
+      </p>
+      <p>
+        Stack candidates: FastAPI (Python), Express or Hono (Node),
+        Django REST Framework (Python), chi or Echo (Go). The user
+        named FastAPI on Python; this ADR records the choice and
+        captures why no alternative was pursued.
+      </p>
+    </section>
+
+    <section id="decision">
+      <h2>Decision</h2>
+      <p>
+        The backend is a single FastAPI application on Python 3.12+,
+        packaged as a Docker image and deployed to DigitalOcean App
+        Platform (see <a href="0007-deploy-on-digitalocean-app-platform.html">ADR
+        0007</a>). The repo follows a feature-grouped layout
+        (<code>auth/</code>, <code>scoring/</code>,
+        <code>billing/</code>, <code>core/</code>) rather than a
+        layer-grouped one.
+      </p>
+    </section>
+
+    <section id="consequences">
+      <h2>Consequences</h2>
+      <ul>
+        <li><strong>+</strong> Pydantic schemas validate
+          request/response payloads at the boundary and auto-generate
+          an OpenAPI spec that drives this repo's
+          <code>docs/reference/api.html</code> mirror.</li>
+        <li><strong>+</strong> Aligns with the user's existing Python
+          proficiency — no new language to learn alongside Supabase,
+          Stripe, and DO App Platform.</li>
+        <li><strong>+</strong> Async I/O suits the call pattern
+          (Gemini + Supabase + Stripe are all network-bound).</li>
+        <li><strong>+</strong> Feature-grouped layout keeps each
+          feature self-contained (router + schemas + service +
+          models in one folder) — easier to find code, easier to
+          extract a feature later.</li>
+        <li><strong>−</strong> Python is slower per dollar of compute
+          than Go or Bun-on-Hono. Not a concern at v4's expected
+          scale.</li>
+        <li><strong>−</strong> Python deploys are heavier than
+          Hono/Bun for cold-start scenarios. Moot on DO App Platform
+          (persistent process, no cold starts).</li>
+      </ul>
+    </section>
+  </body>
+</html>

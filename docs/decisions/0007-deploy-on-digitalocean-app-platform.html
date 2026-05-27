@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-05-27" />
+    <title>ADR 0007 — Deploy backend on DigitalOcean App Platform</title>
+  </head>
+  <body>
+    <h1>ADR 0007 — Deploy backend on DigitalOcean App Platform</h1>
+
+    <section id="context">
+      <h2>Context</h2>
+      <p>
+        The backend (separate repo, see
+        <a href="0004-backend-separate-repo.html">ADR 0004</a>) needs a
+        deployment target for v4. Candidates considered: Vercel
+        (serverless functions), DigitalOcean App Platform, Fly.io,
+        Render, Railway, a self-managed droplet.
+      </p>
+      <p>
+        Vercel forces Python into serverless functions: cold starts,
+        per-request timeouts (10s Hobby / 60s Pro), no persistent
+        connection pool, no background workers. The backend will handle
+        Stripe webhooks, hold a Postgres connection pool, and may batch
+        Gemini calls — all of which are friction on serverless.
+      </p>
+      <p>
+        Fly.io and Render fit the use case technically (Dockerfile
+        deploy, persistent process, Postgres add-ons), but the user
+        already has DO experience from a prior project. Reducing the
+        number of new platforms to learn matters more than the marginal
+        difference between providers for a solo dev shipping v4.
+      </p>
+    </section>
+
+    <section id="decision">
+      <h2>Decision</h2>
+      <p>
+        Deploy the backend on DigitalOcean App Platform as a Dockerized
+        FastAPI service. Use App Platform's managed deploy from a Git
+        push rather than a self-managed droplet. Database is hosted on
+        Supabase (see <a href="0008-auth-and-db-via-supabase.html">ADR
+        0008</a>), not DO Managed Postgres.
+      </p>
+    </section>
+
+    <section id="consequences">
+      <h2>Consequences</h2>
+      <ul>
+        <li><strong>+</strong> Persistent process matches FastAPI's
+          shape — DB pool, Stripe webhook handlers, no cold-start tax
+          on user-facing scans.</li>
+        <li><strong>+</strong> Predictable monthly bill (~$5/mo for
+          the smallest instance).</li>
+        <li><strong>+</strong> Zero new platform to learn; faster path
+          to a deployed v4 bootstrap.</li>
+        <li><strong>+</strong> Dockerfile keeps the image portable —
+          migrating to Fly.io or a droplet later is straightforward
+          if the cost/perf shape changes.</li>
+        <li><strong>−</strong> No scale-to-zero: pay for compute even
+          at zero traffic. Acceptable at v4's hobby-tier scale.</li>
+        <li><strong>−</strong> More expensive than Fly.io's free tier
+          would be while v4 has no paying users.</li>
+        <li><strong>−</strong> DB and app live on different vendors
+          (Supabase + DO). Latency between API and DB depends on
+          region selection — match regions deliberately.</li>
+      </ul>
+    </section>
+  </body>
+</html>

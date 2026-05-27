@@ -19,7 +19,7 @@ Don't re-derive what these files already say. Don't duplicate them here.
 
 - `docs/roadmap.html` — vision across major versions
 - `docs/architecture.html` — current shipped system (extension only;
-  backend is a separate repo, TBD)
+  backend repo: `WW-extension-backend`)
 - `docs/specs/` — per-phase specs (one file per phase, `vX.Y.Z-slug.html`)
 - `docs/decisions/` — ADRs (numbered, immutable, subject-indexed)
 - `docs/reference/` — stable lookup (WW DOM, storage schemas, future

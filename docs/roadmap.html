@@ -43,7 +43,7 @@
 
       <p>
         <strong>Goal:</strong> turn the extension into a monetizable service.
-        A separate backend repo (TBD name) holds user accounts, a credit
+        A separate backend repo (<code>WW-extension-backend</code>) holds user accounts, a credit
         ledger, and the Gemini-calling logic + prompts (moving them off the
         client so they aren't shipped in the unpacked extension). The
         extension becomes a thin client: authenticates the user, spends
@@ -58,44 +58,71 @@
         <li>Enable per-user billing (credits) without trusting the client.</li>
       </ul>
 
-      <p><strong>Sketched phase arcs (subject to v4 planning):</strong></p>
+      <p>
+        <strong>Stack and platform locked in v4 planning (2026-05-27):</strong>
+      </p>
+      <ul>
+        <li>Backend: FastAPI on Python 3.12+
+          (<a href="decisions/0009-backend-stack-fastapi.html">ADR 0009</a>).</li>
+        <li>Deploy: DigitalOcean App Platform
+          (<a href="decisions/0007-deploy-on-digitalocean-app-platform.html">ADR 0007</a>).</li>
+        <li>Auth + DB: Supabase (Google OAuth provider; managed
+          Postgres for the credit ledger)
+          (<a href="decisions/0008-auth-and-db-via-supabase.html">ADR 0008</a>).</li>
+        <li>Payments: Stripe Checkout (hosted page) + webhook-driven
+          credit grants. ADR to be written at v4.5 planning.</li>
+      </ul>
+
+      <p><strong>Phase arcs:</strong></p>
       <ol>
         <li>
-          <strong>v04.000 — Doc restructure + v4 opening</strong>
-          (this commit). See <code>docs/specs/v04.000-restructure.html</code>.
+          <strong>v4.0 — Doc restructure + v4 opening</strong> (shipped
+          as v4.0.0 and v4.0.1). See
+          <code>docs/specs/v4.0.0-restructure.html</code>.
         </li>
         <li>
-          <strong>Backend bootstrap</strong> — separate repo created;
-          minimal auth + health endpoints; <code>docs/reference/api.html</code>
-          populated.
+          <strong>v4.1 — Backend bootstrap</strong> — separate repo
+          created; <code>/health</code> live on DO App Platform;
+          Supabase project configured with Google OAuth; this repo's
+          <code>api.html</code> + <code>architecture.html</code>
+          updated. No extension code changes. See
+          <code>docs/specs/v4.1.0-backend-bootstrap.html</code>.
         </li>
         <li>
-          <strong>Auth in the extension</strong> — sign-in flow, token
-          storage, sign-out. Extension can authenticate against the backend.
+          <strong>v4.2 — Auth in the extension</strong> — sign-in via
+          <code>chrome.identity.launchWebAuthFlow</code>, Supabase
+          session JWT stored, sign-out. Extension can authenticate
+          against the backend.
         </li>
         <li>
-          <strong>Credit ledger</strong> — server-side balance, debit on
-          scan, refund on failure. Extension shows balance.
+          <strong>v4.3 — Credit ledger</strong> — server-side balance,
+          debit on scan, refund on failure. Extension shows balance.
+          Scoring still uses the extension's own Gemini key in this
+          phase.
         </li>
         <li>
-          <strong>Server-side scoring</strong> — Gemini calls move to the
-          backend. Extension sends posting payload, backend returns score.
-          Removes API key requirement from the extension.
+          <strong>v4.4 — Server-side scoring</strong> — Gemini calls
+          move to the backend. Extension sends posting payload,
+          backend returns score. Removes API-key requirement from the
+          extension.
         </li>
         <li>
-          <strong>Payment processor integration</strong> — credit purchase
-          flow (Stripe / Ko-fi / LemonSqueezy — TBD).
+          <strong>v4.5 — Stripe credit purchase</strong> — Stripe
+          Checkout integration, webhook-driven credit grants, purchase
+          UI in options page.
         </li>
         <li>
-          <strong>Free tier + paid tier UX</strong> — onboarding tweaks,
-          welcome page updates, pricing display.
+          <strong>v4.6 — Free tier + paid tier UX</strong> —
+          onboarding tweaks, welcome page updates, pricing display.
         </li>
       </ol>
 
       <p>
-        Phase numbering and exact slicing will be set during v4 planning
-        (the next session after this restructure). Treat the list above as
-        a rough sequence, not a commitment.
+        Phase numbering above is the plan of record; sub-commits within
+        a phase use the <code>Z</code> digit per
+        <a href="decisions/0002-versioning-vXYZ.html">ADR 0002</a>.
+        Slicing may still shift if a phase grows too large — promote
+        to a new <code>Y</code> bump rather than overloading one phase.
       </p>
 
       <p>

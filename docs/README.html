@@ -120,7 +120,8 @@ docs/decisions/NNNN-*.html</code></pre>
         context window.</dd>
 
       <dt id="task-backend">Working on the backend</dt>
-      <dd>Backend lives in a separate repo (TBD name). API contract
+      <dd>Backend lives in a separate repo
+        (<code>WW-extension-backend</code>). API contract
         will be mirrored in <code>docs/reference/api.html</code> as
         the client's view of the server.</dd>
     </dl>
@@ -171,7 +172,13 @@ docs/decisions/NNNN-*.html</code></pre>
     <h3>File naming</h3>
     <ul>
       <li>Specs: <code>vX.Y.Z-kebab-slug.html</code>
-        (e.g. <code>v04.010-auth.html</code>).</li>
+        (e.g. <code>v4.1.0-auth.html</code>). The
+        <code>vX.Y.Z</code> string is identical to the
+        <code>manifest.json</code> <code>version</code> field — no
+        zero-padding, no concatenating <code>Y</code> and
+        <code>Z</code>. Legacy specs under <code>docs/archive/</code>
+        used a different naming scheme; see
+        <a href="decisions/0002-versioning-vXYZ.html">ADR 0002</a>.</li>
       <li>ADRs: <code>NNNN-kebab-slug.html</code>, zero-padded to four
         digits (e.g. <code>0001-html-over-markdown.html</code>).
         Numbering is monotonic and never reused.</li>
