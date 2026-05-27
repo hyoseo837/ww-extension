@@ -16,33 +16,79 @@
     <h2>1. HTML for all documents</h2>
     <p>
       Use HTML for all plans, documents, and written artifacts — not markdown.
-      HTML files must contain only content and metadata. No CSS, no JavaScript,
-      no design elements. HTML is used because it supports richer semantic
-      metadata than markdown.
+      HTML is chosen because it can carry semantic structure and metadata that
+      markdown cannot: <code>&lt;meta&gt;</code> headers, <code>lang</code>,
+      <code>datetime</code> on <code>&lt;time&gt;</code>, <code>id</code>
+      anchors, <code>data-*</code> attributes when they earn their place, and
+      tags that name what content <em>is</em>
+      (<code>&lt;article&gt;</code>, <code>&lt;section&gt;</code>,
+      <code>&lt;figure&gt;</code>, <code>&lt;dl&gt;</code>, <code>&lt;dfn&gt;</code>,
+      <code>&lt;code&gt;</code>) instead of just how it looks.
+    </p>
+    <p>
+      <strong>Use that expressiveness with restraint.</strong> More metadata
+      is not better. Every attribute or tag should earn its place by making
+      the document easier for a future reader (human or agent) to navigate or
+      query. Guidelines:
+    </p>
+    <ul>
+      <li>
+        Pick the tag that names the content. A list of decisions is a
+        <code>&lt;dl&gt;</code> or <code>&lt;ol&gt;</code>, not a wall of
+        <code>&lt;p&gt;</code>s. A version history is a series of
+        <code>&lt;section&gt;</code>s with <code>&lt;time&gt;</code>.
+      </li>
+      <li>
+        Add <code>&lt;meta&gt;</code> only for facts a reader would otherwise
+        have to infer (project, doc type, author, status). Skip generic SEO
+        boilerplate — these docs are not served on the web.
+      </li>
+      <li>
+        Reach for <code>id</code> on anything that might be linked to. Skip
+        <code>class</code> entirely (no styling).
+      </li>
+      <li>
+        Use <code>data-*</code> only when an agent would actually query it
+        (e.g. <code>data-status="done"</code> on a phase). Don't invent
+        attributes nobody reads.
+      </li>
+      <li>
+        No CSS, no JavaScript, no design. Content and structural metadata
+        only.
+      </li>
+    </ul>
+    <p>
+      The test: if removing an attribute or wrapper would not change how a
+      future reader finds or interprets the content, leave it out.
     </p>
 
     <h2>2. Read the right doc set</h2>
     <p>
-      The project has two doc generations. Always read the current set first:
+      The project moved to a per-phase spec + ADR architecture at v4 opening
+      (2026-05-27). Always start at <code>docs/README.html</code> — it maps
+      task type to the docs you need.
     </p>
     <ul>
       <li>
-        <strong>Current (v02, since 2026-05-20)</strong>:
-        <code>docs/plan.html</code>, <code>docs/impl.html</code>,
-        <code>docs/history.html</code>. All new work documents itself here.
+        <strong>Current (v04+)</strong>: <code>docs/README.html</code>
+        (index), <code>docs/roadmap.html</code> (vision),
+        <code>docs/architecture.html</code> (living system doc),
+        <code>docs/specs/vX.Y.Z-slug.html</code> (per-phase specs),
+        <code>docs/decisions/NNNN-slug.html</code> (ADRs),
+        <code>docs/reference/</code> (stable lookup).
       </li>
       <li>
-        <strong>Archived (v01.001 → v01.020)</strong>:
-        <code>docs/v01-archive/plan.html</code>,
-        <code>docs/v01-archive/impl.html</code>,
-        <code>docs/v01-archive/history.html</code>.
-        Historical reference only. Do not extend.
+        <strong>Archived (v01, v02, v03)</strong>:
+        <code>docs/archive/vNN/{plan,impl,history}.html</code>. Frozen
+        historical reference using the older three-doc shape. Do not
+        extend. See <code>docs/decisions/0005-doc-architecture-spec-adr.html</code>
+        for the architecture change.
       </li>
     </ul>
     <p>
-      Both the v01 plan and the v02 plan are user-confirmed. Treat their
-      contents as decided. Build directly from them; if something is not
-      covered, confirm with the user.
+      Treat existing specs and roadmap entries as user-confirmed. Build
+      directly from them; if something is not covered, confirm with the
+      user before extending.
     </p>
 
     <h2>3. Minimal code</h2>
@@ -53,53 +99,71 @@
       abstraction.
     </p>
 
-    <h2>4. Document in docs/history.html after each phase</h2>
+    <h2>4. Document phases as specs; decisions as ADRs</h2>
     <p>
-      After completing each implementation phase, add a concise entry to
-      <code>docs/history.html</code>. Record only crucial decisions or
-      non-obvious choices — not a step-by-step log. A decision is worth
-      recording if a future agent reading only <code>docs/history.html</code>
-      and <code>docs/plan.html</code> would otherwise make a different choice.
+      For each new phase, write
+      <code>docs/specs/vX.Y.Z-slug.html</code> following the convention in
+      <code>docs/README.html</code> (Goal / Files / Verify / Notes).
+    </p>
+    <p>
+      For significant decisions — choices that constrain future work or
+      that a future agent would otherwise re-debate — write a new ADR in
+      <code>docs/decisions/NNNN-slug.html</code> using the Michael Nygard
+      template (Context / Decision / Consequences). ADRs are
+      <strong>immutable</strong> once accepted; supersede with a new ADR
+      rather than editing.
+    </p>
+    <p>
+      Per-phase notes that are observations rather than load-bearing
+      decisions go in the spec's Notes section. If a note in there later
+      turns out to constrain future work, promote it to an ADR.
+    </p>
+    <p>
+      Update <code>docs/architecture.html</code> whenever the system shape
+      changes (new component, new boundary, new storage key). Update
+      <code>docs/roadmap.html</code> when the vision shifts.
     </p>
 
-    <h2>5. Versioning — vXX.YZW</h2>
+    <h2>5. Versioning — vX.Y.Z (manifest.json style)</h2>
     <p>
       Every commit must include a version number in the message using the
-      format <code>vXX.YZW</code> (three digits after the dot). The three
-      parts decompose as:
+      format <code>vX.Y.Z</code>, identical to the
+      <code>manifest.json</code> <code>version</code> field. The three parts
+      decompose as:
     </p>
     <ul>
       <li>
-        <strong>XX — major version.</strong> Increment when adding a new
+        <strong>X — major version.</strong> Increment when adding a new
         feature set or restructuring the project.
       </li>
       <li>
-        <strong>YZ — planned phase within the major version.</strong> Each
-        phase's first commit ends in <code>0</code>
-        (e.g. <code>v03.010</code>, <code>v03.020</code>,
-        <code>v03.030</code>).
+        <strong>Y — planned phase within the major version.</strong> Each
+        phase's first commit ends in <code>.0</code>
+        (e.g. <code>v4.1.0</code>, <code>v4.2.0</code>,
+        <code>v4.3.0</code>).
       </li>
       <li>
-        <strong>W — sub-commit within a phase.</strong> If a phase needs more
+        <strong>Z — sub-commit within a phase.</strong> If a phase needs more
         than one commit, increment the last digit
-        (<code>v03.020</code> → <code>v03.021</code> →
-        <code>v03.022</code>). The next planned phase resets to
-        <code>0</code> (e.g. <code>v03.030</code>).
+        (<code>v4.2.0</code> → <code>v4.2.1</code> →
+        <code>v4.2.2</code>). The next planned phase resets to
+        <code>.0</code> (e.g. <code>v4.3.0</code>).
       </li>
     </ul>
     <p>
+      The commit-message version and <code>manifest.json</code>'s
+      <code>version</code> are the same string (with or without the leading
+      <code>v</code>). Bump <code>manifest.json</code> in the same commit
+      that introduces the new version.
+    </p>
+    <p>
       Some versions may be non-functional; that is expected and acceptable.
     </p>
-
     <p>
-      <strong>manifest.json mirrors the commit version</strong>, translated to
-      the three-component form Chrome requires:
-      <code>vXX.YZW</code> → <code>XX.YZ.W</code>. Examples:
-      <code>v03.010</code> → <code>3.1.0</code>,
-      <code>v03.020</code> → <code>3.2.0</code>,
-      <code>v03.022</code> → <code>3.2.2</code>. Bump
-      <code>manifest.json</code>'s <code>version</code> field in the same
-      commit that introduces the new version number.
+      <strong>Historical note.</strong> Versions <code>v01.xxx</code>,
+      <code>v02.xxx</code>, and <code>v03.xxx</code> used an earlier
+      three-digit-suffix scheme (<code>vXX.YZW</code>). The
+      <code>vX.Y.Z</code> rule above applies from v4 onward.
     </p>
   </body>
 </html>

@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-05-27" />
+    <meta name="supersedes" content="implicit prior scheme vXX.YZW" />
+    <title>ADR 0002 — Versioning vX.Y.Z mirrors manifest.json</title>
+  </head>
+  <body>
+    <h1>ADR 0002 — Versioning <code>vX.Y.Z</code> mirrors <code>manifest.json</code></h1>
+
+    <section id="context">
+      <h2>Context</h2>
+      <p>
+        v01 through v03 used a three-digit suffix scheme: commit messages
+        like <code>v03.015</code>, translated to <code>manifest.json</code>
+        as <code>XX.YZ.W</code> = <code>3.0.15</code>. The translation
+        required a mental step every commit, and in practice the user's
+        commits did not always match the documented decomposition.
+      </p>
+      <p>
+        Chrome's <code>manifest.json</code> version field uses
+        dot-separated integers natively. There is no reason to maintain a
+        separate commit-message format that requires translation.
+      </p>
+    </section>
+
+    <section id="decision">
+      <h2>Decision</h2>
+      <p>
+        From v4 onward, commit-message versions use the format
+        <code>vX.Y.Z</code> — identical to <code>manifest.json</code>'s
+        <code>version</code> field (with or without the leading
+        <code>v</code>).
+      </p>
+      <ul>
+        <li><strong>X</strong> — major version. Bump on new feature set
+          or restructure.</li>
+        <li><strong>Y</strong> — planned phase within the major version.
+          First commit of each phase ends in <code>.0</code> (e.g.
+          <code>v4.1.0</code>, <code>v4.2.0</code>).</li>
+        <li><strong>Z</strong> — sub-commit within a phase. Follow-ups
+          increment Z (<code>v4.2.0</code> → <code>v4.2.1</code>). Next
+          planned phase resets Z to <code>0</code>.</li>
+      </ul>
+      <p>
+        <code>manifest.json</code>'s <code>version</code> field must be
+        bumped in the same commit that introduces the new version
+        number.
+      </p>
+    </section>
+
+    <section id="consequences">
+      <h2>Consequences</h2>
+      <ul>
+        <li><strong>+</strong> No translation step. Commit version and
+          manifest version are the same string.</li>
+        <li><strong>+</strong> Git log is naturally Chrome-version-sortable.</li>
+        <li><strong>+</strong> Phase boundaries visible in the version
+          number (<code>v4.2.0</code> vs <code>v4.2.5</code>).</li>
+        <li><strong>−</strong> v01–v03 commits use the old scheme.
+          Search across all-time history requires knowing both formats.
+          Mitigated by the historical note in rules.html.</li>
+        <li><strong>−</strong> Y is finite (Chrome accepts up to 65535
+          per component), so a single major version cannot have more
+          than 65535 phases. Not a real constraint.</li>
+      </ul>
+    </section>
+  </body>
+</html>

@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="architecture" />
+    <meta name="scope" content="current shipped system" />
+    <meta name="baseline-version" content="v03.015" />
+    <meta name="last-updated" content="2026-05-27" />
+    <title>Architecture — ww-extension</title>
+  </head>
+  <body>
+    <h1>Architecture</h1>
+
+    <p>
+      Living description of the system as currently shipped. Update this file
+      when the architecture changes — not per phase. For phase-level detail
+      see <code>docs/specs/</code>.
+    </p>
+
+    <p>
+      <strong>Baseline:</strong> v03.015 (last shipped client version before
+      v4 opening). The backend is a separate repo (TBD); its section below
+      is a placeholder until that work starts.
+    </p>
+
+    <h2>Components</h2>
+
+    <section id="client">
+      <h3>Client — this repo (Chrome MV3 extension)</h3>
+
+      <h4>Files</h4>
+      <dl>
+        <dt><code>manifest.json</code></dt>
+        <dd>MV3 manifest. <code>options_ui.open_in_tab: true</code>,
+          <code>action: {}</code> (no popup — toolbar icon opens options).
+          Content script matches <code>jobs.htm*</code> on WaterlooWorks.</dd>
+
+        <dt><code>options.html</code> + <code>src/options.js</code></dt>
+        <dd>Three-tab settings UI: API Configuration, Profile &amp; Context,
+          Settings.</dd>
+
+        <dt><code>welcome.html</code></dt>
+        <dd>First-run welcome page. Opens on install via
+          <code>chrome.runtime.onInstalled</code>; <code>welcomeShown</code>
+          storage flag prevents re-open on dev reloads.</dd>
+
+        <dt><code>src/content.js</code></dt>
+        <dd>Content script. Owns the sidebar UI, scan flow, badge injection
+          via MutationObserver, theme listener, empty-state guide.</dd>
+
+        <dt><code>src/background.js</code></dt>
+        <dd>Service worker. Gemini API client, token-usage counter, message
+          router. Handles <code>openWelcome</code>, <code>openOptions</code>,
+          scan requests from content script.</dd>
+
+        <dt><code>src/page-bridge.js</code></dt>
+        <dd>Page-context bridge. Injected into the WW page (not isolated
+          world) to access <code>dataViewerApp</code> and action tokens.
+          Communicates with content script via <code>postMessage</code>
+          with reqId namespacing.</dd>
+
+        <dt><code>src/sidebar.css</code></dt>
+        <dd>All extension CSS: sidebar variables (dark/light tokens), badge
+          styles, controls. No JS-driven styling.</dd>
+      </dl>
+
+      <h4>Storage</h4>
+      <p>See <code>reference/data-model.html</code> for the full key list
+        with schemas. Summary: settings (apiKey, model, cvText,
+        preferences), theme, cumulative token usage, score map per posting,
+        ordered posting-id list for cross-page navigation.</p>
+
+      <h4>Key architectural decisions to preserve</h4>
+      <ul>
+        <li>
+          <strong>page-bridge runs in page context.</strong> Required to
+          reach <code>dataViewerApp</code> and action tokens that the
+          isolated content-script world cannot see. Communication via
+          <code>postMessage</code> with per-request IDs.
+        </li>
+        <li>
+          <strong>Direct fetch to <code>/myAccount/co-op/full/jobs.htm</code></strong>
+          with cached action tokens, bypassing <code>getPostingOverview()</code>.
+          Kills overlay flicker during scans. Do not revert.
+        </li>
+        <li>
+          <strong>MutationObserver on <code>&lt;table&gt;</code> with
+          rAF-debounced badge reinject.</strong> DataViewer reuses
+          <code>&lt;tr&gt;</code> elements on pagination, so badges must
+          re-attach after any DOM mutation.
+        </li>
+        <li>
+          <strong>API key sent as <code>X-Goog-Api-Key</code> header,
+          never in query string.</strong> Keeps the key out of browser
+          history / referer logs.
+        </li>
+        <li>
+          <strong>Token accumulation serialized through a per-context
+          <code>tokenWriteChain</code> promise.</strong> Prevents
+          lost-update races when multiple scans update the counter
+          concurrently.
+        </li>
+        <li>
+          <strong><code>chrome.storage.onChanged</code> drives live UI
+          updates</strong> for theme switching and guide-step status.
+          One listener, multiple consumers — do not add per-feature
+          listeners.
+        </li>
+      </ul>
+    </section>
+
+    <section id="backend" data-status="not-yet-built">
+      <h3>Backend — separate repo (TBD)</h3>
+      <p>
+        Will host user accounts, credit ledger, and the Gemini-calling
+        logic (moving prompts and scoring tuning off the client).
+        See <code>docs/roadmap.html#active</code> for the v4 arc and
+        <code>docs/decisions/0004-backend-separate-repo.html</code> for
+        why this is a separate repo rather than a folder here.
+      </p>
+      <p>
+        This section will be expanded with the backend's components,
+        stack, and deployment target once the backend bootstrap phase
+        lands. Link to the backend repo from
+        <code>docs/reference/api.html</code> when the API contract
+        firms up.
+      </p>
+    </section>
+
+    <h2>Data flow (current — client only)</h2>
+
+    <ol>
+      <li>User opens WW jobs page. Content script injects sidebar and
+        attaches MutationObserver to the postings table.</li>
+      <li>User clicks Scan. Content script asks page-bridge to enumerate
+        posting IDs via <code>dataViewerApp</code>.</li>
+      <li>For each posting: content script fetches the posting HTML
+        directly (cached tokens), forwards to background.</li>
+      <li>Background calls Gemini with the posting + cvText +
+        preferences. Receives <code>{score, verdict, reason}</code>.</li>
+      <li>Background writes the score to <code>ww_scores</code> storage.
+        Content script's storage listener triggers badge reinject and
+        sidebar list re-render.</li>
+    </ol>
+
+    <p>
+      <strong>v4 will reshape this:</strong> step 4's Gemini call moves
+      to the backend; the extension sends the posting payload to the
+      backend (debiting credits) and receives the score. The extension
+      no longer holds the Gemini API key.
+    </p>
+
+    <h2>Security boundaries</h2>
+
+    <ul>
+      <li>
+        <strong>API key never enters the content-script context.</strong>
+        It lives in <code>chrome.storage.local</code> and is read only
+        by the background service worker, which makes the outbound
+        Gemini request.
+      </li>
+      <li>
+        <strong>page-bridge has no access to extension storage or
+        background.</strong> Communication is one-way request/response
+        via postMessage; the page cannot poke storage or trigger scans
+        on its own.
+      </li>
+      <li>
+        <strong>welcome.html is loaded as an extension page</strong>
+        (chrome-extension://...) — no CSP relaxation, no remote scripts.
+      </li>
+    </ul>
+
+    <h2>Known issues</h2>
+
+    <dl>
+      <dt><code>scrollToRow</code> occasionally reports "not in current view"</dt>
+      <dd>Not reproduced in lab. Possibly stale <code>allPostingIds</code>
+        after a WW filter change between scans. v01.020 added a "restore
+        start page + error message" fallback so the user is not silently
+        stranded. Deferred indefinitely.</dd>
+    </dl>
+  </body>
+</html>

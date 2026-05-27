@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="reference" />
+    <meta name="subject" content="data-model" />
+    <meta name="last-updated" content="2026-05-27" />
+    <title>Data Model — ww-extension</title>
+  </head>
+  <body>
+    <h1>Data Model</h1>
+
+    <p>
+      All persistent state. Updated whenever a storage key is added,
+      removed, or its schema changes.
+    </p>
+
+    <h2>Client — <code>chrome.storage.local</code></h2>
+
+    <dl>
+      <dt><code>apiKey</code></dt>
+      <dd><strong>Type:</strong> <code>string</code>. Gemini API key.
+        Read only by the background service worker; never enters the
+        content-script context. In v4 this becomes optional / removed
+        once server-side scoring lands.</dd>
+
+      <dt><code>model</code></dt>
+      <dd><strong>Type:</strong> <code>string</code>
+        (<code>'gemini-2.5-flash'</code> | <code>'gemini-2.5-pro'</code>
+        — verify against current options page).</dd>
+
+      <dt><code>cvText</code></dt>
+      <dd><strong>Type:</strong> <code>string</code>. Extracted profile
+        text from the user's uploaded PDF. Used as scoring context.
+        User-facing name: "application package."</dd>
+
+      <dt><code>preferences</code></dt>
+      <dd><strong>Type:</strong> <code>string</code>. Soft preferences /
+        custom match criteria (free-form prose).</dd>
+
+      <dt><code>theme</code></dt>
+      <dd><strong>Type:</strong> <code>'dark' | 'light'</code>. Default
+        <code>'dark'</code>. Live-synced via
+        <code>chrome.storage.onChanged</code> across all extension
+        contexts.</dd>
+
+      <dt><code>tokenUsage</code></dt>
+      <dd><strong>Type:</strong> <code>{ input: number, cached: number,
+        output: number }</code>. Cumulative token counters across all
+        scans. Writes are serialized through
+        <code>tokenWriteChain</code> in the background service worker
+        to prevent lost-update races.</dd>
+
+      <dt><code>ww_scores</code></dt>
+      <dd><strong>Type:</strong> <code>Record&lt;postingId, { score:
+        number, verdict: string, reason: string, title: string,
+        org: string }&gt;</code>. Score map keyed by WW posting ID.
+        Drives badge rendering and sidebar list.</dd>
+
+      <dt><code>ww_posting_ids</code></dt>
+      <dd><strong>Type:</strong> <code>string[]</code>. Ordered array
+        from the last <code>selectAll</code>. Used for cross-page row
+        navigation when the user clicks a sidebar entry on a different
+        results page than where it was scored.</dd>
+
+      <dt><code>welcomeShown</code></dt>
+      <dd><strong>Type:</strong> <code>boolean</code>. Set after the
+        first-install welcome tab opens. Prevents re-opening on dev
+        reloads (which fire <code>onInstalled</code> with reason
+        <code>'update'</code>).</dd>
+
+      <dt><code>droppedFile</code></dt>
+      <dd><strong>Type:</strong> options-page transient state for the
+        last-dropped PDF (filename + base64). Cleared by the "Clear
+        application package" button.</dd>
+    </dl>
+
+    <h2>Server — backend repo (not yet built)</h2>
+
+    <p>
+      Backend schemas (users, credit ledger, scan history, payment
+      records) will be documented here once the backend bootstrap
+      phase lands. Until then, see <code>docs/roadmap.html#active</code>
+      for the planned v4 arc and
+      <code>docs/decisions/0004-backend-separate-repo.html</code> for
+      the repo-split rationale.
+    </p>
+
+    <p>
+      <strong>Anticipated entities (subject to v4 design):</strong></p>
+    <ul>
+      <li><code>user</code> — identity + auth credentials</li>
+      <li><code>credit_balance</code> — per-user credit count</li>
+      <li><code>credit_ledger_entry</code> — append-only debit/credit log
+        (scan debits, purchase credits, refunds)</li>
+      <li><code>scan</code> — request/response record for audit and
+        refund-on-failure</li>
+    </ul>
+  </body>
+</html>

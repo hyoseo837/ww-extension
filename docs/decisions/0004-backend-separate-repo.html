@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-05-27" />
+    <title>ADR 0004 — Backend lives in a separate repo</title>
+  </head>
+  <body>
+    <h1>ADR 0004 — Backend lives in a separate repo</h1>
+
+    <section id="context">
+      <h2>Context</h2>
+      <p>
+        v4 introduces monetization: user accounts, a credit ledger, and
+        server-side Gemini calls. The choice is whether the backend
+        code lives in this repo (monorepo, e.g. <code>server/</code>
+        alongside <code>src/</code>) or in a separate repository.
+      </p>
+      <p>
+        Monorepo pros: atomic client+server changes, single set of
+        docs, easier for a solo developer to navigate.
+      </p>
+      <p>
+        Split pros: the extension is loaded unpacked or distributed via
+        the Chrome Web Store — anything in this repo can be inspected
+        by any installed user. The user wants to keep scoring prompts,
+        tuning logic, and any pricing/business code out of the client
+        bundle so they aren't visible to end users or competitors.
+      </p>
+    </section>
+
+    <section id="decision">
+      <h2>Decision</h2>
+      <p>
+        The backend lives in a separate repository (name TBD as of this
+        ADR). The extension repo (this one) holds only the client. The
+        client's view of the API contract is mirrored in
+        <code>docs/reference/api.html</code> in this repo; the
+        backend's repo holds the authoritative server-side schemas and
+        endpoint implementations.
+      </p>
+    </section>
+
+    <section id="consequences">
+      <h2>Consequences</h2>
+      <ul>
+        <li><strong>+</strong> Proprietary scoring prompts and tuning
+          logic never ship in the extension bundle.</li>
+        <li><strong>+</strong> Each repo has a smaller agent context
+          surface — faster orientation for agents working on either
+          side.</li>
+        <li><strong>+</strong> Independent deploy story for the server
+          (no Chrome Web Store review cycle for backend changes).</li>
+        <li><strong>−</strong> Client/server changes can no longer be
+          atomic. API contract changes require a coordinated release.
+          Mitigated by versioning the API and keeping the contract
+          mirror in this repo current.</li>
+        <li><strong>−</strong> Two repos to maintain. Slight overhead
+          for a solo dev.</li>
+        <li><strong>−</strong> Cross-repo cross-references in docs are
+          weaker than intra-repo links. The contract mirror approach
+          (this repo describes what the client expects; backend repo
+          describes what it provides) keeps each repo self-contained
+          for agents working within it.</li>
+      </ul>
+    </section>
+  </body>
+</html>

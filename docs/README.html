@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="docs-index" />
+    <meta name="audience" content="agents and humans navigating this project" />
+    <meta name="last-updated" content="2026-05-27" />
+    <title>Docs Index — ww-extension</title>
+  </head>
+  <body>
+    <h1>Docs Index</h1>
+
+    <p>
+      This file is the map. Open it first when you don't know which doc
+      you need. It explains where things live and the conventions used
+      across <code>docs/</code>.
+    </p>
+
+    <h2>Doc tree</h2>
+
+    <dl>
+      <dt><code>docs/README.html</code></dt>
+      <dd>This file. Map of everything below.</dd>
+
+      <dt><code>docs/roadmap.html</code></dt>
+      <dd>Living vision. Active major version's goals; sketched future
+        majors. Updated in place across version bumps — not archived.</dd>
+
+      <dt><code>docs/architecture.html</code></dt>
+      <dd>Living system architecture. Current shipped state: files,
+        storage keys, components, contracts. Updated whenever the
+        architecture changes (not per phase).</dd>
+
+      <dt><code>docs/specs/</code></dt>
+      <dd>One file per phase: <code>vX.Y.Z-slug.html</code>. Self-contained
+        spec for that phase: vision, files to touch, verify criteria,
+        status. Replaces the old <code>plan.html</code> + <code>impl.html</code>.</dd>
+
+      <dt><code>docs/decisions/</code></dt>
+      <dd>ADRs (Architecture Decision Records). One file per significant
+        decision: <code>NNNN-slug.html</code>. Immutable once accepted —
+        supersede with a new ADR rather than editing. Replaces the old
+        chronological <code>history.html</code>.</dd>
+
+      <dt><code>docs/reference/</code></dt>
+      <dd>Stable lookup material. WW DOM cheatsheet, storage/data
+        schemas, backend API contract. Read on demand, not by default.</dd>
+
+      <dt><code>docs/archive/</code></dt>
+      <dd>Frozen old major versions. v01/v02/v03 used the older
+        plan/impl/history shape. Do not extend; reference only.</dd>
+    </dl>
+
+    <h2>Where to read for common tasks</h2>
+
+    <dl>
+      <dt id="task-implement-phase">Implementing a phase</dt>
+      <dd>
+        <ol>
+          <li><code>CLAUDE.md</code> + <code>.claude/rules.html</code></li>
+          <li><code>docs/specs/vX.Y.Z-slug.html</code> (the specific phase)</li>
+          <li><code>docs/architecture.html</code> (only the relevant section)</li>
+          <li><code>docs/decisions/</code> (grep for constraints — e.g.
+            <code>*auth*</code>, <code>*storage*</code>)</li>
+        </ol>
+      </dd>
+
+      <dt id="task-understand-system">Understanding the system</dt>
+      <dd>
+        <ol>
+          <li><code>docs/architecture.html</code></li>
+          <li><code>docs/reference/data-model.html</code></li>
+          <li><code>docs/decisions/</code> (browse titles)</li>
+        </ol>
+      </dd>
+
+      <dt id="task-plan-feature">Planning a new feature / phase</dt>
+      <dd>
+        <ol>
+          <li><code>docs/roadmap.html</code> (where does it fit?)</li>
+          <li><code>docs/decisions/</code> (what constraints apply?)</li>
+          <li>Write a new <code>docs/specs/vX.Y.Z-slug.html</code>
+            following the convention below</li>
+          <li>If the feature requires a significant new decision, write
+            an ADR in <code>docs/decisions/</code> too</li>
+        </ol>
+      </dd>
+
+      <dt id="task-lookup-storage">Looking up storage keys / data shapes</dt>
+      <dd><code>docs/reference/data-model.html</code></dd>
+
+      <dt id="task-debug-ww-dom">Debugging WaterlooWorks DOM behavior</dt>
+      <dd><code>docs/reference/ww-dom.html</code> (compact cheatsheet).
+        The full DOM dump <code>ww-dom-full.html</code> (553 KB,
+        gitignored) is local-only — do not load it into an agent
+        context window.</dd>
+
+      <dt id="task-backend">Working on the backend</dt>
+      <dd>Backend lives in a separate repo (TBD name). API contract
+        will be mirrored in <code>docs/reference/api.html</code> as
+        the client's view of the server.</dd>
+    </dl>
+
+    <h2>Conventions</h2>
+
+    <h3>How to write a spec (<code>docs/specs/vX.Y.Z-slug.html</code>)</h3>
+    <p>Required <code>&lt;meta&gt;</code>: <code>project</code>,
+      <code>type="spec"</code>, <code>version</code>,
+      <code>status</code> (planned | in-progress | done),
+      <code>last-updated</code>. Body sections:</p>
+    <ul>
+      <li><strong>Goal</strong> — one paragraph: what this phase does
+        and why.</li>
+      <li><strong>Files</strong> — files to touch (changed / added /
+        moved).</li>
+      <li><strong>Verify</strong> — concrete checks a human or agent
+        can run to confirm the phase shipped correctly.</li>
+      <li><strong>Notes</strong> (optional) — non-obvious observations
+        from implementation. If a decision in here turns out to
+        constrain future work, promote it to an ADR.</li>
+    </ul>
+    <p>A trivial phase (e.g. a one-line copy fix) gets a 15-line spec.
+      A complex phase can grow to a folder
+      <code>vX.Y.Z-slug/</code> with <code>spec.html</code> plus
+      supporting assets.</p>
+
+    <h3>How to write an ADR (<code>docs/decisions/NNNN-slug.html</code>)</h3>
+    <p>Required <code>&lt;meta&gt;</code>: <code>project</code>,
+      <code>type="adr"</code>, <code>status</code>
+      (proposed | accepted | deprecated | superseded),
+      <code>date</code>, optional <code>supersedes</code> /
+      <code>superseded-by</code>. Body sections (Michael Nygard
+      template):</p>
+    <ul>
+      <li><strong>Context</strong> — the forces at play. Why this
+        decision is on the table.</li>
+      <li><strong>Decision</strong> — what we chose, in one or two
+        sentences.</li>
+      <li><strong>Consequences</strong> — what becomes easier, what
+        becomes harder, what's now constrained.</li>
+    </ul>
+    <p>ADRs are <em>immutable once accepted</em>. To change a decision,
+      write a new ADR that supersedes the old one (link via
+      <code>supersedes</code> / <code>superseded-by</code> meta and an
+      explicit prose pointer).</p>
+
+    <h3>File naming</h3>
+    <ul>
+      <li>Specs: <code>vX.Y.Z-kebab-slug.html</code>
+        (e.g. <code>v04.010-auth.html</code>).</li>
+      <li>ADRs: <code>NNNN-kebab-slug.html</code>, zero-padded to four
+        digits (e.g. <code>0001-html-over-markdown.html</code>).
+        Numbering is monotonic and never reused.</li>
+    </ul>
+  </body>
+</html>

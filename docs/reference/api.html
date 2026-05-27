@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="reference" />
+    <meta name="subject" content="backend-api-contract" />
+    <meta name="status" content="placeholder" />
+    <meta name="last-updated" content="2026-05-27" />
+    <title>Backend API Contract — ww-extension (placeholder)</title>
+  </head>
+  <body>
+    <h1>Backend API Contract</h1>
+
+    <p>
+      <strong>Placeholder.</strong> Populated when the backend bootstrap
+      phase lands. Holds the client's view of the backend API —
+      endpoints, request/response shapes, error codes, auth headers.
+      Authoritative source remains the backend repo; this file is the
+      mirror the extension depends on.
+    </p>
+
+    <p>
+      Backend lives in a separate repo (TBD name). See
+      <code>docs/decisions/0004-backend-separate-repo.html</code> for
+      why.
+    </p>
+
+    <h2>Anticipated endpoints (subject to v4 design)</h2>
+
+    <ul>
+      <li><code>POST /auth/signup</code>, <code>POST /auth/signin</code>,
+        <code>POST /auth/signout</code></li>
+      <li><code>GET /me</code> — current user + credit balance</li>
+      <li><code>POST /scan</code> — submit posting payload, receive
+        score + verdict + reason. Debits credit.</li>
+      <li><code>GET /credits/balance</code></li>
+      <li><code>POST /credits/purchase</code> — payment processor
+        callback / checkout init.</li>
+    </ul>
+  </body>
+</html>

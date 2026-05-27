@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-05-27" />
+    <title>ADR 0001 — HTML over Markdown for project docs</title>
+  </head>
+  <body>
+    <h1>ADR 0001 — HTML over Markdown for project docs</h1>
+
+    <section id="context">
+      <h2>Context</h2>
+      <p>
+        Most software projects use Markdown for internal docs. But Markdown
+        cannot carry semantic metadata: no <code>&lt;meta&gt;</code> headers,
+        no <code>&lt;time datetime&gt;</code>, no <code>id</code> anchors on
+        arbitrary elements, no semantic tags that name what content
+        <em>is</em> (versus how it looks).
+      </p>
+      <p>
+        This project is consumed primarily by AI coding agents (Claude Code)
+        that benefit from structured metadata when deciding which docs to
+        load and how to interpret them. Status tracking on specs and ADRs,
+        version tags, dates, and explicit document types are all things a
+        well-tagged HTML doc surfaces that a Markdown doc only implies.
+      </p>
+      <p>
+        The cost of HTML is ~30% more tokens than equivalent Markdown for
+        the same prose content, due to closing tags and attributes.
+      </p>
+    </section>
+
+    <section id="decision">
+      <h2>Decision</h2>
+      <p>
+        Use HTML for all docs under <code>docs/</code>. Exception:
+        <code>CLAUDE.md</code> and <code>README.md</code> at the project
+        root, which must be Markdown because their consumers (Claude Code
+        and GitHub) require it by filename.
+      </p>
+      <p>
+        Use HTML's expressiveness <strong>with restraint</strong>. Every
+        tag and attribute must earn its place by helping a future reader
+        (human or agent) navigate or query the doc. Skip generic SEO
+        boilerplate. Use <code>data-*</code> only when something actually
+        queries it. No CSS, no JavaScript, no design.
+      </p>
+    </section>
+
+    <section id="consequences">
+      <h2>Consequences</h2>
+      <ul>
+        <li><strong>+</strong> Specs and ADRs can carry status, dates, and
+          version metadata in <code>&lt;meta&gt;</code> — greppable and
+          machine-readable without parsing prose.</li>
+        <li><strong>+</strong> Semantic tags (<code>&lt;section&gt;</code>,
+          <code>&lt;dl&gt;</code>, <code>&lt;time&gt;</code>) name content
+          types, giving agents structural cues beyond heading hierarchy.</li>
+        <li><strong>+</strong> <code>id</code> anchors on any element
+          enable precise cross-doc links.</li>
+        <li><strong>−</strong> ~30% more tokens per doc than Markdown.
+          Mitigated by writing concisely and keeping individual files small.</li>
+        <li><strong>−</strong> Loses Markdown's ecosystem tooling
+          (auto-rendering on GitHub, ADR templates, lint tools). Accepted
+          tradeoff — these docs are not for GitHub browsing.</li>
+        <li><strong>−</strong> Discipline required to avoid over-tagging.
+          Easy to add metadata "just in case." Restraint rule in this ADR
+          and the project rules file is the only guardrail.</li>
+      </ul>
+    </section>
+  </body>
+</html>

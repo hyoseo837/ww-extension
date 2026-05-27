@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-05-27" />
+    <meta name="supersedes" content="plan.html + impl.html + history.html shape" />
+    <title>ADR 0005 — Doc architecture: per-phase specs + subject-indexed ADRs</title>
+  </head>
+  <body>
+    <h1>ADR 0005 — Doc architecture: per-phase specs + subject-indexed ADRs</h1>
+
+    <section id="context">
+      <h2>Context</h2>
+      <p>
+        v01–v03 used a three-doc shape: <code>plan.html</code>
+        (vision), <code>impl.html</code> (build steps + inherited
+        state), <code>history.html</code> (chronological decisions log).
+        Three issues surfaced:
+      </p>
+      <ol>
+        <li>
+          <strong>Duplication.</strong> Plan and impl both enumerate
+          every phase. Phase-level changes had to be reflected in two
+          places.
+        </li>
+        <li>
+          <strong>Mixed time horizons in impl.html.</strong> Per-phase
+          build steps (relevant during that phase) were interleaved
+          with the "Inherited State" snapshot (relevant always).
+        </li>
+        <li>
+          <strong>Chronological-only decision log.</strong>
+          history.html grouped decisions by phase number. Finding
+          "the auth decision" months later required remembering which
+          phase it landed in.
+        </li>
+      </ol>
+      <p>
+        Research into 2026 patterns (Diátaxis, ADRs, Spec-Driven
+        Development, CLAUDE.md navigation-hub guidance) suggested a
+        cleaner split: specs per phase, ADRs per decision, separate
+        living docs for vision and architecture.
+      </p>
+    </section>
+
+    <section id="decision">
+      <h2>Decision</h2>
+      <p>The v4-onward doc structure is:</p>
+      <ul>
+        <li><code>CLAUDE.md</code> — agent navigation hub at project root.</li>
+        <li><code>docs/README.html</code> — doc map.</li>
+        <li><code>docs/roadmap.html</code> — living vision across major versions.</li>
+        <li><code>docs/architecture.html</code> — living system architecture.</li>
+        <li><code>docs/specs/vX.Y.Z-slug.html</code> — one spec per phase.</li>
+        <li><code>docs/decisions/NNNN-slug.html</code> — ADRs, immutable,
+          subject-indexed.</li>
+        <li><code>docs/reference/</code> — stable lookup material.</li>
+        <li><code>docs/archive/v01..v03/</code> — frozen prior major versions.</li>
+      </ul>
+      <p>
+        Specs are self-contained (goal + files + verify + notes). ADRs
+        follow the Michael Nygard template (Context / Decision /
+        Consequences) with status tracking and supersession links.
+      </p>
+    </section>
+
+    <section id="consequences">
+      <h2>Consequences</h2>
+      <ul>
+        <li><strong>+</strong> Agent working on a phase reads a single
+          small file (the relevant spec) instead of cross-referencing
+          plan and impl.</li>
+        <li><strong>+</strong> Decisions are findable by topic
+          (<code>ls decisions/*auth*</code>) regardless of when they
+          were made.</li>
+        <li><strong>+</strong> Living docs (roadmap, architecture)
+          survive major-version bumps without being rewritten.</li>
+        <li><strong>+</strong> Smaller per-task context window — agent
+          loads only what's relevant.</li>
+        <li><strong>−</strong> More files. A major version with 16
+          phases produces 16 spec files instead of one combined
+          impl.html.</li>
+        <li><strong>−</strong> Two indirection points to learn: the
+          spec-naming convention and the ADR-numbering convention.
+          docs/README.html documents both.</li>
+        <li><strong>−</strong> v01–v03 archived docs use the old shape;
+          agents reading those must understand the prior convention.
+          Mitigated by the archive being read-only and clearly labelled.</li>
+      </ul>
+    </section>
+  </body>
+</html>

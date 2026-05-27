@@ -13,11 +13,30 @@
     <h1>Session History — ww-extension v03</h1>
 
     <p>
-      This file records decisions made during v03 phases. Append a new section
-      after each phase commit. Record only crucial decisions or non-obvious
-      choices — not a step-by-step log. See <code>docs/v02-archive/history.html</code>
-      for the same pattern applied to v02.001 through v02.022.
+      This file records decisions made during v03 phases. Recording stopped at v03.008.
+      v03 wrapped at v03.015 — see closeout note below. Frozen historical reference;
+      do not extend. See <code>docs/archive/v02/history.html</code> for the same pattern
+      applied to v02.001 through v02.022.
     </p>
+
+    <section id="v03-closeout">
+      <h2>v03 closeout (2026-05-27)</h2>
+      <p>
+        v03 shipped 16 phases (v03.000 through v03.015). Entries below cover
+        v03.002–v03.008. The seven commits between v03.009 and v03.015 shipped
+        without history entries — small fixes and polish (rate-limit copy, paid API
+        key requirement, CV→application-package rename, skip-button target, CSP fix,
+        dark-mode contrast, WaterlooWorks link). No non-obvious decisions worth
+        recording.
+      </p>
+      <p>
+        At v4 opening (2026-05-27) the doc architecture changed: plan / impl /
+        history were replaced by <code>docs/specs/</code> (one file per phase) and
+        <code>docs/decisions/</code> (ADR-style). This file is frozen as the v03
+        archive. See <code>docs/decisions/0005-doc-architecture-spec-adr.html</code>
+        for the rationale.
+      </p>
+    </section>
 
     <h2>v03.008 — Options page: Settings tab expansion (2026-05-22)</h2>
 

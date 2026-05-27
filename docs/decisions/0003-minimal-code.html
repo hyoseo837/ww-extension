@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-05-27" />
+    <title>ADR 0003 — Minimal code, no premature abstraction</title>
+  </head>
+  <body>
+    <h1>ADR 0003 — Minimal code, no premature abstraction</h1>
+
+    <section id="context">
+      <h2>Context</h2>
+      <p>
+        This is a solo-developed Chrome extension that grew from a
+        scoring loop into a polished tool over three major versions.
+        AI coding agents producing code for this project default to
+        adding abstractions, error-handling layers, and configuration
+        plumbing that anticipate hypothetical future needs. For a
+        single-developer browser extension, this overhead is pure cost
+        — it complicates the code, makes refactors harder, and pollutes
+        agent context windows on subsequent reads.
+      </p>
+    </section>
+
+    <section id="decision">
+      <h2>Decision</h2>
+      <p>
+        Write the simplest, clearest, most direct code that solves the
+        problem at hand. No abstractions beyond what the task requires.
+        No clever patterns, no premature generalization. Three similar
+        lines are better than a premature abstraction.
+      </p>
+      <p>
+        No error handling, fallbacks, or validation for scenarios that
+        can't happen. Trust internal code and framework guarantees.
+        Only validate at system boundaries (user input, external APIs,
+        the WW page DOM).
+      </p>
+      <p>
+        Default to no comments. Add a comment only when the
+        <em>why</em> is non-obvious — a workaround, a subtle invariant,
+        a hidden constraint. Don't explain what the code does; the code
+        does that.
+      </p>
+    </section>
+
+    <section id="consequences">
+      <h2>Consequences</h2>
+      <ul>
+        <li><strong>+</strong> Code stays readable end-to-end without
+          jumping through abstraction layers.</li>
+        <li><strong>+</strong> Smaller agent context windows per file
+          read — directly improves agent productivity.</li>
+        <li><strong>+</strong> Refactors are easier because there is
+          less inherited indirection to preserve.</li>
+        <li><strong>−</strong> When duplication does eventually warrant
+          extraction, the work to extract is borne later rather than
+          spread across initial writes. Acceptable for a project at
+          this scale.</li>
+        <li><strong>−</strong> Agents asked to "improve" code without
+          a specific bug or feature target will be tempted to add
+          structure. The rule must be enforced via rules.html and code
+          review.</li>
+      </ul>
+    </section>
+  </body>
+</html>

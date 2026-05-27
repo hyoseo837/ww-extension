@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="roadmap" />
+    <meta name="active-major-version" content="v04" />
+    <meta name="last-updated" content="2026-05-27" />
+    <title>Roadmap — ww-extension</title>
+  </head>
+  <body>
+    <h1>Roadmap</h1>
+
+    <p>
+      Vision across major versions. Living document — updated in place
+      across version bumps, not archived. For shipped phase detail see
+      <code>docs/specs/</code>; for system architecture see
+      <code>docs/architecture.html</code>.
+    </p>
+
+    <section id="shipped">
+      <h2>Shipped (frozen)</h2>
+
+      <dl>
+        <dt><a href="archive/v01/plan.html">v01</a> — core scoring loop</dt>
+        <dd>Sidebar UI, Gemini scoring, save-to-folder, badge tooltips.
+          Foundation for the entire extension.</dd>
+
+        <dt><a href="archive/v02/plan.html">v02</a> — context + cost-efficiency</dt>
+        <dd>PDF profile upload, multimodal extraction, soft preferences,
+          context caching, responseSchema, light/dark theming, cumulative
+          token usage.</dd>
+
+        <dt><a href="archive/v03/plan.html">v03</a> — UX polish</dt>
+        <dd>First-run welcome page, in-extension help, sidebar empty-state
+          guide, options-page help icons, Settings tab About/How-to cards.
+          Extension feels self-contained and Web-Store-ready.</dd>
+      </dl>
+    </section>
+
+    <section id="active" data-status="in-progress">
+      <h2>v4 — Monetization (active)</h2>
+
+      <p>
+        <strong>Goal:</strong> turn the extension into a monetizable service.
+        A separate backend repo (TBD name) holds user accounts, a credit
+        ledger, and the Gemini-calling logic + prompts (moving them off the
+        client so they aren't shipped in the unpacked extension). The
+        extension becomes a thin client: authenticates the user, spends
+        credits per scan, displays results.
+      </p>
+
+      <p><strong>Rationale for split:</strong></p>
+      <ul>
+        <li>Hide proprietary scoring prompts and tuning logic.</li>
+        <li>Centralize Gemini key management — user no longer needs their
+          own paid API key.</li>
+        <li>Enable per-user billing (credits) without trusting the client.</li>
+      </ul>
+
+      <p><strong>Sketched phase arcs (subject to v4 planning):</strong></p>
+      <ol>
+        <li>
+          <strong>v04.000 — Doc restructure + v4 opening</strong>
+          (this commit). See <code>docs/specs/v04.000-restructure.html</code>.
+        </li>
+        <li>
+          <strong>Backend bootstrap</strong> — separate repo created;
+          minimal auth + health endpoints; <code>docs/reference/api.html</code>
+          populated.
+        </li>
+        <li>
+          <strong>Auth in the extension</strong> — sign-in flow, token
+          storage, sign-out. Extension can authenticate against the backend.
+        </li>
+        <li>
+          <strong>Credit ledger</strong> — server-side balance, debit on
+          scan, refund on failure. Extension shows balance.
+        </li>
+        <li>
+          <strong>Server-side scoring</strong> — Gemini calls move to the
+          backend. Extension sends posting payload, backend returns score.
+          Removes API key requirement from the extension.
+        </li>
+        <li>
+          <strong>Payment processor integration</strong> — credit purchase
+          flow (Stripe / Ko-fi / LemonSqueezy — TBD).
+        </li>
+        <li>
+          <strong>Free tier + paid tier UX</strong> — onboarding tweaks,
+          welcome page updates, pricing display.
+        </li>
+      </ol>
+
+      <p>
+        Phase numbering and exact slicing will be set during v4 planning
+        (the next session after this restructure). Treat the list above as
+        a rough sequence, not a commitment.
+      </p>
+
+      <p>
+        <strong>Out of scope for v4 (deferred):</strong> auto-apply,
+        cover-letter generation, non-Gemini providers, native mobile.
+      </p>
+    </section>
+
+    <section id="future">
+      <h2>Beyond v4</h2>
+      <p>
+        No v5 commitments yet. Candidates to consider once v4 stabilizes:
+        non-Gemini provider support, cover-letter generation, team /
+        recruiter views. Update this section when a v5 direction is set.
+      </p>
+    </section>
+  </body>
+</html>

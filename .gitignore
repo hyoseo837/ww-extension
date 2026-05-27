@@ -2,5 +2,5 @@
 *.log
 node_modules/
 dist/
-docs/examples/exampleWW.html
+docs/reference/ww-dom-full.html
 ww-extension-v*.zip

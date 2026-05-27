@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v4.0.0" />
+    <meta name="status" content="in-progress" />
+    <meta name="last-updated" content="2026-05-27" />
+    <title>v4.0.0 — Doc restructure + v4 opening</title>
+  </head>
+  <body>
+    <h1>v4.0.0 — Doc restructure + v4 opening</h1>
+
+    <h2>Goal</h2>
+    <p>
+      Open major version 4 with a doc architecture that scales to the
+      monetization work ahead. Replace the inherited plan/impl/history
+      shape with per-phase specs (<code>docs/specs/</code>) and
+      subject-indexed decisions (<code>docs/decisions/</code>), add a
+      living roadmap and architecture doc, and seed the standing
+      project decisions as ADRs so v4 starts on a clean foundation.
+    </p>
+    <p>
+      No client code changes in this phase. Pure docs + config
+      restructure plus the version bump.
+    </p>
+
+    <h2>Files</h2>
+
+    <h3>Added</h3>
+    <ul>
+      <li><code>CLAUDE.md</code> — agent navigation hub (project root)</li>
+      <li><code>.claude/settings.json</code> — permission allowlist</li>
+      <li><code>docs/README.html</code> — doc map</li>
+      <li><code>docs/roadmap.html</code> — living vision</li>
+      <li><code>docs/architecture.html</code> — living system doc</li>
+      <li><code>docs/specs/v04.000-restructure.html</code> — this file</li>
+      <li><code>docs/decisions/0001-html-over-markdown.html</code></li>
+      <li><code>docs/decisions/0002-versioning-vXYZ.html</code></li>
+      <li><code>docs/decisions/0003-minimal-code.html</code></li>
+      <li><code>docs/decisions/0004-backend-separate-repo.html</code></li>
+      <li><code>docs/decisions/0005-doc-architecture-spec-adr.html</code></li>
+      <li><code>docs/reference/data-model.html</code></li>
+      <li><code>docs/reference/api.html</code> (placeholder)</li>
+    </ul>
+
+    <h3>Moved (git mv preserves history)</h3>
+    <ul>
+      <li><code>docs/v01-archive/</code> → <code>docs/archive/v01/</code></li>
+      <li><code>docs/v02-archive/</code> → <code>docs/archive/v02/</code></li>
+      <li><code>docs/plan.html</code> → <code>docs/archive/v03/plan.html</code></li>
+      <li><code>docs/impl.html</code> → <code>docs/archive/v03/impl.html</code></li>
+      <li><code>docs/history.html</code> → <code>docs/archive/v03/history.html</code></li>
+      <li><code>docs/examples/exampleWW-compact.html</code> → <code>docs/reference/ww-dom.html</code></li>
+      <li><code>docs/examples/exampleWW.html</code> → <code>docs/reference/ww-dom-full.html</code> (gitignored; .gitignore updated)</li>
+    </ul>
+
+    <h3>Removed</h3>
+    <ul>
+      <li><code>docs/examples/</code> (empty after moves)</li>
+    </ul>
+
+    <h3>Changed</h3>
+    <ul>
+      <li><code>.claude/rules.html</code> — rule 2 rewritten to point at
+        new structure; rule 4 rewritten for the spec/ADR pattern.</li>
+      <li><code>manifest.json</code> — version <code>3.0.15</code> →
+        <code>4.0.0</code>.</li>
+      <li><code>.gitignore</code> — <code>docs/examples/exampleWW.html</code>
+        → <code>docs/reference/ww-dom-full.html</code>.</li>
+      <li><code>docs/archive/v03/history.html</code> — closeout note
+        added for the v03.009–015 commits that shipped without entries.</li>
+    </ul>
+
+    <h2>Verify</h2>
+    <ol>
+      <li><code>git status</code> shows all moves as renames (R), not
+        delete+add — confirms history preserved.</li>
+      <li><code>cat manifest.json | grep version</code> →
+        <code>"version": "4.0.0"</code>.</li>
+      <li>Opening <code>docs/README.html</code> in a browser shows the
+        doc map with links to roadmap, architecture, specs, decisions,
+        reference, archive.</li>
+      <li>An agent starting fresh can read CLAUDE.md → rules.html →
+        docs/README.html and from those alone know where every kind
+        of content lives. No more guessing between plan.html and
+        impl.html.</li>
+      <li>Loading the unpacked extension still works (no code changes
+        in this phase) — the restructure should be invisible to the
+        running extension.</li>
+    </ol>
+
+    <h2>Notes</h2>
+    <p>
+      The 5 seeded ADRs formalize decisions already in force at v4
+      opening — they do not introduce new constraints. They exist so a
+      future agent (or the user 6 months from now) can find the "why"
+      behind project rules without having to grep conversation
+      transcripts or memory files.
+    </p>
+    <p>
+      Archive files' internal cross-references still use the old
+      <code>docs/v0N-archive/</code> paths. Not updated — they are
+      frozen historical snapshots. <code>docs/README.html</code>
+      directs agents away from archive paths for active work.
+    </p>
+  </body>
+</html>
