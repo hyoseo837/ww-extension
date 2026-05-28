@@ -1,15 +1,14 @@
 const TABLE_SEL      = '#dataViewerPlaceholder table.data-viewer-table';
 const ROW_SEL        = `${TABLE_SEL} tbody tr.table__row--body`;
-const DESC_CHAR_CAP  = 6000;
-const SCAN_DELAY_MS  = 600;
-const FETCH_TIMEOUT  = 15000;
+const DESC_CHAR_CAP   = 6000;
+const FETCH_TIMEOUT   = 15000;
+const SCAN_CONCURRENCY = 5;
 const VERDICT_ORDER  = { Apply: 0, Consider: 1, Skip: 2 };
 
 const scores = new Map(); // postingId → {score, verdict, reason, title, org}
 let allPostingIds = [];   // ordered list from selectAll — used for page navigation
 let aborted = false;
 let detectedPageSize = 50; // refined upward from observed row counts
-let cacheName = null;      // context cache name for the current scan session
 
 if (!window.__wwExtensionInjected) {
   window.__wwExtensionInjected = true;
@@ -248,28 +247,10 @@ async function scanAllJobs() {
       return;
     }
 
-    const settings = await chrome.storage.local.get(['apiKey', 'model', 'cvText', 'preferences']);
-    if (!settings.apiKey || !settings.cvText) {
-      setProgress('Open Settings (⚙) to set API key and Profile.', true);
+    const settings = await chrome.storage.local.get(['model', 'cvText', 'preferences']);
+    if (!settings.cvText) {
+      setProgress('Open Settings (⚙) to add your Profile.', true);
       return;
-    }
-
-    // Ask background to create a context cache for this scan session.
-    // The API key stays in the background context and is never sent through
-    // chrome.runtime messages or exposed in the page's Network tab.
-    // Requires ≥ 1,024 tokens of cached content — falls back to inline if it fails.
-    cacheName = null;
-    try {
-      const cacheReply = await chrome.runtime.sendMessage({
-        type:   'createCache',
-        cvText: settings.cvText,
-        model:  settings.model || 'gemini-2.5-flash'
-      });
-      if (cacheReply?.ok) cacheName = cacheReply.cacheName;
-      // Cache create failures fall through silently — token counter shows the
-      // impact (cached column stays at 0) and scoring proceeds inline.
-    } catch (e) {
-      // Messaging error — same fallback as above.
     }
 
     allPostingIds = postingIds.map(String);
@@ -282,11 +263,10 @@ async function scanAllJobs() {
     const total   = toScore.length;
     let done = 0, failed = 0;
     let lastError = '';
+    let halted = false;
+    let nextIdx = 0;
 
-    for (const postingId of toScore) {
-      if (aborted) break;
-      setProgress(`Fetching ${done + failed + 1} of ${total}…`);
-
+    async function scanOne(postingId) {
       let descriptionText = '';
       let extractedTitle  = '';
       try {
@@ -300,7 +280,7 @@ async function scanAllJobs() {
         descriptionText = rawText.slice(0, DESC_CHAR_CAP);
         extractedTitle  = doc.querySelector('h1, h2, h3')?.textContent.trim() ?? '';
       } catch (e) {
-        failed++; lastError = `fetch: ${e.message}`; continue;
+        return { ok: false, error: `fetch: ${e.message}` };
       }
 
       const rowInfo = rowMeta[postingId];
@@ -308,7 +288,6 @@ async function scanAllJobs() {
         title: rowInfo?.title || extractedTitle || `#${postingId}`,
         org:   rowInfo?.org   || ''
       };
-      setProgress(`Scoring ${done + failed + 1} of ${total}…`);
 
       const reply = await chrome.runtime.sendMessage({
         type: 'scoreJob',
@@ -316,42 +295,61 @@ async function scanAllJobs() {
         descriptionText,
         cvText:      settings.cvText,
         preferences: settings.preferences || '',
-        cacheName,
-        model:       settings.model || 'gemini-2.5-flash'
+        model:       settings.model || 'gemini-2.5-flash',
+        postingId
       });
 
-      if (reply.ok) {
+      if (reply?.ok) {
         scores.set(postingId, { ...reply.result, title: meta.title, org: meta.org });
         injectRowScores();
         scheduleFlush();
-        done++;
-      } else if (reply.code === 'RATE_LIMIT') {
-        setProgress(`Rate limit reached after ${done} scored. Try again later.`, true);
-        break;
-      } else {
-        failed++; lastError = reply.error || 'unknown';
+        return { ok: true };
       }
-
-      await sleep(SCAN_DELAY_MS);
+      // NO_CREDITS / NOT_SIGNED_IN stop the whole batch — no point burning
+      // wall time on calls we know will all fail the same way.
+      const halt = reply?.code === 'NO_CREDITS' || reply?.code === 'NOT_SIGNED_IN';
+      return { ok: false, error: reply?.error || 'unknown', halt };
     }
+
+    async function worker() {
+      while (!aborted && !halted) {
+        const idx = nextIdx++;
+        if (idx >= toScore.length) return;
+        const postingId = toScore[idx];
+        const result = await scanOne(postingId);
+        if (result.ok) {
+          done++;
+        } else {
+          failed++;
+          lastError = result.error;
+          if (result.halt) {
+            halted = true;
+            setProgress(result.error, true);
+            return;
+          }
+        }
+        setProgress(`Scored ${done + failed} of ${total}…`);
+      }
+    }
+
+    const workerCount = Math.min(SCAN_CONCURRENCY, toScore.length);
+    await Promise.all(Array.from({ length: workerCount }, () => worker()));
 
     // Final flush — overrides the pending debounced one.
     saveScores();
     renderSidebarList();
 
-    const skipped = failed ? ` (${failed} failed: ${lastError})` : '';
-    const summary = aborted
-      ? `Stopped at ${done} of ${total}.${skipped}`
-      : `${done} of ${total} scored.${skipped}`;
-    setProgress(summary, failed > 0);
+    if (!halted) {
+      const skipped = failed ? ` (${failed} failed: ${lastError})` : '';
+      const summary = aborted
+        ? `Stopped at ${done} of ${total}.${skipped}`
+        : `${done} of ${total} scored.${skipped}`;
+      setProgress(summary, failed > 0);
+    }
 
   } catch (e) {
     setProgress(`Error: ${e.message}`, true);
   } finally {
-    if (cacheName) {
-      chrome.runtime.sendMessage({ type: 'deleteCache', cacheName }).catch(() => {});
-      cacheName = null;
-    }
     scanBtn.disabled = false;
     stopBtn.disabled = true;
   }
@@ -367,10 +365,6 @@ function indexVisibleRows() {
     if (id) map[id] = { title: title || `#${id}`, org };
   });
   return map;
-}
-
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 // ── Sidebar list ──────────────────────────────────────────────────────────────
