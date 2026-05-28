@@ -5,7 +5,7 @@
     <meta name="project" content="ww-extension" />
     <meta name="type" content="spec" />
     <meta name="version" content="v4.1.0" />
-    <meta name="status" content="planned" />
+    <meta name="status" content="in-progress" />
     <meta name="last-updated" content="2026-05-27" />
     <title>Spec v4.1.0 — Backend bootstrap</title>
   </head>
@@ -34,7 +34,9 @@
         <a href="../decisions/0008-auth-and-db-via-supabase.html">0008</a>
         (Supabase auth + DB),
         <a href="../decisions/0009-backend-stack-fastapi.html">0009</a>
-        (FastAPI). Repo layout fixed by
+        (FastAPI),
+        <a href="../decisions/0011-uv-as-dep-manager.html">0011</a>
+        (uv). Repo layout fixed by
         <a href="../decisions/0010-monorepo-with-server-folder.html">0010</a>
         (monorepo).
       </p>
@@ -48,9 +50,15 @@
         <dt><code>server/pyproject.toml</code></dt>
         <dd>Project metadata, version <code>4.1.0</code> (syncs with
           root <code>manifest.json</code>), dependencies (fastapi,
-          uvicorn, supabase, httpx, pydantic-settings). Dependency
-          manager choice (uv vs poetry vs pip-tools) decided at phase
-          start — record as an ADR.</dd>
+          uvicorn[standard]). Uses uv per
+          <a href="../decisions/0011-uv-as-dep-manager.html">ADR 0011</a>;
+          hatchling build backend so the project is installable into
+          the venv (required for <code>importlib.metadata.version</code>
+          in <code>/health</code>).</dd>
+
+        <dt><code>server/uv.lock</code></dt>
+        <dd>uv-generated lockfile, committed. Dockerfile uses
+          <code>uv sync --frozen</code> to install from it.</dd>
 
         <dt><code>server/Dockerfile</code></dt>
         <dd>Multi-stage build: deps install, then thin runtime image.
@@ -88,10 +96,12 @@
       <h3>Changed</h3>
       <dl>
         <dt><code>package.sh</code></dt>
-        <dd>Add <code>server/</code> to the exclusion list (alongside
-          existing exclusions for docs, .git, etc.). Verify by
-          inspecting the resulting zip — no <code>server/</code>
-          entries.</dd>
+        <dd>Add a comment explaining <code>server/</code> exclusion.
+          The script uses an allowlist (only listed files are zipped),
+          so <code>server/</code> is already excluded by construction.
+          The comment makes the load-bearing intent explicit so a
+          future maintainer doesn't add <code>server/</code> to the
+          allowlist.</dd>
 
         <dt><code>.gitignore</code></dt>
         <dd>Add Python entries:
@@ -159,8 +169,11 @@
         <li>Region selection (DO + Supabase) is a load-bearing call
           for cross-vendor latency — decide and document in
           <code>architecture.html</code> at phase start.</li>
-        <li>Dependency manager choice (uv vs poetry vs pip-tools) is
-          worth an ADR — decide at phase start.</li>
+        <li>Dependency manager: uv, locked in
+          <a href="../decisions/0011-uv-as-dep-manager.html">ADR 0011</a>.</li>
+        <li>Region pair: DO <code>tor1</code> + Supabase
+          <code>ca-central-1</code> (both in Canada; lowest latency for
+          UWaterloo users). Decided at v4.1 phase start.</li>
         <li>DO App Platform deploys from the <code>server/</code>
           sub-path of this repo's master branch. Configure the source
           directory in the App Platform spec.</li>

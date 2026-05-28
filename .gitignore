@@ -4,3 +4,15 @@ node_modules/
 dist/
 docs/reference/ww-dom-full.html
 ww-extension-v*.zip
+
+# server/ (FastAPI backend)
+server/__pycache__/
+server/**/__pycache__/
+server/.venv/
+server/.env
+server/.env.*
+!server/.env.example
+server/*.egg-info/
+server/.pytest_cache/
+server/.ruff_cache/
+server/.mypy_cache/

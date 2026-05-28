@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-05-27" />
+    <title>ADR 0011 — uv as Python dependency manager for server/</title>
+  </head>
+  <body>
+    <h1>ADR 0011 — uv as Python dependency manager for server/</h1>
+
+    <section id="context">
+      <h2>Context</h2>
+      <p>
+        The backend in <code>server/</code> needs a dependency manager
+        that handles: a lockfile for reproducible builds, a virtual
+        environment, fast resolution, and clean Docker integration.
+        Candidates considered: <code>uv</code> (Astral),
+        <code>poetry</code>, and <code>pip-tools</code>
+        (<code>requirements.in</code> + <code>pip-compile</code>).
+      </p>
+      <p>
+        <strong>uv</strong> is Astral's Rust-based tool, ~10–100×
+        faster than pip/poetry for resolution and install. Single
+        binary handles project, lockfile, venv, and tool execution.
+        De facto choice for new Python projects in 2026.
+        <strong>Poetry</strong> is mature, popular, slower; familiar
+        if you've packaged Python before. <strong>pip-tools</strong>
+        is minimal but splits responsibilities across multiple tools
+        (pip + pip-compile + venv).
+      </p>
+      <p>
+        For a Docker deploy on DigitalOcean App Platform, build speed
+        matters (faster CI builds, faster local iteration). For a
+        solo dev, fewer tools to learn matters.
+      </p>
+    </section>
+
+    <section id="decision">
+      <h2>Decision</h2>
+      <p>
+        Use <code>uv</code> for <code>server/</code>. Lockfile is
+        <code>server/uv.lock</code>, committed. Dockerfile uses the
+        official <code>ghcr.io/astral-sh/uv:python3.12-bookworm-slim</code>
+        image for the build stage and copies the resulting
+        <code>.venv</code> into a slim runtime stage.
+      </p>
+    </section>
+
+    <section id="consequences">
+      <h2>Consequences</h2>
+      <ul>
+        <li><strong>+</strong> Fast: <code>uv sync</code> typically
+          finishes in seconds even for ~50 deps.</li>
+        <li><strong>+</strong> Single tool covers lockfile, venv,
+          tool execution (<code>uv run</code>), and Python version
+          management.</li>
+        <li><strong>+</strong> First-class Docker support via the
+          published <code>uv</code> images and cache-mount patterns.</li>
+        <li><strong>+</strong> Lockfile is committed; reproducible
+          builds across local dev, CI, and production.</li>
+        <li><strong>−</strong> Dependency on Astral's continued
+          stewardship. Astral is well-funded and uv is broadly
+          adopted, but it's a younger project than pip or poetry.
+          Mitigation: <code>pyproject.toml</code> is standard PEP 621;
+          if uv is ever abandoned, the project metadata moves to
+          another tool with minimal change.</li>
+        <li><strong>−</strong> Less familiar to Python developers who
+          haven't kept up with the 2024–2026 tooling shift. Acceptable
+          for a solo project.</li>
+      </ul>
+    </section>
+  </body>
+</html>
