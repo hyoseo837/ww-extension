@@ -74,28 +74,48 @@
       <dd><strong>Type:</strong> options-page transient state for the
         last-dropped PDF (filename + base64). Cleared by the "Clear
         application package" button.</dd>
+
+      <dt><code>auth</code> (v4.2.1)</dt>
+      <dd><strong>Type:</strong>
+        <code>{ access_token: string, refresh_token: string,
+        expires_at: number, email: string, user_id: string }</code>.
+        Supabase session captured by
+        <code>chrome.identity.launchWebAuthFlow</code>.
+        <code>expires_at</code> is a millisecond timestamp;
+        <code>email</code> and <code>user_id</code> are extracted
+        from the decoded JWT for display. Absent when signed out;
+        cleared by the Sign out button. Refresh logic lands at v4.2.2.</dd>
     </dl>
 
-    <h2>Server — backend repo (not yet built)</h2>
+    <h2>Server — Supabase Postgres</h2>
 
     <p>
-      Backend schemas (users, credit ledger, scan history, payment
-      records) will be documented here once the backend bootstrap
-      phase lands. Until then, see <code>docs/roadmap.html#active</code>
-      for the planned v4 arc and
-      <code>docs/decisions/0004-backend-separate-repo.html</code> for
-      the repo-split rationale.
+      User records are managed by Supabase Auth (table
+      <code>auth.users</code>) — populated automatically on first
+      Google sign-in. Application-owned tables (credit ledger, scan
+      history) land at v4.3+ and will be documented here as they ship.
     </p>
 
     <p>
-      <strong>Anticipated entities (subject to v4 design):</strong></p>
+      <strong>Live (v4.2.1):</strong>
+    </p>
     <ul>
-      <li><code>user</code> — identity + auth credentials</li>
-      <li><code>credit_balance</code> — per-user credit count</li>
-      <li><code>credit_ledger_entry</code> — append-only debit/credit log
-        (scan debits, purchase credits, refunds)</li>
+      <li><code>auth.users</code> (Supabase-managed) — identity records
+        keyed by UUID. The extension receives this UUID as
+        <code>sub</code> in the session JWT.</li>
+    </ul>
+
+    <p>
+      <strong>Anticipated (v4.3+):</strong>
+    </p>
+    <ul>
+      <li><code>credit_balance</code> — per-user credit count (v4.3)</li>
+      <li><code>credit_ledger_entry</code> — append-only debit/credit log,
+        scan debits + purchase credits + refunds (v4.3)</li>
       <li><code>scan</code> — request/response record for audit and
-        refund-on-failure</li>
+        refund-on-failure (v4.4)</li>
+      <li><code>stripe_event</code> — idempotency keyed by Stripe event
+        ID (v4.5)</li>
     </ul>
   </body>
 </html>

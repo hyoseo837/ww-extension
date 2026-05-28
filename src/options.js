@@ -250,6 +250,95 @@ el('clearCv').addEventListener('click', () => {
   });
 });
 
+// ── Account / Auth ────────────────────────────────────────────────────────────
+
+const SUPABASE_URL = 'https://bumrzedwwfhbxlttwboh.supabase.co';
+
+function decodeJwtPayload(token) {
+  try {
+    const [, payload] = token.split('.');
+    return JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+  } catch {
+    return null;
+  }
+}
+
+function setAuthStatus(msg, type) {
+  const s = el('authStatus');
+  s.textContent = msg;
+  s.className = 'status-line' + (type ? ' ' + type : '');
+}
+
+function renderAuth(auth) {
+  const out = el('auth-out');
+  const inn = el('auth-in');
+  if (auth && auth.access_token) {
+    out.style.display = 'none';
+    inn.style.display = 'block';
+    el('authEmail').textContent = auth.email || '(no email)';
+  } else {
+    out.style.display = 'block';
+    inn.style.display = 'none';
+  }
+}
+
+el('signIn').addEventListener('click', async () => {
+  const redirectUrl = chrome.identity.getRedirectURL();
+  const authUrl = `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}`;
+
+  el('signIn').disabled = true;
+  setAuthStatus('Opening Google sign-in…');
+
+  try {
+    const responseUrl = await chrome.identity.launchWebAuthFlow({
+      url: authUrl,
+      interactive: true,
+    });
+    if (!responseUrl) {
+      setAuthStatus('Sign-in cancelled.', 'err');
+      return;
+    }
+    const hash = new URL(responseUrl).hash.substring(1);
+    const params = new URLSearchParams(hash);
+    const errorDesc = params.get('error_description') || params.get('error');
+    if (errorDesc) {
+      setAuthStatus(`Sign-in failed: ${errorDesc}`, 'err');
+      return;
+    }
+    const accessToken = params.get('access_token');
+    const refreshToken = params.get('refresh_token');
+    const expiresIn = parseInt(params.get('expires_in') || '3600', 10);
+    if (!accessToken) {
+      setAuthStatus('Sign-in failed: no access token returned.', 'err');
+      return;
+    }
+    const claims = decodeJwtPayload(accessToken) || {};
+    const auth = {
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      expires_at: Date.now() + expiresIn * 1000,
+      email: claims.email,
+      user_id: claims.sub,
+    };
+    await chrome.storage.local.set({ auth });
+    setAuthStatus('Signed in.', 'ok');
+  } catch (e) {
+    setAuthStatus(`Sign-in failed: ${e.message || e}`, 'err');
+  } finally {
+    el('signIn').disabled = false;
+  }
+});
+
+el('signOut').addEventListener('click', async () => {
+  await chrome.storage.local.remove('auth');
+  setAuthStatus('Signed out.', 'ok');
+});
+
+chrome.storage.local.get(['auth'], data => renderAuth(data.auth));
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === 'local' && changes.auth) renderAuth(changes.auth.newValue);
+});
+
 // ── Help popover toggle ───────────────────────────────────────────────────────
 
 const helpPopover = el('opts-help-popover');

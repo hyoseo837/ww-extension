@@ -582,6 +582,24 @@
           <button class="btn-secondary" id="showWelcome" style="margin-top:16px; width:auto; padding:7px 16px;">Show welcome page again</button>
         </div>
 
+        <!-- Account -->
+        <div class="card">
+          <span class="field-label">Account</span>
+          <div id="auth-out" style="display:none;">
+            <p style="font-size:13px; color:var(--on-surface-dim); line-height:1.6; margin-bottom:14px;">
+              Sign in with Google to enable server-side features in upcoming versions. Optional for now — scoring still works with your own Gemini key.
+            </p>
+            <button class="btn-primary" id="signIn" style="margin-top:0;">Sign in with Google</button>
+          </div>
+          <div id="auth-in" style="display:none;">
+            <div style="font-size:13px; color:var(--on-surface); margin-bottom:14px;">
+              Signed in as <span id="authEmail" style="font-family:'JetBrains Mono',monospace; color:var(--primary-dim);"></span>
+            </div>
+            <button class="btn-secondary" id="signOut" style="margin-top:0; width:auto; padding:7px 16px;">Sign out</button>
+          </div>
+          <div id="authStatus" class="status-line"></div>
+        </div>
+
         <!-- Theme -->
         <div class="card">
           <div class="setting-row">
