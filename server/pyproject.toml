@@ -1,6 +1,6 @@
 [project]
 name = "ww-extension-backend"
-version = "4.3.0"
+version = "4.4.0"
 description = "Backend for ww-extension Chrome extension"
 requires-python = ">=3.12"
 dependencies = [
@@ -9,6 +9,7 @@ dependencies = [
     "pydantic-settings>=2.6",
     "pyjwt[crypto]>=2.10",
     "asyncpg>=0.30",
+    "httpx[http2]>=0.27",
 ]
 
 [build-system]

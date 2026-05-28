@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     supabase_secret_key: str
     supabase_jwks_url: HttpUrl
     database_url: str
+    gemini_api_key: str
 
 
 settings = Settings()
