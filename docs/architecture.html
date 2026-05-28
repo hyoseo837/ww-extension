@@ -111,32 +111,77 @@
       </ul>
     </section>
 
-    <section id="backend" data-status="not-yet-built">
-      <h3>Backend — <code>server/</code> (created at v4.1 bootstrap)</h3>
+    <section id="backend" data-status="deployed">
+      <h3>Backend — <code>server/</code></h3>
       <p>
+        FastAPI on Python 3.12+, deployed to DigitalOcean App Platform.
         Will host user accounts, credit ledger, and Gemini-calling
         logic (moving prompts and scoring tuning off the client).
-        FastAPI on Python 3.12+, deployed to DigitalOcean App Platform,
-        backed by Supabase (auth + Postgres). Stack rationale:
-        <a href="decisions/0007-deploy-on-digitalocean-app-platform.html">ADR 0007</a>,
-        <a href="decisions/0008-auth-and-db-via-supabase.html">ADR 0008</a>,
-        <a href="decisions/0009-backend-stack-fastapi.html">ADR 0009</a>.
+        Stack rationale:
+        <a href="decisions/0007-deploy-on-digitalocean-app-platform.html">ADR 0007</a> (DO),
+        <a href="decisions/0008-auth-and-db-via-supabase.html">ADR 0008</a> (Supabase),
+        <a href="decisions/0009-backend-stack-fastapi.html">ADR 0009</a> (FastAPI),
+        <a href="decisions/0011-uv-as-dep-manager.html">ADR 0011</a> (uv).
         Monorepo rationale:
         <a href="decisions/0010-monorepo-with-server-folder.html">ADR 0010</a>.
       </p>
+
+      <h4>Deployment</h4>
+      <dl>
+        <dt>Public URL</dt>
+        <dd><code>https://ww-extension-backend-x5h6h.ondigitalocean.app</code></dd>
+
+        <dt>Region pair</dt>
+        <dd>DigitalOcean <code>tor1</code> (Toronto) + Supabase
+          <code>ca-central-1</code>. Both Canadian; cross-vendor
+          latency stays low.</dd>
+
+        <dt>Deploy trigger</dt>
+        <dd>DO App Platform auto-deploys on every push to
+          <code>master</code> when files under <code>server/</code>
+          change. Pushes that only touch <code>docs/</code> or
+          <code>src/</code> should not trigger rebuilds.</dd>
+
+        <dt>Build</dt>
+        <dd>Multi-stage Dockerfile at <code>server/Dockerfile</code>.
+          Build stage uses
+          <code>ghcr.io/astral-sh/uv:python3.12-bookworm-slim</code>
+          for <code>uv sync --frozen</code>; runtime stage is
+          <code>python:3.12-slim-bookworm</code> with only the
+          built venv copied over.</dd>
+      </dl>
+
+      <h4>Endpoints (as of baseline)</h4>
+      <ul>
+        <li><code>GET /health</code> — liveness probe. No auth.
+          Returns <code>{service, version, status}</code>. Full
+          contract in
+          <a href="reference/api.html">reference/api.html</a>.</li>
+      </ul>
+
+      <h4>Configuration</h4>
       <p>
-        <strong>Packaging boundary.</strong> <code>server/</code> is
-        excluded from the Web Store zip by <code>package.sh</code>.
-        This packaging discipline replaces the repo split as the
-        mechanism keeping backend code out of end-user installs — if
-        <code>package.sh</code> ever stops excluding <code>server/</code>
-        (or its env files), backend code or secrets could leak into the
-        bundle. Verify the zip layout at every release that touches
-        packaging.
+        Env vars (<code>SUPABASE_URL</code>,
+        <code>SUPABASE_PUBLISHABLE_KEY</code>,
+        <code>SUPABASE_SECRET_KEY</code>,
+        <code>SUPABASE_JWKS_URL</code>) live in DO App Platform's env
+        store. Local dev uses <code>server/.env</code> (gitignored);
+        <code>server/.env.example</code> is the committed template.
+        <code>server/app/core/config.py</code> reads both via
+        pydantic-settings.
       </p>
+
+      <h4>Packaging boundary</h4>
       <p>
-        Components, endpoints, and deployment details will be expanded
-        here once v4.1 bootstrap lands.
+        <code>server/</code> is excluded from the Web Store zip by
+        <code>package.sh</code>'s allowlist. This packaging discipline
+        replaces the repo split (see
+        <a href="decisions/0010-monorepo-with-server-folder.html">ADR 0010</a>)
+        as the mechanism keeping backend code out of end-user installs.
+        Verify the zip layout at every release that touches packaging
+        — if <code>server/</code> (or its env files) ever sneak into
+        the allowlist, backend code or secrets could leak into the
+        bundle.
       </p>
     </section>
 

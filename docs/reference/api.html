@@ -5,7 +5,7 @@
     <meta name="project" content="ww-extension" />
     <meta name="type" content="reference" />
     <meta name="subject" content="backend-api-contract" />
-    <meta name="status" content="placeholder" />
+    <meta name="status" content="live" />
     <meta name="last-updated" content="2026-05-27" />
     <title>Backend API Contract — ww-extension (placeholder)</title>
   </head>
@@ -13,20 +13,16 @@
     <h1>Backend API Contract</h1>
 
     <p>
-      <strong>Placeholder.</strong> Populated when v4.1 backend
-      bootstrap lands. This file is the <em>authoritative</em>
-      contract — endpoints, request/response shapes, error codes,
-      auth headers — for the FastAPI backend in <code>server/</code>.
+      Authoritative contract for the FastAPI backend in
+      <code>server/</code> (monorepo since
+      <a href="../decisions/0010-monorepo-with-server-folder.html">ADR 0010</a>).
       Single source of truth; no mirror. The client (extension)
       reads this file directly.
     </p>
 
     <p>
-      Backend lives at <code>server/</code> in this repo (monorepo
-      since <a href="../decisions/0010-monorepo-with-server-folder.html">ADR 0010</a>
-      superseded 0004). The packaging boundary between client and
-      server is enforced by <code>package.sh</code> excluding
-      <code>server/</code> from the Web Store zip.
+      <strong>Base URL:</strong>
+      <code>https://ww-extension-backend-x5h6h.ondigitalocean.app</code>
     </p>
 
     <h2>Auth header convention (planned, v4.2)</h2>
@@ -36,12 +32,31 @@
       the JWT against Supabase JWKS before any business logic.
     </p>
 
-    <h2>Anticipated endpoints (subject to phase planning)</h2>
+    <h2>Live endpoints</h2>
 
     <dl>
-      <dt><code>GET /health</code> (v4.1)</dt>
-      <dd>Liveness probe. No auth.</dd>
+      <dt id="get-health"><code>GET /health</code></dt>
+      <dd>
+        <p>Liveness probe. No auth.</p>
+        <p><strong>Response:</strong> <code>200 OK</code></p>
+        <pre><code>{
+  "service": "ww-extension-backend",
+  "version": "4.1.2",
+  "status": "ok"
+}</code></pre>
+        <p>
+          <code>version</code> reflects the value in
+          <code>server/pyproject.toml</code> at the deployed commit
+          — read at startup via
+          <code>importlib.metadata.version</code>. Useful for
+          confirming a deploy went through.
+        </p>
+      </dd>
+    </dl>
 
+    <h2>Planned endpoints (subject to phase planning)</h2>
+
+    <dl>
       <dt><code>GET /me</code> (v4.2)</dt>
       <dd>Authenticated. Returns current user identity + credit
         balance.</dd>
