@@ -7,6 +7,7 @@
     <meta name="version" content="v4.3.0" />
     <meta name="status" content="in-progress" />
     <meta name="last-updated" content="2026-05-28" />
+    <meta name="credit-unit" content="1 credit = $0.01 USD" />
     <title>Spec v4.3 — Credit ledger (balance read-only)</title>
   </head>
   <body>
@@ -32,6 +33,17 @@
         to use the user's own Gemini key in this phase.
       </p>
       <p>
+        <strong>Unit model.</strong> <code>1 credit = $0.01 USD</code>.
+        The ledger stores <code>delta</code> as
+        <code>NUMERIC(14, 6)</code> so per-scan and per-PDF costs can
+        be priced from real token usage as exact fractions of a credit
+        (e.g., a typical Gemini Flash scan lands around
+        <code>0.05–0.10</code> credits). One credit type only — every
+        billable API call (scan, PDF extract, future features) draws
+        from the same pool. Per-token pricing constants land with
+        v4.4 when the backend starts seeing real token counts.
+      </p>
+      <p>
         Auth stack from v4.2 carries over: every credits call uses
         <code>Authorization: Bearer &lt;jwt&gt;</code>, verified via
         the existing <code>current_user</code> dependency.
@@ -47,8 +59,8 @@
         <dd>
           Idempotent SQL: create <code>public.credit_ledger_entry</code>
           (UUID PK, <code>user_id</code> FK to <code>auth.users(id)</code>
-          ON DELETE CASCADE, <code>delta</code> integer NOT NULL,
-          <code>kind</code> text NOT NULL CHECK in
+          ON DELETE CASCADE, <code>delta</code> <code>NUMERIC(14, 6)</code>
+          NOT NULL, <code>kind</code> text NOT NULL CHECK in
           (<code>'signup_bonus'</code>, <code>'admin_grant'</code>,
           <code>'purchase'</code>, <code>'scan_debit'</code>,
           <code>'scan_refund'</code>), <code>ref</code> text NULL,
@@ -61,8 +73,8 @@
           policies — only the backend's service-role connection
           writes. Trigger on <code>auth.users</code> AFTER INSERT
           inserts a <code>signup_bonus</code> row with
-          <code>delta = 10</code> (hardcoded in the trigger function;
-          changing it requires a follow-up migration).
+          <code>delta = 100</code> (hardcoded in the trigger
+          function; changing it requires a follow-up migration).
         </dd>
 
         <dt><code>server/app/billing/db.py</code> (added)</dt>
@@ -75,13 +87,16 @@
           Postgres service-role credentials and bypasses RLS.
           Helper <code>get_balance(user_id)</code> returning
           <code>SELECT COALESCE(SUM(delta), 0) FROM
-          credit_ledger_entry WHERE user_id = $1</code>.
+          credit_ledger_entry WHERE user_id = $1</code> as a Python
+          <code>Decimal</code>; the handler serializes it to a JSON
+          number (e.g., <code>100.000000</code> → <code>100</code>).
         </dd>
 
         <dt><code>server/app/billing/routes.py</code> (added)</dt>
         <dd>
           <code>GET /credits/balance</code> — authenticated; returns
-          <code>{balance: int}</code> from
+          <code>{balance: number}</code> (JSON number, may be
+          fractional once debit lands) from
           <code>billing.db.get_balance(claims["sub"])</code>.
         </dd>
 
@@ -130,8 +145,8 @@
           (changed — v4.3.1)</dt>
         <dd>
           Sidebar header gains a compact credits chip
-          (<code>"⚡ N credits"</code>). Hidden when signed out; live
-          via the same storage listener.
+          (<code>"⚡ N.NN credits"</code>; 2-decimal format). Hidden
+          when signed out; live via the same storage listener.
         </dd>
 
         <dt><code>manifest.json</code> (changed)</dt>
@@ -145,14 +160,18 @@
         <dt><code>docs/reference/api.html</code> (changed)</dt>
         <dd>Promote <code>GET /credits/balance</code> from
           "Planned" to "Live endpoints". Response shape:
-          <code>{balance: int}</code>.</dd>
+          <code>{balance: number}</code> (JSON number; fractional once
+          debit lands at v4.4). State the unit anchor:
+          <code>1 credit = $0.01 USD</code>.</dd>
 
         <dt><code>docs/reference/data-model.html</code> (changed)</dt>
         <dd>Add client key <code>creditBalance</code>
           (<code>number | undefined</code>; cleared on sign-out). Move
           <code>credit_ledger_entry</code> from "Anticipated" to
-          "Live"; document the column set, the signup-bonus trigger,
-          and the RLS policy.</dd>
+          "Live"; document the column set (including the
+          <code>delta NUMERIC(14, 6)</code> choice and the unit
+          anchor <code>1 credit = $0.01 USD</code>), the
+          signup-bonus trigger, and the RLS policy.</dd>
 
         <dt><code>docs/architecture.html</code> (changed at v4.3.2)</dt>
         <dd>Backend section: add <code>billing/</code> as wired, list
@@ -173,7 +192,7 @@
           (idempotent).</li>
         <li>Signing in with a brand-new Google account causes the
           trigger to insert one <code>kind = 'signup_bonus'</code>
-          row of <code>delta = 10</code>. Verified by dashboard SQL.</li>
+          row of <code>delta = 100</code>. Verified by dashboard SQL.</li>
         <li>Manually re-running the bonus INSERT against the same
           <code>user_id</code> errors on the partial unique index
           (defense-in-depth).</li>
@@ -181,11 +200,12 @@
           header returns <code>401</code>.</li>
         <li><code>GET /credits/balance</code> with a valid Supabase
           session JWT returns <code>200</code> with
-          <code>{balance: 10}</code> for a freshly signed-up user.</li>
-        <li>Inserting an arbitrary ledger entry (e.g.,
-          <code>delta = -3, kind = 'admin_grant'</code>) via dashboard
-          SQL changes the balance returned by the endpoint
-          accordingly.</li>
+          <code>{balance: 100}</code> for a freshly signed-up user.</li>
+        <li>Inserting a fractional ledger entry (e.g.,
+          <code>delta = -0.075000, kind = 'scan_debit'</code>) via
+          dashboard SQL changes the balance returned by the endpoint
+          to <code>99.925</code> — confirms NUMERIC precision survives
+          the SUM and the JSON serialization.</li>
         <li>RLS holds: a service-role connection sees all rows; a
           user-role connection signed in as user A sees only A's
           rows; user A cannot SELECT user B's rows.</li>
@@ -223,10 +243,21 @@
           exists before the user's first authenticated request,
           eliminating a first-request race and keeping the
           <code>/credits/balance</code> handler trivial. The bonus
-          amount (10) is hardcoded in the trigger function — changing
-          it is a new migration. The value moves rarely enough that
-          coupling it to an env var or a GUC isn't worth the extra
-          plumbing.
+          amount (100, i.e. $1) is hardcoded in the trigger function
+          — changing it is a new migration. The value moves rarely
+          enough that coupling it to an env var or a GUC isn't worth
+          the extra plumbing.
+        </li>
+        <li>
+          <strong>NUMERIC(14, 6) over INTEGER.</strong> Single credit
+          pool, USD-anchored, fractional-by-design: token-priced
+          scans and PDF extracts produce cost values that don't fit
+          whole credits. 6 decimal places (micro-cent precision) is
+          more than enough for token-rate math; the 14-digit total
+          gives ~14M displayed-credit headroom per row, far beyond
+          any realistic single transaction. SUM-over-NUMERIC is exact
+          in Postgres — no float drift, no rounding-to-money issues
+          when v4.5 reconciles purchases against Stripe.
         </li>
         <li>
           <strong>RLS configured but not relied on.</strong> The backend
