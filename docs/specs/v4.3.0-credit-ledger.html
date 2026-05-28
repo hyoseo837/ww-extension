@@ -7,7 +7,7 @@
     <meta name="version" content="v4.3.0" />
     <meta name="status" content="in-progress" />
     <meta name="last-updated" content="2026-05-28" />
-    <meta name="credit-unit" content="1 credit = $0.01 USD" />
+    <meta name="credit-unit" content="1 credit = $0.01 CAD" />
     <title>Spec v4.3 — Credit ledger (balance read-only)</title>
   </head>
   <body>
@@ -33,15 +33,19 @@
         to use the user's own Gemini key in this phase.
       </p>
       <p>
-        <strong>Unit model.</strong> <code>1 credit = $0.01 USD</code>.
-        The ledger stores <code>delta</code> as
-        <code>NUMERIC(14, 6)</code> so per-scan and per-PDF costs can
-        be priced from real token usage as exact fractions of a credit
-        (e.g., a typical Gemini Flash scan lands around
-        <code>0.05–0.10</code> credits). One credit type only — every
-        billable API call (scan, PDF extract, future features) draws
-        from the same pool. Per-token pricing constants land with
-        v4.4 when the backend starts seeing real token counts.
+        <strong>Unit model.</strong> <code>1 credit = $0.01 CAD</code>
+        (customer-facing currency; target audience is UWaterloo
+        co-op students). Gemini's per-token rates are USD, so v4.4's
+        pricing constants apply a <code>USD → CAD</code> factor on top
+        of the raw rates plus margin. The ledger stores
+        <code>delta</code> as <code>NUMERIC(14, 6)</code> so per-scan
+        and per-PDF costs can be priced from real token usage as
+        exact fractions of a credit (e.g., a typical Gemini Flash
+        scan lands around <code>0.07–0.14</code> credits at the
+        current FX). One credit type only — every billable API call
+        (scan, PDF extract, future features) draws from the same
+        pool. Per-token pricing constants land with v4.4 when the
+        backend starts seeing real token counts.
       </p>
       <p>
         Auth stack from v4.2 carries over: every credits call uses
@@ -162,7 +166,7 @@
           "Planned" to "Live endpoints". Response shape:
           <code>{balance: number}</code> (JSON number; fractional once
           debit lands at v4.4). State the unit anchor:
-          <code>1 credit = $0.01 USD</code>.</dd>
+          <code>1 credit = $0.01 CAD</code>.</dd>
 
         <dt><code>docs/reference/data-model.html</code> (changed)</dt>
         <dd>Add client key <code>creditBalance</code>
@@ -170,7 +174,7 @@
           <code>credit_ledger_entry</code> from "Anticipated" to
           "Live"; document the column set (including the
           <code>delta NUMERIC(14, 6)</code> choice and the unit
-          anchor <code>1 credit = $0.01 USD</code>), the
+          anchor <code>1 credit = $0.01 CAD</code>), the
           signup-bonus trigger, and the RLS policy.</dd>
 
         <dt><code>docs/architecture.html</code> (changed at v4.3.2)</dt>
@@ -243,14 +247,14 @@
           exists before the user's first authenticated request,
           eliminating a first-request race and keeping the
           <code>/credits/balance</code> handler trivial. The bonus
-          amount (100, i.e. $1) is hardcoded in the trigger function
+          amount (100, i.e. $1 CAD) is hardcoded in the trigger function
           — changing it is a new migration. The value moves rarely
           enough that coupling it to an env var or a GUC isn't worth
           the extra plumbing.
         </li>
         <li>
           <strong>NUMERIC(14, 6) over INTEGER.</strong> Single credit
-          pool, USD-anchored, fractional-by-design: token-priced
+          pool, CAD-anchored, fractional-by-design: token-priced
           scans and PDF extracts produce cost values that don't fit
           whole credits. 6 decimal places (micro-cent precision) is
           more than enough for token-rate math; the 14-digit total
