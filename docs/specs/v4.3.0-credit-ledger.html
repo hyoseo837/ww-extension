@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v4.3.0" />
+    <meta name="status" content="in-progress" />
+    <meta name="last-updated" content="2026-05-28" />
+    <title>Spec v4.3 — Credit ledger (balance read-only)</title>
+  </head>
+  <body>
+    <h1>Spec v4.3 — Credit ledger (balance read-only)</h1>
+
+    <section id="goal">
+      <h2>Goal</h2>
+      <p>
+        Stand up the credit ledger as the system of record for per-user
+        credits. Ship an append-only
+        <code>credit_ledger_entry</code> table in Supabase, an
+        auto-grant of N free credits when a user first signs in, and
+        <code>GET /credits/balance</code> on the backend. The extension
+        fetches the balance after sign-in and renders it in the
+        sidebar header and the options-page Account section.
+      </p>
+      <p>
+        <strong>Read-only in v4.3.</strong> Debit-on-scan and
+        refund-on-failure are deferred — likely folded into v4.4
+        (server-side scoring) where the debit naturally happens
+        server-side at the moment Gemini is called, removing the need
+        for a client-driven debit/refund handshake. Scoring continues
+        to use the user's own Gemini key in this phase.
+      </p>
+      <p>
+        Auth stack from v4.2 carries over: every credits call uses
+        <code>Authorization: Bearer &lt;jwt&gt;</code>, verified via
+        the existing <code>current_user</code> dependency.
+      </p>
+    </section>
+
+    <section id="files">
+      <h2>Files</h2>
+
+      <h3>Backend</h3>
+      <dl>
+        <dt><code>server/migrations/0001_credit_ledger.sql</code> (added)</dt>
+        <dd>
+          Idempotent SQL: create <code>public.credit_ledger_entry</code>
+          (UUID PK, <code>user_id</code> FK to <code>auth.users(id)</code>
+          ON DELETE CASCADE, <code>delta</code> integer NOT NULL,
+          <code>kind</code> text NOT NULL CHECK in
+          (<code>'signup_bonus'</code>, <code>'admin_grant'</code>,
+          <code>'purchase'</code>, <code>'scan_debit'</code>,
+          <code>'scan_refund'</code>), <code>ref</code> text NULL,
+          <code>created_at</code> timestamptz DEFAULT <code>now()</code>);
+          index on <code>(user_id, created_at DESC)</code>; partial
+          unique index on <code>(user_id) WHERE kind =
+          'signup_bonus'</code> (defense-in-depth against double-grant);
+          row-level security enabled, SELECT policy
+          <code>auth.uid() = user_id</code>; no INSERT/UPDATE/DELETE
+          policies — only the backend's service-role connection
+          writes. Trigger on <code>auth.users</code> AFTER INSERT
+          inserts a <code>signup_bonus</code> row with
+          <code>delta = 10</code> (hardcoded in the trigger function;
+          changing it requires a follow-up migration).
+        </dd>
+
+        <dt><code>server/app/billing/db.py</code> (added)</dt>
+        <dd>
+          Async Postgres pool initialized from a new
+          <code>DATABASE_URL</code> env var. Use the Supabase
+          <strong>direct connection</strong> (port 5432, not the
+          transaction pooler on 6543) so asyncpg's prepared-statement
+          cache works without extra configuration. Backend uses the
+          Postgres service-role credentials and bypasses RLS.
+          Helper <code>get_balance(user_id)</code> returning
+          <code>SELECT COALESCE(SUM(delta), 0) FROM
+          credit_ledger_entry WHERE user_id = $1</code>.
+        </dd>
+
+        <dt><code>server/app/billing/routes.py</code> (added)</dt>
+        <dd>
+          <code>GET /credits/balance</code> — authenticated; returns
+          <code>{balance: int}</code> from
+          <code>billing.db.get_balance(claims["sub"])</code>.
+        </dd>
+
+        <dt><code>server/app/main.py</code> (changed)</dt>
+        <dd>Mount the billing router. Initialize and dispose the
+          asyncpg pool on FastAPI startup/shutdown.</dd>
+
+        <dt><code>server/app/core/config.py</code> (changed)</dt>
+        <dd>Add <code>DATABASE_URL</code> to Pydantic Settings.</dd>
+
+        <dt><code>server/pyproject.toml</code> (changed)</dt>
+        <dd>Add <code>asyncpg&gt;=0.30</code>. Bump version to
+          <code>4.3.0</code>.</dd>
+
+        <dt><code>server/.env.example</code> (changed)</dt>
+        <dd>Add <code>DATABASE_URL=postgresql://postgres:&lt;password&gt;@&lt;host&gt;:5432/postgres</code>
+          — Supabase Settings → Database → Connection string → URI,
+          <strong>direct connection</strong> (port 5432). Do not use
+          the transaction pooler URL (port 6543) here; asyncpg's
+          prepared-statement cache is incompatible with it.</dd>
+      </dl>
+
+      <h3>Extension</h3>
+      <dl>
+        <dt><code>src/background.js</code> (changed — v4.3.1)</dt>
+        <dd>
+          Add <code>refreshBalance</code> message handler: calls
+          <code>backendFetch('/credits/balance')</code>, writes
+          <code>{ creditBalance: data.balance }</code> to
+          <code>chrome.storage.local</code>. Fetch automatically on
+          sign-in completion (listen for <code>auth</code> storage
+          change) and on extension service-worker startup if signed in.
+        </dd>
+
+        <dt><code>options.html</code> + <code>src/options.js</code>
+          (changed — v4.3.1)</dt>
+        <dd>
+          Extend the Account section to show
+          <code>creditBalance</code>; subscribe via
+          <code>chrome.storage.onChanged</code> for live updates.
+          No manual refresh control — the background worker handles
+          fetches on sign-in and SW startup.
+        </dd>
+
+        <dt><code>src/content.js</code> + <code>src/sidebar.css</code>
+          (changed — v4.3.1)</dt>
+        <dd>
+          Sidebar header gains a compact credits chip
+          (<code>"⚡ N credits"</code>). Hidden when signed out; live
+          via the same storage listener.
+        </dd>
+
+        <dt><code>manifest.json</code> (changed)</dt>
+        <dd>Bump to <code>4.3.0</code> at backend land, then
+          <code>4.3.1</code> at extension wiring, then
+          <code>4.3.2</code> at spec → done.</dd>
+      </dl>
+
+      <h3>Docs</h3>
+      <dl>
+        <dt><code>docs/reference/api.html</code> (changed)</dt>
+        <dd>Promote <code>GET /credits/balance</code> from
+          "Planned" to "Live endpoints". Response shape:
+          <code>{balance: int}</code>.</dd>
+
+        <dt><code>docs/reference/data-model.html</code> (changed)</dt>
+        <dd>Add client key <code>creditBalance</code>
+          (<code>number | undefined</code>; cleared on sign-out). Move
+          <code>credit_ledger_entry</code> from "Anticipated" to
+          "Live"; document the column set, the signup-bonus trigger,
+          and the RLS policy.</dd>
+
+        <dt><code>docs/architecture.html</code> (changed at v4.3.2)</dt>
+        <dd>Backend section: add <code>billing/</code> as wired, list
+          <code>GET /credits/balance</code>, mention the asyncpg pool
+          and the migrations directory. Client section: note the
+          balance cache + sidebar chip in the storage summary.</dd>
+      </dl>
+    </section>
+
+    <section id="verify">
+      <h2>Verify</h2>
+      <ol>
+        <li><code>GET /health</code> still returns 200 with the
+          expected payload (regression check after billing router
+          mounted).</li>
+        <li>Applying <code>0001_credit_ledger.sql</code> to a fresh
+          Supabase project succeeds; rerunning it is a no-op
+          (idempotent).</li>
+        <li>Signing in with a brand-new Google account causes the
+          trigger to insert one <code>kind = 'signup_bonus'</code>
+          row of <code>delta = 10</code>. Verified by dashboard SQL.</li>
+        <li>Manually re-running the bonus INSERT against the same
+          <code>user_id</code> errors on the partial unique index
+          (defense-in-depth).</li>
+        <li><code>GET /credits/balance</code> with no Authorization
+          header returns <code>401</code>.</li>
+        <li><code>GET /credits/balance</code> with a valid Supabase
+          session JWT returns <code>200</code> with
+          <code>{balance: 10}</code> for a freshly signed-up user.</li>
+        <li>Inserting an arbitrary ledger entry (e.g.,
+          <code>delta = -3, kind = 'admin_grant'</code>) via dashboard
+          SQL changes the balance returned by the endpoint
+          accordingly.</li>
+        <li>RLS holds: a service-role connection sees all rows; a
+          user-role connection signed in as user A sees only A's
+          rows; user A cannot SELECT user B's rows.</li>
+        <li>Extension Account section (Settings tab) displays
+          <code>creditBalance</code>; signing out clears the value;
+          signing in re-fetches and re-renders (v4.3.1+).</li>
+        <li>Sidebar credits chip on the WW jobs page renders the same
+          value as the Account section and updates live when storage
+          changes (v4.3.1+).</li>
+      </ol>
+    </section>
+
+    <section id="notes">
+      <h2>Notes</h2>
+      <ul>
+        <li>
+          <strong>Why append-only ledger over a balance row.</strong>
+          v4.4 will introduce debit/refund pairs that need to correlate
+          via <code>ref</code> (scan UUID). A SUM-over-ledger reads
+          fine for a single user up to many thousands of scans; if
+          read latency ever matters we can add a materialized
+          balance row later without touching the ledger schema.
+        </li>
+        <li>
+          <strong>asyncpg over supabase-py / SQLAlchemy.</strong>
+          One backend service that owns its schema and bypasses RLS via
+          service-role — no need for PostgREST or an ORM. asyncpg keeps
+          the query surface visible (raw SQL in the few helpers we
+          need) and the dependency set small. Promote to an ADR if a
+          second backend feature also picks asyncpg.
+        </li>
+        <li>
+          <strong>Signup bonus via trigger, not API call.</strong>
+          Triggering on <code>auth.users</code> INSERT means the row
+          exists before the user's first authenticated request,
+          eliminating a first-request race and keeping the
+          <code>/credits/balance</code> handler trivial. The bonus
+          amount (10) is hardcoded in the trigger function — changing
+          it is a new migration. The value moves rarely enough that
+          coupling it to an env var or a GUC isn't worth the extra
+          plumbing.
+        </li>
+        <li>
+          <strong>RLS configured but not relied on.</strong> The backend
+          uses service-role credentials and bypasses RLS for its own
+          queries. RLS is still enabled as a defense-in-depth measure:
+          if a future feature accidentally exposes a user-role
+          connection to a request handler, users still cannot read
+          others' rows.
+        </li>
+        <li>
+          <strong>Sub-version slicing.</strong>
+          <ul>
+            <li><code>v4.3.0</code> — backend only: migration, asyncpg
+              pool, <code>/credits/balance</code>,
+              <code>api.html</code> + <code>data-model.html</code>
+              docs updates. No extension changes; manifest bumps to
+              <code>4.3.0</code> to keep the version in lockstep with
+              <code>pyproject.toml</code> per
+              <a href="../decisions/0002-versioning-vXYZ.html">ADR 0002</a>.</li>
+            <li><code>v4.3.1</code> — extension wiring: background
+              <code>refreshBalance</code>, Account section display,
+              sidebar chip.</li>
+            <li><code>v4.3.2</code> — close-out: spec → done,
+              architecture.html updated, manifest bump.</li>
+          </ul>
+        </li>
+        <li>
+          <strong>Out of scope (deferred).</strong> Debit-on-scan,
+          refund-on-failure, admin-grant endpoint, Stripe purchase,
+          balance display on the welcome page. The first two land
+          with v4.4 server-side scoring; the rest are scheduled in
+          later phases per roadmap.
+        </li>
+      </ul>
+    </section>
+  </body>
+</html>
