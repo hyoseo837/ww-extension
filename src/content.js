@@ -31,9 +31,9 @@ function applyThemeToContent(theme) {
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== 'local') return;
   if (changes.theme) applyThemeToContent(changes.theme.newValue ?? 'dark');
-  if (changes.apiKey || changes.cvText) {
-    chrome.storage.local.get(['apiKey', 'cvText'], data => {
-      updateGuideSteps(!!data.apiKey, !!(data.cvText && data.cvText.trim()));
+  if (changes.auth || changes.cvText) {
+    chrome.storage.local.get(['auth', 'cvText'], data => {
+      updateGuideSteps(!!data.auth?.access_token, !!(data.cvText && data.cvText.trim()));
     });
   }
   if (changes.auth || changes.creditBalance) {
@@ -247,11 +247,7 @@ async function scanAllJobs() {
       return;
     }
 
-    const settings = await chrome.storage.local.get(['model', 'cvText', 'preferences']);
-    if (!settings.cvText) {
-      setProgress('Open Settings (⚙) to add your Profile.', true);
-      return;
-    }
+    const settings = await chrome.storage.local.get(['model']);
 
     allPostingIds = postingIds.map(String);
     const toScore = allPostingIds.filter(id => !scores.has(id));
@@ -293,8 +289,6 @@ async function scanAllJobs() {
         type: 'scoreJob',
         meta,
         descriptionText,
-        cvText:      settings.cvText,
-        preferences: settings.preferences || '',
         model:       settings.model || 'gemini-2.5-flash',
         postingId
       });
@@ -305,9 +299,11 @@ async function scanAllJobs() {
         scheduleFlush();
         return { ok: true };
       }
-      // NO_CREDITS / NOT_SIGNED_IN stop the whole batch — no point burning
-      // wall time on calls we know will all fail the same way.
-      const halt = reply?.code === 'NO_CREDITS' || reply?.code === 'NOT_SIGNED_IN';
+      // NO_CREDITS / NOT_SIGNED_IN / PROFILE_NOT_SET stop the whole batch —
+      // no point burning wall time on calls we know will all fail the same way.
+      const halt = reply?.code === 'NO_CREDITS'
+        || reply?.code === 'NOT_SIGNED_IN'
+        || reply?.code === 'PROFILE_NOT_SET';
       return { ok: false, error: reply?.error || 'unknown', halt };
     }
 
@@ -376,9 +372,9 @@ function renderSidebarList() {
     ul.innerHTML = `
       <li class="ww-ext-empty">
         <div class="ww-ext-guide-title">Get started</div>
-        <div class="ww-ext-guide-step" id="ww-ext-step-key">
+        <div class="ww-ext-guide-step" id="ww-ext-step-auth">
           <span class="ww-ext-step-num">1</span>
-          <div>Set your API key in <button class="ww-ext-inline-link">Settings</button></div>
+          <div>Sign in with Google in <button class="ww-ext-inline-link">Settings</button></div>
         </div>
         <div class="ww-ext-guide-step" id="ww-ext-step-cv">
           <span class="ww-ext-step-num">2</span>
@@ -392,8 +388,8 @@ function renderSidebarList() {
     ul.querySelector('.ww-ext-inline-link')?.addEventListener('click', () => {
       chrome.runtime.sendMessage({ type: 'openOptions' });
     });
-    chrome.storage.local.get(['apiKey', 'cvText'], data => {
-      updateGuideSteps(!!data.apiKey, !!(data.cvText && data.cvText.trim()));
+    chrome.storage.local.get(['auth', 'cvText'], data => {
+      updateGuideSteps(!!data.auth?.access_token, !!(data.cvText && data.cvText.trim()));
     });
     return;
   }
@@ -708,12 +704,12 @@ function injectSidebar() {
   });
 }
 
-function updateGuideSteps(hasKey, hasCv) {
-  const keyStep = document.getElementById('ww-ext-step-key');
-  const cvStep  = document.getElementById('ww-ext-step-cv');
-  if (keyStep) {
-    keyStep.querySelector('.ww-ext-step-num').textContent = hasKey ? '✓' : '1';
-    keyStep.classList.toggle('ww-ext-step-done', hasKey);
+function updateGuideSteps(hasAuth, hasCv) {
+  const authStep = document.getElementById('ww-ext-step-auth');
+  const cvStep   = document.getElementById('ww-ext-step-cv');
+  if (authStep) {
+    authStep.querySelector('.ww-ext-step-num').textContent = hasAuth ? '✓' : '1';
+    authStep.classList.toggle('ww-ext-step-done', hasAuth);
   }
   if (cvStep) {
     cvStep.querySelector('.ww-ext-step-num').textContent = hasCv ? '✓' : '2';

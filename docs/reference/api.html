@@ -7,7 +7,7 @@
     <meta name="subject" content="backend-api-contract" />
     <meta name="status" content="live" />
     <meta name="last-updated" content="2026-05-28" />
-    <meta name="version-pin" content="server v4.4.0" />
+    <meta name="version-pin" content="server v4.4.2" />
     <title>Backend API Contract — ww-extension</title>
   </head>
   <body>
@@ -107,15 +107,14 @@
   "model": "gemini-2.5-flash" | "gemini-2.5-pro",
   "meta": { "title": "...", "org": "..." },
   "description_text": "...",
-  "posting_id": "&lt;WW posting ID&gt;",
-  "cv_text": "...",
-  "preferences": "..."
+  "posting_id": "&lt;WW posting ID&gt;"
 }</code></pre>
         <p>
-          <code>cv_text</code> and <code>preferences</code> are
-          inline in v4.4.0. v4.4.2 moves them server-side
-          (<code>user_profile</code> table) and removes them from
-          this request.
+          <strong>Breaking change in v4.4.2:</strong>
+          <code>cv_text</code> and <code>preferences</code> are no
+          longer accepted in the request body. The backend reads them
+          from <code>user_profile</code> on every scan. Set them via
+          <code>PUT /profile</code> first.
         </p>
         <p><strong>Response:</strong> <code>200 OK</code></p>
         <pre><code>{
@@ -131,8 +130,10 @@
         </p>
         <p><strong>Errors:</strong></p>
         <ul>
-          <li><code>400</code> — unsupported <code>model</code> or
-            malformed request.</li>
+          <li><code>400</code> — unsupported <code>model</code>,
+            malformed request, or
+            <code>{"error": "profile_not_set"}</code> when the user
+            has no <code>cv_text</code> in their <code>user_profile</code>.</li>
           <li><code>401</code> — missing/invalid bearer token.</li>
           <li>
             <code>402 Payment Required</code> — insufficient credits.
@@ -166,16 +167,62 @@
       </dd>
     </dl>
 
+      <dt id="get-profile"><code>GET /profile</code></dt>
+      <dd>
+        <p>Authenticated. Returns the user's stored CV text +
+          preferences. Empty strings if the row hasn't been
+          created yet.</p>
+        <p><strong>Response:</strong> <code>200 OK</code></p>
+        <pre><code>{
+  "cv_text": "...",
+  "preferences": "..."
+}</code></pre>
+      </dd>
+
+      <dt id="put-profile"><code>PUT /profile</code></dt>
+      <dd>
+        <p>Authenticated. Upserts the user's profile. Either field
+          may be omitted to leave that column untouched. No credit
+          cost.</p>
+        <p><strong>Request:</strong></p>
+        <pre><code>{
+  "cv_text": "...",       // optional
+  "preferences": "..."    // optional
+}</code></pre>
+        <p><strong>Response:</strong> <code>200 OK</code> with the
+          updated <code>{cv_text, preferences}</code>.</p>
+      </dd>
+
+      <dt id="post-profile-extract"><code>POST /profile/extract</code></dt>
+      <dd>
+        <p>Authenticated. Sends a PDF to Gemini multimodal for text
+          extraction; on success, upserts the extracted text into
+          <code>user_profile.cv_text</code>. Same
+          estimate-debit-call-refund machinery as <code>/scan</code>
+          (same <code>scan_id</code> idempotency, same 402 / 502
+          shapes).</p>
+        <p><strong>Request:</strong></p>
+        <pre><code>{
+  "scan_id": "&lt;uuid v4&gt;",
+  "model": "gemini-2.5-flash" | "gemini-2.5-pro",
+  "pdf_b64": "&lt;base64-encoded PDF, no data: prefix&gt;"
+}</code></pre>
+        <p>5 MB cap on the decoded PDF.</p>
+        <p><strong>Response:</strong> <code>200 OK</code></p>
+        <pre><code>{
+  "text": "...extracted text...",
+  "cost": 1.85,
+  "balance": 98.15
+}</code></pre>
+        <p><strong>Errors:</strong> same set as <code>/scan</code>
+          (400 unsupported model / invalid base64 / oversize / 401 /
+          402 / 409 / 502).</p>
+      </dd>
+    </dl>
+
     <h2>Planned endpoints (subject to phase planning)</h2>
 
     <dl>
-
-      <dt><code>GET /profile</code> + <code>PUT /profile</code> +
-        <code>POST /profile/extract</code> (v4.4.2)</dt>
-      <dd>Authenticated. Server-stored CV text + preferences;
-        <code>extract</code> processes an uploaded PDF via Gemini
-        multimodal and upserts the extracted text. Same
-        estimate-debit-refund machinery as <code>/scan</code>.</dd>
 
       <dt><code>POST /credits/checkout</code> (v4.5)</dt>
       <dd>Authenticated. Creates a Stripe Checkout session for credit

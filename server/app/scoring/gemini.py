@@ -149,6 +149,66 @@ async def score(
     return parsed, usage
 
 
+_PDF_EXTRACT_PROMPT = (
+    "Extract all relevant content from this application package PDF as plain "
+    "text. Include education, work experience, skills, projects, grades, and "
+    "any other candidate information. Output only the extracted text — no "
+    "commentary, no markdown."
+)
+
+
+async def extract_pdf(
+    model: str,
+    pdf_b64: str,
+    max_output_tokens: int = 8192,
+) -> tuple[str, dict]:
+    """Extract text from a PDF via Gemini multimodal. Returns (text, usage)."""
+    client = _require_client()
+    url = f"{_GEMINI_BASE}/models/{model}:generateContent"
+    body = {
+        "contents": [
+            {
+                "parts": [
+                    {"text": _PDF_EXTRACT_PROMPT},
+                    {"inline_data": {"mime_type": "application/pdf", "data": pdf_b64}},
+                ]
+            }
+        ],
+        "generationConfig": {
+            "temperature": 0,
+            "maxOutputTokens": max_output_tokens,
+            "thinkingConfig": {"thinkingBudget": 0},
+        },
+    }
+    try:
+        res = await client.post(
+            url,
+            headers={
+                "Content-Type": "application/json",
+                "X-Goog-Api-Key": settings.gemini_api_key,
+            },
+            json=body,
+        )
+    except httpx.HTTPError as exc:
+        raise GeminiError(f"network: {exc}") from exc
+
+    if res.status_code >= 400:
+        snippet = res.text[:200] if res.text else ""
+        raise GeminiError(
+            f"http {res.status_code}: {snippet}", status_code=res.status_code
+        )
+
+    data = res.json()
+    usage = data.get("usageMetadata", {}) or {}
+    try:
+        text = data["candidates"][0]["content"]["parts"][0]["text"]
+    except (KeyError, IndexError, TypeError) as exc:
+        raise GeminiError(f"unexpected response shape: {exc}") from exc
+    if not isinstance(text, str) or not text.strip():
+        raise GeminiError("empty extract result")
+    return text, usage
+
+
 def _valid_result(p: object) -> bool:
     if not isinstance(p, dict):
         return False

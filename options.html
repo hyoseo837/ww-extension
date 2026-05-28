@@ -443,7 +443,7 @@
       <nav>
         <button class="nav-item active" data-tab="api">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="5"/><path d="M20 4l-7.5 7.5M15 4h5v5"/></svg>
-          API Configuration
+          Model
         </button>
         <button class="nav-item" data-tab="context">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -462,16 +462,12 @@
 
     <main>
 
-      <!-- ── API Configuration ── -->
+      <!-- ── Model ── -->
       <div id="tab-api" class="tab-panel active">
-        <h1 class="page-title">API Configuration</h1>
-        <p class="page-subtitle">Connect your Gemini API key to enable AI-powered job scoring.</p>
+        <h1 class="page-title">Model</h1>
+        <p class="page-subtitle">Choose which Gemini model the backend should use to score your jobs. Flash is cheaper; Pro is more accurate.</p>
 
         <div class="card">
-          <div class="field">
-            <span class="field-label">API Key</span>
-            <input id="apiKey" type="password" placeholder="AIza..." />
-          </div>
           <div class="field">
             <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
               <span class="field-label" style="margin-bottom:0;">Model</span>
@@ -483,36 +479,11 @@
             </select>
           </div>
           <div style="display:flex; gap:10px; margin-top:16px;">
-            <button class="btn-secondary" id="test" style="margin-top:0;">Test API Key</button>
-            <button class="btn-primary" id="save" style="margin-top:0;">Save Configuration</button>
+            <button class="btn-primary" id="save" style="margin-top:0;">Save</button>
           </div>
         </div>
 
         <div id="status" class="status-line"></div>
-
-        <div class="card" style="margin-top:20px;">
-          <div style="display:flex; align-items:center; gap:8px; margin-bottom:16px;">
-            <span class="field-label" style="margin:0; white-space:nowrap;">Cumulative Token Usage</span>
-            <button class="opts-help-btn" data-help="tokens">?</button>
-            <div style="flex:1; height:1px; background:var(--outline);"></div>
-          </div>
-          <div class="token-stats">
-            <div>
-              <div class="token-stat-label">Input Tokens</div>
-              <div class="token-stat-val" id="tokIn">—</div>
-            </div>
-            <div>
-              <div class="token-stat-label">Output Tokens</div>
-              <div class="token-stat-val" id="tokOut">—</div>
-            </div>
-            <div>
-              <div class="token-stat-label">Cached Tokens</div>
-              <div class="token-stat-val dim" id="tokCached">—</div>
-              <div class="token-hint">included in input</div>
-            </div>
-          </div>
-          <button class="btn-secondary" id="resetTokens" style="margin-top:0; width:auto; padding: 7px 16px;">Reset Counter</button>
-        </div>
       </div>
 
       <!-- ── Profile & Context ── -->
@@ -574,8 +545,8 @@
         <div class="card">
           <span class="field-label">How to Use</span>
           <ol style="margin:0; padding-left:20px; display:flex; flex-direction:column; gap:8px; font-size:13px; color:var(--on-surface); line-height:1.6;">
-            <li>Go to <b>API Configuration</b> and paste your <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--primary-dim);">Gemini API key</a>. Click Save.</li>
-            <li>Go to <b>Profile &amp; Context</b>, drop in your application package PDF (from WaterlooWorks Documents), click <b>Extract Profile</b>, then <b>Update Profile</b>.</li>
+            <li>Sign in with Google under <b>Account</b> below. New accounts receive 100 free credits ($1 CAD worth of scans).</li>
+            <li>Go to <b>Profile &amp; Context</b>, drop in your application package PDF (from WaterlooWorks Documents), and click <b>Extract Profile</b> — the backend extracts your info and saves it to your account.</li>
             <li>Optionally add <b>Custom Match Criteria</b> (e.g. "Remote only, no Web3") to sharpen scoring.</li>
             <li>Navigate to the <a href="https://waterlooworks.uwaterloo.ca/myAccount/co-op/full/jobs.htm" target="_blank" style="color:var(--primary-dim);">WaterlooWorks jobs list</a>, click the purple <b>AI Score</b> tab on the right edge, then hit <b>Scan All Jobs</b>.</li>
           </ol>
@@ -587,7 +558,7 @@
           <span class="field-label">Account</span>
           <div id="auth-out" style="display:none;">
             <p style="font-size:13px; color:var(--on-surface-dim); line-height:1.6; margin-bottom:14px;">
-              Sign in with Google to enable server-side features in upcoming versions. Optional for now — scoring still works with your own Gemini key.
+              Sign in with Google. Scoring runs on the backend against your credit balance — new accounts get 100 free credits.
             </p>
             <button class="btn-primary" id="signIn" style="margin-top:0;">Sign in with Google</button>
           </div>

@@ -88,3 +88,34 @@ def actual_cost(model: str, usage: dict) -> Decimal:
         + Decimal(cached) * rates["cached_input"]
         + Decimal(output) * rates["output"]
     )
+
+
+# PDF extract: Gemini bills multimodal PDFs as ~258 input tokens per page.
+# Page count isn't visible from the raw bytes without parsing the PDF, so
+# we estimate it from the base64 size with a conservative ceiling. Real
+# usage refunds the difference.
+_PDF_TOKENS_PER_PAGE = 258
+_PDF_BYTES_PER_PAGE_ESTIMATE = 100 * 1024  # ~100 KB per page; varies wildly
+_PDF_MAX_PAGES_ESTIMATE = 10               # ceiling for the worst-case bill
+_PDF_PROMPT_OVERHEAD_TOKENS = 100
+
+# Hard cap that mirrors the extension's old 8192-token max for extraction.
+DEFAULT_EXTRACT_MAX_OUTPUT_TOKENS = 8192
+
+
+def estimate_extract_cost(
+    model: str,
+    pdf_size_bytes: int,
+    max_output_tokens: int = DEFAULT_EXTRACT_MAX_OUTPUT_TOKENS,
+) -> Decimal:
+    """Worst-case credit cost for a PDF extraction."""
+    rates = _RATES[model]
+    pages = max(
+        1,
+        min(_PDF_MAX_PAGES_ESTIMATE, (pdf_size_bytes // _PDF_BYTES_PER_PAGE_ESTIMATE) + 1),
+    )
+    input_tokens = pages * _PDF_TOKENS_PER_PAGE + _PDF_PROMPT_OVERHEAD_TOKENS
+    return (
+        Decimal(input_tokens) * rates["input"]
+        + Decimal(max_output_tokens) * rates["output"]
+    )

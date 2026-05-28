@@ -32,12 +32,6 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     scoreJob(msg).then(sendResponse);
     return true; // keep message channel open for async response
   }
-  if (msg.type === "addTokens") {
-    // Local Gemini token counter — only options.html PDF extract still
-    // updates it until v4.4.2 moves that path server-side.
-    incrementTokenUsage(msg.usage);
-    return; // fire-and-forget
-  }
   if (msg.type === "backendFetch") {
     backendFetch(msg.path, msg.init).then(sendResponse);
     return true;
@@ -73,14 +67,7 @@ chrome.storage.local.get("auth", (data) => {
 // backend). The backend handles Gemini, ledger debit/refund, and returns
 // the new balance alongside the result so we can update creditBalance
 // without a follow-up /credits/balance fetch.
-async function scoreJob({
-  meta,
-  descriptionText,
-  cvText,
-  preferences,
-  model,
-  postingId,
-}) {
+async function scoreJob({ meta, descriptionText, model, postingId }) {
   const scan_id = crypto.randomUUID();
   const res = await backendFetch("/scan", {
     method: "POST",
@@ -91,8 +78,6 @@ async function scoreJob({
       meta,
       description_text: descriptionText,
       posting_id: postingId,
-      cv_text: cvText,
-      preferences: preferences || "",
     }),
   });
 
@@ -105,6 +90,13 @@ async function scoreJob({
 
   if (res.status === 0) {
     return { ok: false, code: "NOT_SIGNED_IN", error: "Sign in to scan." };
+  }
+  if (res.status === 400 && res.data?.detail?.error === "profile_not_set") {
+    return {
+      ok: false,
+      code: "PROFILE_NOT_SET",
+      error: "Set up your Profile (⚙) before scanning.",
+    };
   }
   if (res.status === 402) {
     const d = res.data?.detail || {};
@@ -213,28 +205,5 @@ function decodeJwtPayload(token) {
   }
 }
 
-// ── Local Gemini token counter (PDF extract only, until v4.4.2) ───────────────
-
-// Serialize get→set so concurrent calls don't lose increments.
-let tokenWriteChain = Promise.resolve();
-function incrementTokenUsage(usage) {
-  if (!usage) return;
-  tokenWriteChain = tokenWriteChain.then(
-    () =>
-      new Promise((resolve) => {
-        chrome.storage.local.get("tokenUsage", (stored) => {
-          const cur = stored.tokenUsage || { input: 0, cached: 0, output: 0 };
-          chrome.storage.local.set(
-            {
-              tokenUsage: {
-                input: cur.input + (usage.promptTokenCount ?? 0),
-                cached: cur.cached + (usage.cachedContentTokenCount ?? 0),
-                output: cur.output + (usage.candidatesTokenCount ?? 0),
-              },
-            },
-            resolve,
-          );
-        });
-      }),
-  );
-}
+// One-time cleanup of storage keys left behind by pre-v4.4.2 versions.
+chrome.storage.local.remove(["apiKey", "tokenUsage"]);
