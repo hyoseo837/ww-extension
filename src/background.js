@@ -4,7 +4,7 @@ const RETRY_DELAYS = [2000, 4000, 8000];
 const SUPABASE_URL = "https://bumrzedwwfhbxlttwboh.supabase.co";
 // Public key by design — embedded in Supabase web app bundles too. Paste
 // the sb_publishable_... value from server/.env before loading the extension.
-const SUPABASE_PUBLISHABLE_KEY = "";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_bQlHXw98CvV4gZ6Z_5ExLg_u2Td-M5Q";
 const BACKEND_URL = "https://ww-extension-backend-x5h6h.ondigitalocean.app";
 
 const SYSTEM_TEXT = `You are a job-fit scorer. Score how well the candidate fits the job.
