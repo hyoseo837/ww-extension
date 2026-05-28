@@ -85,15 +85,22 @@
         <dd>
           Async Postgres pool initialized from a new
           <code>DATABASE_URL</code> env var. Use the Supabase
-          <strong>direct connection</strong> (port 5432, not the
-          transaction pooler on 6543) so asyncpg's prepared-statement
-          cache works without extra configuration. Backend uses the
-          Postgres service-role credentials and bypasses RLS.
-          Helper <code>get_balance(user_id)</code> returning
-          <code>SELECT COALESCE(SUM(delta), 0) FROM
-          credit_ledger_entry WHERE user_id = $1</code> as a Python
-          <code>Decimal</code>; the handler serializes it to a JSON
-          number (e.g., <code>100.000000</code> → <code>100</code>).
+          <strong>Session pooler</strong> (port 5432, hostname pattern
+          <code>aws-0-&lt;region&gt;.pooler.supabase.com</code>). The
+          two alternatives don't fit: <em>Direct connection</em>
+          (port 5432, hostname <code>db.&lt;ref&gt;.supabase.co</code>)
+          is IPv6-only without the paid IPv4 add-on and unreachable
+          from many dev hosts and some DO regions;
+          <em>Transaction pooler</em> (port 6543) is IPv4 but doesn't
+          support prepared statements and so breaks asyncpg's default
+          statement cache. Session pooler is IPv4 AND session-mode,
+          so prepared statements work with zero asyncpg
+          configuration. Backend bypasses RLS via the Postgres
+          role's privileges. Helper <code>get_balance(user_id)</code>
+          returns <code>SELECT COALESCE(SUM(delta), 0) FROM
+          credit_ledger_entry WHERE user_id = $1::uuid</code> as a
+          Python <code>Decimal</code>; the handler serializes it to a
+          JSON number.
         </dd>
 
         <dt><code>server/app/billing/routes.py</code> (added)</dt>
@@ -116,11 +123,12 @@
           <code>4.3.0</code>.</dd>
 
         <dt><code>server/.env.example</code> (changed)</dt>
-        <dd>Add <code>DATABASE_URL=postgresql://postgres:&lt;password&gt;@&lt;host&gt;:5432/postgres</code>
-          — Supabase Settings → Database → Connection string → URI,
-          <strong>direct connection</strong> (port 5432). Do not use
-          the transaction pooler URL (port 6543) here; asyncpg's
-          prepared-statement cache is incompatible with it.</dd>
+        <dd>Add <code>DATABASE_URL</code> using the Supabase
+          <strong>Session pooler</strong> URI from the top-right
+          Connect modal (port 5432, hostname
+          <code>aws-0-&lt;region&gt;.pooler.supabase.com</code>,
+          username <code>postgres.&lt;project-ref&gt;</code>). Rationale
+          in the <code>db.py</code> description above.</dd>
       </dl>
 
       <h3>Extension</h3>
