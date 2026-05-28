@@ -1,0 +1,573 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v4.4.0" />
+    <meta name="status" content="in-progress" />
+    <meta name="last-updated" content="2026-05-28" />
+    <meta name="credit-unit" content="1 credit = $0.01 CAD" />
+    <title>Spec v4.4 — Server-side scoring</title>
+  </head>
+  <body>
+    <h1>Spec v4.4 — Server-side scoring</h1>
+
+    <section id="goal">
+      <h2>Goal</h2>
+      <p>
+        Move every Gemini call (scoring + PDF profile extraction) from
+        the extension to the backend. The backend holds a single
+        server-owned Gemini API key, debits credits against the
+        signed-in user before each call, refunds on failure or for the
+        unused portion of the worst-case estimate, and returns the
+        result to the extension. The extension no longer needs (or
+        accepts) a user-provided Gemini API key for any scoring path.
+      </p>
+      <p>
+        This phase closes the v4 loop: <strong>auth (v4.2) →
+        ledger (v4.3) → metered API calls (v4.4)</strong>. After v4.4,
+        every billable action is gated by a real-time balance check,
+        and v4.5 can plug Stripe in to top up that balance.
+      </p>
+      <p>
+        Scoring prompts and tuning logic also move server-side as part
+        of this — they ride along with the Gemini calls and stop
+        shipping to end users via the Web Store zip
+        (see <a href="../roadmap.html">roadmap</a>, "Rationale for
+        moving the backend off the client").
+      </p>
+    </section>
+
+    <section id="files">
+      <h2>Files</h2>
+
+      <h3>Backend</h3>
+      <dl>
+        <dt><code>server/migrations/0002_scan.sql</code> (added — v4.4.0)</dt>
+        <dd>
+          Create <code>public.scan</code> for audit and idempotency:
+          <code>id uuid primary key</code> (client-generated UUID,
+          doubles as idempotency key),
+          <code>user_id uuid not null references auth.users(id) on
+          delete cascade</code>,
+          <code>model text not null</code>,
+          <code>posting_id text</code> (WW posting ID, nullable for
+          PDF-extract scans),
+          <code>kind text not null check in ('scan','profile_extract')</code>,
+          <code>status text not null check in
+          ('pending','success','failed')</code>,
+          <code>estimated_cost numeric(14, 6) not null</code>,
+          <code>actual_cost numeric(14, 6)</code> (filled on success;
+          equals the net debit after the partial refund),
+          <code>response jsonb</code>,
+          <code>usage jsonb</code> (raw <code>usageMetadata</code> for
+          audit),
+          <code>error text</code>,
+          <code>created_at timestamptz not null default now()</code>,
+          <code>completed_at timestamptz</code>.
+          Index on <code>(user_id, created_at desc)</code>. RLS enabled
+          with the same defense-in-depth pattern as
+          <code>credit_ledger_entry</code>.
+        </dd>
+
+        <dt><code>server/app/billing/pricing.py</code> (added — v4.4.0)</dt>
+        <dd>
+          Per-model Gemini rate constants and the cost-computation
+          functions. Rates stored as Python <code>Decimal</code> in
+          credits per token (= USD per token × USD→CAD factor ×
+          margin, pre-computed). One entry per model + token kind
+          (<code>input</code>, <code>cached_input</code>,
+          <code>output</code>). Exposes:
+          <code>estimate_scan_cost(model, input_tokens,
+          max_output_tokens, cached_input_tokens=0) -&gt; Decimal</code>
+          and <code>actual_cost(model, usage_metadata) -&gt;
+          Decimal</code>. Constants commented with their source
+          (Google pricing page snapshot date + USD rate + CAD FX +
+          chosen margin) so future calibration is auditable.
+        </dd>
+
+        <dt><code>server/app/scoring/gemini.py</code> (added — v4.4.0)</dt>
+        <dd>
+          Async Gemini REST client backed by a single
+          <code>httpx.AsyncClient</code> held by the FastAPI lifespan
+          (HTTP/2 enabled, persistent connection pool). One function
+          per Gemini call shape we use:
+          <code>score(model, system_text, cv_text, job_part,
+          cache_name=None) -&gt; (response_json, usage_metadata)</code>
+          and (v4.4.2) <code>extract_pdf(model, pdf_b64) -&gt;
+          (text, usage_metadata)</code>. Lifts the request bodies
+          essentially verbatim from the current
+          <code>src/background.js</code> + <code>src/options.js</code>
+          Gemini fetches so behavior is preserved. Backoff/retry
+          ported from <code>RETRY_DELAYS</code>.
+        </dd>
+
+        <dt><code>server/app/scoring/routes.py</code> (added — v4.4.0)</dt>
+        <dd>
+          <code>POST /scan</code> — authenticated. Request body:
+          <code>{scan_id: uuid, model: string, meta: {title, org},
+          description_text: string, posting_id: string}</code>.
+          Profile (cvText) and preferences are read server-side from
+          the user's stored profile (added in v4.4.2 alongside PDF
+          extract). Until v4.4.2, the request also carries
+          <code>cv_text</code> and <code>preferences</code>
+          inline — explicitly deprecated by v4.4.2.
+          <strong>Flow:</strong>
+          <ol>
+            <li>Begin transaction.</li>
+            <li>INSERT scan row with status='pending', estimated_cost
+              from <code>pricing.estimate_scan_cost(...)</code>. ON
+              CONFLICT (id) DO NOTHING — return the existing row
+              (idempotent retry).</li>
+            <li>Check <code>SUM(delta) - estimated_cost &gt;= 0</code>
+              for the user. If not, mark scan failed; return
+              <code>402 Payment Required</code> with
+              <code>{error: 'insufficient_credits',
+              balance, required}</code>.</li>
+            <li>INSERT a <code>scan_debit</code> ledger row of
+              <code>-estimated_cost</code>, <code>ref = scan_id</code>.</li>
+            <li>Commit; release the transaction before Gemini call to
+              avoid holding a row lock during a slow external API.</li>
+            <li>Call Gemini. On HTTP/parse/validation failure: open
+              a new transaction, INSERT a <code>scan_refund</code>
+              ledger row of <code>+estimated_cost</code> with
+              <code>ref = scan_id</code>, UPDATE scan SET
+              status='failed', error=..., completed_at=now(); return
+              <code>502 Bad Gateway</code> (or appropriate code).</li>
+            <li>On success: compute
+              <code>actual = pricing.actual_cost(model, usage)</code>.
+              If <code>estimated - actual &gt; 0</code>, INSERT a
+              <code>scan_refund</code> for the difference, same
+              <code>ref</code>. UPDATE scan SET status='success',
+              response, usage, actual_cost=actual,
+              completed_at=now(). Return
+              <code>200 {result: {score, verdict, reason}, cost,
+              balance}</code> — including <code>balance</code> spares
+              the extension an extra <code>/credits/balance</code>
+              roundtrip after every scan.</li>
+          </ol>
+
+          <code>POST /profile/extract</code> (v4.4.2) — authenticated.
+          Multipart upload (PDF), or base64-in-JSON for simplicity if
+          the multipart middleware adds friction. Same
+          estimate-debit-call-refund pattern, but with
+          <code>kind = 'profile_extract'</code> and the multimodal
+          Gemini call shape. On success: stores the extracted text in
+          the user's profile (see new
+          <code>public.user_profile</code> table below) and returns
+          <code>{text, cost, balance}</code>.
+        </dd>
+
+        <dt><code>server/migrations/0003_user_profile.sql</code>
+          (added — v4.4.2)</dt>
+        <dd>
+          Create <code>public.user_profile</code>:
+          <code>user_id uuid primary key references auth.users(id)
+          on delete cascade</code>,
+          <code>cv_text text</code>,
+          <code>preferences text</code>,
+          <code>updated_at timestamptz not null default now()</code>.
+          RLS enabled with SELECT/UPDATE policies on
+          <code>auth.uid() = user_id</code> for forward-compat (the
+          backend still uses service-role and bypasses RLS).
+          Triggered upsert helpers in
+          <code>server/app/profile/db.py</code> (added).
+        </dd>
+
+        <dt><code>server/app/profile/routes.py</code> (added — v4.4.2)</dt>
+        <dd>
+          <code>GET /profile</code> and <code>PUT /profile</code> for
+          <code>{cv_text, preferences}</code>. No credit cost (just
+          DB writes). <code>POST /profile/extract</code> documented
+          under scoring/routes since it shares the
+          estimate-debit-refund machinery, but its success path also
+          calls <code>profile.db.upsert(user_id, cv_text)</code>.
+        </dd>
+
+        <dt><code>server/app/scoring/cache.py</code> (added — v4.4.3)</dt>
+        <dd>
+          Per-user Gemini context cache lifecycle. Backend creates a
+          cache containing the system prompt + the user's
+          <code>cv_text</code> on first scan after profile change or
+          cache expiry; reuses the cache name on subsequent scans
+          within the TTL; deletes on profile update / sign-out
+          (the latter via a Supabase webhook on auth.users — TBD at
+          implementation, may defer to in-band TTL only).
+          New columns on <code>user_profile</code>:
+          <code>cache_name text</code>,
+          <code>cache_expires_at timestamptz</code>
+          (added via <code>0004_user_profile_cache.sql</code>).
+          Reduces input cost on batch scans by ~75% per Gemini's
+          cached-input rate.
+        </dd>
+
+        <dt><code>server/app/billing/db.py</code> (changed — v4.4.0)</dt>
+        <dd>
+          Add <code>insert_ledger_entry(conn, user_id, delta, kind,
+          ref)</code> and <code>insert_scan / update_scan</code>
+          helpers. Add <code>balance_after_estimate(conn, user_id,
+          estimate)</code> doing the
+          <code>SUM(delta) - estimate</code> check in the same query
+          (one round-trip, snapshot-isolated within the transaction).
+          Bump <code>asyncpg.create_pool</code> <code>max_size</code>
+          from 10 → 25 so concurrent scans (3 queries each) don't
+          queue on the pool. See Performance section.
+        </dd>
+
+        <dt><code>server/app/main.py</code> (changed — v4.4.0)</dt>
+        <dd>Mount the scoring router and (v4.4.2) the profile router.</dd>
+
+        <dt><code>server/app/core/config.py</code> + <code>.env.example</code>
+          (changed — v4.4.0)</dt>
+        <dd>
+          Add <code>GEMINI_API_KEY</code> (encrypted in DO; the
+          backend's own Google API key — billed to your Google Cloud
+          project, not the user's). Add optional
+          <code>GEMINI_DEFAULT_MODEL</code> with default
+          <code>gemini-2.5-flash</code>. Pricing constants live in
+          <code>pricing.py</code>, not env, so changes go through code
+          review.
+        </dd>
+
+        <dt><code>server/pyproject.toml</code> (changed — v4.4.0)</dt>
+        <dd>Add <code>httpx&gt;=0.27</code>. Bump version per
+          sub-phase (4.4.0, 4.4.2, 4.4.3 — pyproject only bumps when
+          server/ files change; v4.4.1 is extension-only).</dd>
+      </dl>
+
+      <h3>Extension</h3>
+      <dl>
+        <dt><code>src/background.js</code> (changed — v4.4.1)</dt>
+        <dd>
+          Replace the direct Gemini fetch in <code>scoreJob</code>
+          with a single <code>backendFetch('/scan', { method: 'POST',
+          body: ... })</code>. Remove <code>createCache</code>,
+          <code>deleteCache</code>, and <code>addTokens</code>
+          message handlers — caching is server-side, and the
+          extension no longer tracks Gemini tokens (the backend's
+          <code>scan</code> table is the audit record). On
+          <code>402 insufficient_credits</code>, return a
+          <code>NO_CREDITS</code> failure code surfaced in the sidebar
+          row UI; on success, the response includes the new
+          <code>balance</code> so the SW writes it straight to
+          <code>creditBalance</code> storage without a follow-up
+          balance fetch.
+        </dd>
+
+        <dt><code>src/content.js</code> (changed — v4.4.1)</dt>
+        <dd>
+          Remove the <code>createCache</code> / <code>deleteCache</code>
+          calls at scan batch start/end (server owns the cache).
+          Handle the new <code>NO_CREDITS</code> failure: badge shows
+          a "—" with a tooltip explaining the balance shortfall;
+          sidebar row link opens the Account section. Replace the
+          sequential <code>for ... await scoreJob</code> loop with a
+          bounded-parallel scheduler (concurrency = 5): up to 5
+          scans in flight at once via a small semaphore around
+          <code>sendMessage('scoreJob', ...)</code>. Badges still
+          appear as each scan completes (now in small bursts);
+          progress counter updates per completion. Cuts batch wall
+          time roughly 5× without tripping per-key Gemini rate
+          limits or saturating the asyncpg pool. See Performance.
+        </dd>
+
+        <dt><code>options.html</code> + <code>src/options.js</code>
+          (changed — v4.4.2)</dt>
+        <dd>
+          PDF extract button calls
+          <code>backendFetch('/profile/extract', ...)</code> with the
+          base64 PDF. Backend persists the extracted text into
+          <code>user_profile.cv_text</code>; the options page reads it
+          back via <code>GET /profile</code> and renders into the
+          existing <code>extractedText</code> textarea. The
+          API Configuration tab loses the API key input + test
+          button + "Get an API key" CTA; the tab is renamed to
+          "Model" with just the model dropdown.
+          <code>welcome.html</code> gets a small edit replacing the
+          "Get a Gemini API key" step with "Sign in with Google" —
+          full onboarding rework is v4.6.
+        </dd>
+
+        <dt><code>manifest.json</code> (changed)</dt>
+        <dd>
+          Drop <code>https://generativelanguage.googleapis.com/*</code>
+          from <code>host_permissions</code> once v4.4.1 lands — the
+          extension no longer calls Gemini directly. Bump version per
+          sub-phase.
+        </dd>
+      </dl>
+
+      <h3>Storage / data-model migrations</h3>
+      <dl>
+        <dt><code>chrome.storage.local</code></dt>
+        <dd>Remove <code>apiKey</code> (v4.4.2). Remove
+          <code>tokenUsage</code> (v4.4.1) — server-side audit
+          replaces it. Remove <code>cacheName</code> if still present
+          on any in-flight scan (v4.4.1 — server owns it).
+          <code>cvText</code> and <code>preferences</code> become
+          optional local caches sourced from the server profile;
+          single-source-of-truth shifts to <code>user_profile</code>.</dd>
+      </dl>
+
+      <h3>Docs</h3>
+      <dl>
+        <dt><code>docs/reference/api.html</code> (changed)</dt>
+        <dd>Promote <code>POST /scan</code> (v4.4.0),
+          <code>GET/PUT /profile</code> +
+          <code>POST /profile/extract</code> (v4.4.2) to Live with
+          request/response shapes and the 402 contract.</dd>
+
+        <dt><code>docs/reference/data-model.html</code> (changed)</dt>
+        <dd>Add <code>scan</code>, <code>user_profile</code> tables.
+          Move <code>apiKey</code> / <code>tokenUsage</code> out of
+          the Live client section. Document the
+          <code>GEMINI_API_KEY</code> server env var.</dd>
+
+        <dt><code>docs/architecture.html</code> (changed at v4.4.4)</dt>
+        <dd>Backend section: scoring/ wired with <code>POST /scan</code>
+          and <code>POST /profile/extract</code>; mention Gemini
+          server-owned key; note the cache layer. Client section:
+          remove "API key never enters the content-script context"
+          security note (no longer relevant — there's no API key in
+          the extension at all). Update Data flow: step 4's Gemini
+          call now goes through the backend with debit/refund; the
+          long-promised "v4 will reshape this" paragraph is finally
+          true.</dd>
+
+        <dt>ADR? (TBD at implementation)</dt>
+        <dd>If we end up with a non-obvious call (e.g. estimate-vs-actual
+          billing semantics, or caching policy specifics), promote
+          the spec's Notes into an ADR. None pre-decided.</dd>
+      </dl>
+    </section>
+
+    <section id="verify">
+      <h2>Verify</h2>
+      <ol>
+        <li>Applying <code>0002_scan.sql</code>,
+          <code>0003_user_profile.sql</code>, and
+          <code>0004_user_profile_cache.sql</code> to a fresh
+          Supabase project succeeds in order; rerunning each is a
+          no-op.</li>
+        <li><code>POST /scan</code> with no auth → <code>401</code>.</li>
+        <li><code>POST /scan</code> with a valid JWT and a user
+          balance &lt; estimate → <code>402
+          {error:'insufficient_credits', balance, required}</code>.
+          No ledger row written; scan row left in failed state.</li>
+        <li><code>POST /scan</code> succeeds end-to-end against a
+          test posting: response includes
+          <code>{result:{score,verdict,reason}, cost, balance}</code>.
+          Ledger gains one <code>scan_debit</code> and one
+          <code>scan_refund</code> row (when actual &lt; estimate);
+          both share the same <code>ref</code> equal to the
+          <code>scan_id</code>. Net balance change equals
+          <code>actual_cost</code>.</li>
+        <li><code>POST /scan</code> with a forced Gemini failure
+          (e.g. invalid model) → response is non-2xx; the ledger
+          shows a full <code>scan_refund</code> matching the
+          <code>scan_debit</code>; net balance change is 0.</li>
+        <li>Replaying the same <code>scan_id</code> returns the
+          original response without re-debiting or re-calling
+          Gemini (idempotency).</li>
+        <li><code>POST /profile/extract</code> (v4.4.2) processes a
+          sample PDF, debits credits per multimodal token usage,
+          upserts <code>user_profile.cv_text</code>, returns the
+          extracted text + updated balance.</li>
+        <li>Context cache reuse (v4.4.3): two scans inside the cache
+          TTL with the same <code>cv_text</code> use the same
+          Gemini cache name; the second scan's
+          <code>actual_cost</code> is materially lower than the first
+          (cached-input rate). Updating
+          <code>user_profile.cv_text</code> invalidates the cache;
+          next scan recreates it.</li>
+        <li>Extension scan flow (v4.4.1+) no longer hits
+          <code>generativelanguage.googleapis.com</code> from the
+          background SW Network tab. All outbound calls go to the DO
+          backend host.</li>
+        <li>Extension manifest after v4.4.1 has no
+          <code>generativelanguage.googleapis.com</code> entry in
+          <code>host_permissions</code>; the extension still scans
+          successfully.</li>
+        <li>Options page after v4.4.2 has no API key input, no
+          "Test API key" button, no
+          <code>chrome.storage.local.apiKey</code>; PDF extract
+          works without the user providing a Gemini key.</li>
+        <li>Sidebar credits chip and Account section balance update
+          immediately after each scan (driven by the
+          <code>balance</code> field in the
+          <code>/scan</code> response, no extra
+          <code>/credits/balance</code> fetch needed).</li>
+      </ol>
+    </section>
+
+    <section id="performance">
+      <h2>Performance</h2>
+      <p>
+        Adding the backend hop adds ~200–500ms of overhead per scan
+        (two DB round-trips around the Gemini call) on top of the ~1s
+        Gemini call itself. Concurrent users don't multiply this
+        unless they collide on a shared bottleneck.
+      </p>
+
+      <h3>Baked into v4.4.0 / v4.4.1</h3>
+      <ul>
+        <li>
+          <strong>httpx with HTTP/2 + a persistent client</strong> for
+          Gemini calls (v4.4.0). Reuses TCP/TLS across scans, saves
+          ~50–100ms of handshake per request, and gives connection
+          pooling under load. One <code>httpx.AsyncClient</code>
+          instance held by the FastAPI lifespan, same pattern as the
+          asyncpg pool.
+        </li>
+        <li>
+          <strong>asyncpg pool <code>max_size = 25</code></strong>
+          (v4.4.0, up from v4.3.0's default of 10). Each scan uses
+          ~3 queries across two transactions; 25 lets ~8 concurrent
+          scans run without pool waits, comfortably above expected
+          peak.
+        </li>
+        <li>
+          <strong>Bounded-parallel scan loop in
+          <code>content.js</code></strong> (v4.4.1). Up to 5 scans
+          in flight at once instead of strictly sequential. Roughly
+          5× speedup on batch wall time for a 50-job scan
+          (~60s → ~12s). Concurrency limit picked to stay well
+          below per-key Gemini paid-tier limits and well inside the
+          asyncpg pool. Sequential was the right default in v3 with
+          a free-tier user key (15 req/min); with a server-owned
+          paid-tier key, the constraint is gone.
+        </li>
+        <li>
+          <strong>p50 / p95 scan-latency logging</strong> (v4.4.0).
+          Every <code>POST /scan</code> emits a single structured log
+          line with <code>scan_id</code>, <code>model</code>, total
+          duration, and a breakdown
+          (<code>db_pre_ms</code>, <code>gemini_ms</code>,
+          <code>db_post_ms</code>). DO captures stdout — gives a
+          rolling latency picture without standing up a metrics
+          backend. Revisit if/when load justifies one.
+        </li>
+      </ul>
+
+      <h3>Deferred until measurements demand them</h3>
+      <ul>
+        <li>
+          <strong>Streaming Gemini responses</strong> back to the
+          client. Cuts perceived latency for long scans (especially
+          Pro) but adds significant complexity in both backend
+          (SSE/chunked) and extension (incremental render). Worth it
+          if p95 stays above ~3s.
+        </li>
+        <li>
+          <strong>Autoscaling / Pro DO tier.</strong> The Basic
+          instance handles the expected UWaterloo-scale load.
+          Bump only when concurrent-user logs show CPU or memory
+          ceiling.
+        </li>
+        <li>
+          <strong>Async / queue-based scan execution.</strong> Return
+          a <code>scan_id</code> immediately, settle the result via
+          polling or a webhook. Useful at very high concurrency or
+          when scans get expensive (longer Pro calls); not worth the
+          state machine yet.
+        </li>
+        <li>
+          <strong>Gemini per-key rate limit headroom.</strong>
+          Request a paid-tier quota bump from Google ahead of public
+          launch. Free tier (15 req/min for Flash) is enough for
+          dev/test; not enough for batch scans across multiple
+          concurrent users.
+        </li>
+      </ul>
+    </section>
+
+    <section id="notes">
+      <h2>Notes</h2>
+      <ul>
+        <li>
+          <strong>Estimate-first, refund the unused portion.</strong>
+          Pre-debit a worst-case (input + maxOutputTokens) so the
+          balance check at the start of <code>/scan</code> is
+          definitive — no two concurrent scans can collectively
+          overdraft. On success, refund the difference between
+          estimate and actual; on failure, refund the full estimate.
+          Two ledger rows per scan when the refund fires, both keyed
+          by the same <code>scan_id</code> in <code>ref</code> for
+          auditable correlation.
+        </li>
+        <li>
+          <strong>Idempotency via client-generated scan_id.</strong>
+          Extension generates a UUID per scan attempt and includes
+          it in the request body. Backend uses it as the
+          <code>scan</code> table primary key with
+          <code>ON CONFLICT DO NOTHING</code>; on conflict, the
+          existing row's response is returned without re-debiting or
+          re-calling Gemini. Network glitches and SW restarts
+          therefore can't double-charge.
+        </li>
+        <li>
+          <strong>Pricing constants live in code, not env.</strong>
+          <code>server/app/billing/pricing.py</code> holds per-model
+          per-token-kind credit rates. Each constant carries a
+          source-date comment (Google pricing snapshot + USD rate +
+          CAD FX + chosen margin) so future changes are auditable in
+          git history. Re-pricing is a code change + redeploy, not a
+          dashboard tweak — appropriate for something that affects
+          every user's bill.
+        </li>
+        <li>
+          <strong>Single server-owned Gemini key.</strong> The
+          backend bills Google for all users' usage; users see only
+          credits. Set up via a dedicated Google Cloud project so
+          billing is isolated from any personal projects. Stored as
+          <code>GEMINI_API_KEY</code> in DO encrypted env.
+        </li>
+        <li>
+          <strong>Transaction discipline around external calls.</strong>
+          Hold a DB transaction only for the balance check + debit
+          ledger insert + scan row insert; commit before calling
+          Gemini. After Gemini returns, open a fresh transaction for
+          the refund/update. Keeps Gemini's 1–10s latency out of the
+          row-lock window.
+        </li>
+        <li>
+          <strong>Sub-version slicing.</strong>
+          <ul>
+            <li><code>v4.4.0</code> — backend only:
+              <code>0002_scan.sql</code>, <code>pricing.py</code>,
+              <code>gemini.py</code>, <code>POST /scan</code>,
+              <code>billing/db.py</code> ledger helpers, env additions.
+              Tested via curl against the deployed backend.</li>
+            <li><code>v4.4.1</code> — extension scan wiring:
+              <code>background.js scoreJob</code> swap, drop cache /
+              addTokens handlers, NO_CREDITS UI in
+              <code>content.js</code>, manifest
+              <code>host_permissions</code> trim, manifest bump.</li>
+            <li><code>v4.4.2</code> — PDF extract + profile:
+              <code>0003_user_profile.sql</code>,
+              <code>profile/routes.py</code>,
+              <code>POST /profile/extract</code>, options page UI
+              rework (API Configuration → Model), apiKey removal,
+              minor welcome.html edit.</li>
+            <li><code>v4.4.3</code> — context cache:
+              <code>0004_user_profile_cache.sql</code>,
+              <code>scoring/cache.py</code>, cache-aware
+              <code>POST /scan</code>, pricing constants extended for
+              cached-input rate (already present from v4.4.0 but
+              now actually used).</li>
+            <li><code>v4.4.4</code> — close-out: spec → done,
+              <code>architecture.html</code> rewrite of the data
+              flow + storage + security sections, manifest bump.</li>
+          </ul>
+        </li>
+        <li>
+          <strong>Out of scope (deferred).</strong>
+          Stripe purchase flow (v4.5). Full onboarding rework in
+          welcome.html (v4.6). Multi-currency display, multi-provider
+          (Claude/GPT) routing, per-organization billing.
+        </li>
+      </ul>
+    </section>
+  </body>
+</html>
