@@ -1,6 +1,12 @@
 const VALID_VERDICTS = new Set(['Apply', 'Consider', 'Skip']);
 const RETRY_DELAYS = [2000, 4000, 8000];
 
+const SUPABASE_URL = 'https://bumrzedwwfhbxlttwboh.supabase.co';
+// Public key by design — embedded in Supabase web app bundles too. Paste
+// the sb_publishable_... value from server/.env before loading the extension.
+const SUPABASE_PUBLISHABLE_KEY = '';
+const BACKEND_URL = 'https://ww-extension-backend-x5h6h.ondigitalocean.app';
+
 const SYSTEM_TEXT =
 `You are a job-fit scorer. Score how well the candidate fits the job.
 
@@ -57,6 +63,10 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.type === 'addTokens') {
     incrementTokenUsage(msg.usage);
     return; // fire-and-forget
+  }
+  if (msg.type === 'backendFetch') {
+    backendFetch(msg.path, msg.init).then(sendResponse);
+    return true;
   }
 });
 
@@ -186,6 +196,78 @@ function validate(p) {
 
 function fail(code, error) { return { ok: false, code, error }; }
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ── Authenticated backend fetch with one-shot token refresh ───────────────────
+
+async function backendFetch(path, init = {}) {
+  let auth = await getAuth();
+  if (!auth?.access_token) return { ok: false, status: 0, error: 'NOT_SIGNED_IN' };
+
+  let res = await callBackend(path, init, auth.access_token);
+  if (res.status === 401 && auth.refresh_token) {
+    const refreshed = await refreshSession(auth.refresh_token);
+    if (refreshed) res = await callBackend(path, init, refreshed.access_token);
+  }
+  const data = await res.json().catch(() => null);
+  return { ok: res.ok, status: res.status, data };
+}
+
+function callBackend(path, init, accessToken) {
+  return fetch(`${BACKEND_URL}${path}`, {
+    ...init,
+    headers: { ...(init.headers || {}), Authorization: `Bearer ${accessToken}` }
+  });
+}
+
+function getAuth() {
+  return new Promise(resolve => chrome.storage.local.get('auth', d => resolve(d.auth)));
+}
+
+// Supabase rotates the refresh token on each call, so concurrent 401s must
+// share one in-flight refresh — otherwise the second call sees an invalidated
+// refresh token and signs the user out.
+let refreshInFlight = null;
+function refreshSession(refreshToken) {
+  if (refreshInFlight) return refreshInFlight;
+  refreshInFlight = (async () => {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: SUPABASE_PUBLISHABLE_KEY },
+        body: JSON.stringify({ refresh_token: refreshToken })
+      });
+      if (!res.ok) {
+        await chrome.storage.local.remove('auth');
+        return null;
+      }
+      const data = await res.json();
+      const claims = decodeJwtPayload(data.access_token) || {};
+      const auth = {
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+        expires_at: Date.now() + (data.expires_in ?? 3600) * 1000,
+        email: claims.email,
+        user_id: claims.sub
+      };
+      await chrome.storage.local.set({ auth });
+      return auth;
+    } catch {
+      return null;
+    } finally {
+      refreshInFlight = null;
+    }
+  })();
+  return refreshInFlight;
+}
+
+function decodeJwtPayload(token) {
+  try {
+    const [, payload] = token.split('.');
+    return JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+  } catch {
+    return null;
+  }
+}
 
 // Serialize get→set so concurrent scoreJob calls don't lose increments.
 let tokenWriteChain = Promise.resolve();
