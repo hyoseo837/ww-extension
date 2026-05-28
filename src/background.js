@@ -67,6 +67,29 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     backendFetch(msg.path, msg.init).then(sendResponse);
     return true;
   }
+  if (msg.type === "refreshBalance") {
+    refreshBalance().then(sendResponse);
+    return true;
+  }
+});
+
+// Auto-refresh balance on sign-in (auth set in storage) and clear it on
+// sign-out. Storage change is the single source of truth for auth state,
+// so the listener covers both options-page sign-in and any future caller.
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== "local" || !changes.auth) return;
+  const next = changes.auth.newValue;
+  if (next?.access_token) {
+    refreshBalance();
+  } else {
+    chrome.storage.local.remove("creditBalance");
+  }
+});
+
+// SW startup: if already signed in (e.g. browser reopened, SW woke up),
+// refresh once so the cached balance doesn't drift.
+chrome.storage.local.get("auth", (data) => {
+  if (data.auth?.access_token) refreshBalance();
 });
 
 // API key stays in background context — never sent over chrome.runtime
@@ -221,6 +244,14 @@ function sleep(ms) {
 }
 
 // ── Authenticated backend fetch with one-shot token refresh ───────────────────
+
+async function refreshBalance() {
+  const res = await backendFetch("/credits/balance");
+  if (res.ok && typeof res.data?.balance === "number") {
+    await chrome.storage.local.set({ creditBalance: res.data.balance });
+  }
+  return res;
+}
 
 async function backendFetch(path, init = {}) {
   let auth = await getAuth();

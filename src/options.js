@@ -282,6 +282,12 @@ function renderAuth(auth) {
   }
 }
 
+function renderBalance(balance) {
+  const node = el('creditBalance');
+  if (!node) return;
+  node.textContent = typeof balance === 'number' ? balance.toFixed(2) : '—';
+}
+
 el('signIn').addEventListener('click', async () => {
   const redirectUrl = chrome.identity.getRedirectURL();
   const authUrl = `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}`;
@@ -334,9 +340,14 @@ el('signOut').addEventListener('click', async () => {
   setAuthStatus('Signed out.', 'ok');
 });
 
-chrome.storage.local.get(['auth'], data => renderAuth(data.auth));
+chrome.storage.local.get(['auth', 'creditBalance'], data => {
+  renderAuth(data.auth);
+  renderBalance(data.creditBalance);
+});
 chrome.storage.onChanged.addListener((changes, area) => {
-  if (area === 'local' && changes.auth) renderAuth(changes.auth.newValue);
+  if (area !== 'local') return;
+  if (changes.auth) renderAuth(changes.auth.newValue);
+  if (changes.creditBalance) renderBalance(changes.creditBalance.newValue);
 });
 
 // ── Help popover toggle ───────────────────────────────────────────────────────

@@ -37,7 +37,26 @@ chrome.storage.onChanged.addListener((changes, area) => {
       updateGuideSteps(!!data.apiKey, !!(data.cvText && data.cvText.trim()));
     });
   }
+  if (changes.auth || changes.creditBalance) {
+    chrome.storage.local.get(['auth', 'creditBalance'], data => {
+      renderCreditsChip(data.auth, data.creditBalance);
+    });
+  }
 });
+
+function renderCreditsChip(auth, balance) {
+  const node = document.getElementById('ww-ext-credits');
+  if (!node) return;
+  const signedIn = !!auth?.access_token;
+  if (!signedIn) {
+    node.hidden = true;
+    node.textContent = '';
+    return;
+  }
+  node.hidden = false;
+  const value = typeof balance === 'number' ? balance.toFixed(2) : '—';
+  node.textContent = `⚡ ${value}`;
+}
 
 // ── Bridge ────────────────────────────────────────────────────────────────────
 
@@ -557,7 +576,10 @@ function injectSidebar() {
   sidebar.id = 'ww-ext-sidebar';
   sidebar.innerHTML = `
     <div id="ww-ext-header">
-      <span>WW AI Scorer</span>
+      <div class="ww-ext-header-left">
+        <span>WW AI Scorer</span>
+        <span id="ww-ext-credits" hidden></span>
+      </div>
       <div class="ww-ext-header-btns">
         <button id="ww-ext-help-open" title="How to use">?</button>
         <button id="ww-ext-settings" title="Settings">&#9881;</button>
@@ -603,6 +625,11 @@ function injectSidebar() {
 
   // Apply saved theme
   chrome.storage.local.get('theme', data => { if (data.theme) applyThemeToContent(data.theme); });
+
+  // Initial credits chip render
+  chrome.storage.local.get(['auth', 'creditBalance'], data => {
+    renderCreditsChip(data.auth, data.creditBalance);
+  });
 
   // Badge reason tooltip
   const tooltip = document.createElement('div');

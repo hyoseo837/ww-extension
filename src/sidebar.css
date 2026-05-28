@@ -140,6 +140,19 @@
   letter-spacing: -0.01em;
 }
 
+.ww-ext-header-left { display: flex; align-items: center; gap: 10px; }
+
+#ww-ext-credits {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--s-primary);
+  background: var(--s-surface-hi);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
 .ww-ext-header-btns { display: flex; align-items: center; gap: 2px; }
 
 #ww-ext-help-open,
