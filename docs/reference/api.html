@@ -6,7 +6,7 @@
     <meta name="type" content="reference" />
     <meta name="subject" content="backend-api-contract" />
     <meta name="status" content="live" />
-    <meta name="last-updated" content="2026-05-27" />
+    <meta name="last-updated" content="2026-05-28" />
     <title>Backend API Contract — ww-extension</title>
   </head>
   <body>
@@ -72,14 +72,31 @@
           underlying PyJWT error message in <code>detail</code> for
           debugging; v4.3+ may sanitize.</p>
       </dd>
+
+      <dt id="get-credits-balance"><code>GET /credits/balance</code></dt>
+      <dd>
+        <p>Authenticated. Returns the signed-in user's current credit
+          balance as a JSON number. Unit:
+          <code>1 credit = $0.01 CAD</code>. Computed as
+          <code>SUM(delta)</code> over the user's
+          <code>credit_ledger_entry</code> rows.</p>
+        <p><strong>Response:</strong> <code>200 OK</code></p>
+        <pre><code>{
+  "balance": 100
+}</code></pre>
+        <p>
+          May be fractional once debit/refund land (v4.4+) —
+          e.g., <code>{"balance": 99.925}</code>.
+        </p>
+        <p><strong>Errors:</strong>
+          <code>401</code> on missing or invalid Authorization header
+          (same semantics as <code>/me</code>).</p>
+      </dd>
     </dl>
 
     <h2>Planned endpoints (subject to phase planning)</h2>
 
     <dl>
-
-      <dt><code>GET /credits/balance</code> (v4.3)</dt>
-      <dd>Authenticated. Returns current credit balance.</dd>
 
       <dt><code>POST /scan</code> (v4.4)</dt>
       <dd>Authenticated. Submits a posting payload; backend forwards

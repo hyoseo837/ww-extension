@@ -5,7 +5,7 @@
     <meta name="project" content="ww-extension" />
     <meta name="type" content="reference" />
     <meta name="subject" content="data-model" />
-    <meta name="last-updated" content="2026-05-27" />
+    <meta name="last-updated" content="2026-05-28" />
     <title>Data Model — ww-extension</title>
   </head>
   <body>
@@ -85,6 +85,15 @@
         <code>email</code> and <code>user_id</code> are extracted
         from the decoded JWT for display. Absent when signed out;
         cleared by the Sign out button. Refresh logic lands at v4.2.2.</dd>
+
+      <dt><code>creditBalance</code> (v4.3.1)</dt>
+      <dd><strong>Type:</strong> <code>number | undefined</code>.
+        Last-known credit balance fetched from
+        <code>GET /credits/balance</code> by the background service
+        worker. Unit: <code>1 credit = $0.01 CAD</code>. May be
+        fractional once debit/refund land (v4.4+). Cleared on sign-out.
+        Live-synced to UI via
+        <code>chrome.storage.onChanged</code>.</dd>
     </dl>
 
     <h2>Server — Supabase Postgres</h2>
@@ -97,21 +106,75 @@
     </p>
 
     <p>
-      <strong>Live (v4.2.1):</strong>
+      <strong>Live (v4.3.0):</strong>
     </p>
     <ul>
       <li><code>auth.users</code> (Supabase-managed) — identity records
         keyed by UUID. The extension receives this UUID as
         <code>sub</code> in the session JWT.</li>
+      <li><code>public.credit_ledger_entry</code> — append-only credit
+        ledger. See below.</li>
     </ul>
 
+    <h3 id="credit_ledger_entry"><code>public.credit_ledger_entry</code></h3>
     <p>
-      <strong>Anticipated (v4.3+):</strong>
+      Append-only log of credit movements per user. Balance is computed
+      as <code>SUM(delta)</code> over a user's rows. Unit:
+      <code>1 credit = $0.01 CAD</code>.
+    </p>
+    <dl>
+      <dt><code>id uuid primary key default gen_random_uuid()</code></dt>
+      <dd>Row identifier.</dd>
+
+      <dt><code>user_id uuid not null references auth.users(id) on delete cascade</code></dt>
+      <dd>Owner. If the auth row is deleted, the ledger rows go with it.</dd>
+
+      <dt><code>delta numeric(14, 6) not null</code></dt>
+      <dd>Positive for credits added (signup_bonus, admin_grant,
+        purchase, scan_refund); negative for credits spent
+        (scan_debit). Fractional values are expected once token-priced
+        debits land at v4.4. NUMERIC keeps Postgres SUM exact.</dd>
+
+      <dt><code>kind text not null check (kind in (…))</code></dt>
+      <dd>One of
+        <code>'signup_bonus'</code>,
+        <code>'admin_grant'</code>,
+        <code>'purchase'</code>,
+        <code>'scan_debit'</code>,
+        <code>'scan_refund'</code>.</dd>
+
+      <dt><code>ref text null</code></dt>
+      <dd>Free-form correlation (scan UUID for debit/refund pairs at
+        v4.4; Stripe event ID for purchases at v4.5).</dd>
+
+      <dt><code>created_at timestamptz not null default now()</code></dt>
+      <dd>Insertion time.</dd>
+    </dl>
+    <p>
+      <strong>Indexes:</strong>
+      <code>(user_id, created_at desc)</code> for balance/history reads;
+      partial unique index on <code>(user_id) where kind =
+      'signup_bonus'</code> as defense-in-depth against double-grant.
+    </p>
+    <p>
+      <strong>RLS:</strong> enabled. SELECT policy
+      <code>auth.uid() = user_id</code>; no INSERT/UPDATE/DELETE
+      policies. Backend uses service-role credentials and bypasses RLS
+      for its own queries — RLS is a safety net for any future code
+      path that ever holds a user-role connection.
+    </p>
+    <p>
+      <strong>Signup bonus trigger.</strong>
+      <code>public.grant_signup_bonus()</code> fires AFTER INSERT on
+      <code>auth.users</code> and inserts one
+      <code>signup_bonus</code> row of <code>delta = 100</code>
+      (= $1 CAD). Hardcoded; bump via a follow-up migration.
+    </p>
+
+    <p>
+      <strong>Anticipated (v4.4+):</strong>
     </p>
     <ul>
-      <li><code>credit_balance</code> — per-user credit count (v4.3)</li>
-      <li><code>credit_ledger_entry</code> — append-only debit/credit log,
-        scan debits + purchase credits + refunds (v4.3)</li>
       <li><code>scan</code> — request/response record for audit and
         refund-on-failure (v4.4)</li>
       <li><code>stripe_event</code> — idempotency keyed by Stripe event

@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     supabase_publishable_key: str
     supabase_secret_key: str
     supabase_jwks_url: HttpUrl
+    database_url: str
 
 
 settings = Settings()
