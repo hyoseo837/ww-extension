@@ -6,7 +6,7 @@
     <meta name="type" content="architecture" />
     <meta name="scope" content="current shipped system" />
     <meta name="baseline-version" content="v03.015" />
-    <meta name="last-updated" content="2026-05-27" />
+    <meta name="last-updated" content="2026-05-28" />
     <title>Architecture — ww-extension</title>
   </head>
   <body>
@@ -70,7 +70,13 @@
       <p>See <code>reference/data-model.html</code> for the full key list
         with schemas. Summary: settings (apiKey, model, cvText,
         preferences), theme, cumulative token usage, score map per posting,
-        ordered posting-id list for cross-page navigation.</p>
+        ordered posting-id list for cross-page navigation,
+        <code>auth</code> (Supabase session, v4.2.1+) and
+        <code>creditBalance</code> (last-known balance from
+        <code>GET /credits/balance</code>, v4.3.1+). The credits chip
+        in the sidebar header and the Account section in options both
+        render <code>creditBalance</code> live via
+        <code>chrome.storage.onChanged</code>.</p>
 
       <h4>Key architectural decisions to preserve</h4>
       <ul>
@@ -158,6 +164,9 @@
         <li><code>GET /me</code> (v4.2.0) — authenticated. Returns
           <code>{user_id, email}</code> from the verified Supabase
           JWT.</li>
+        <li><code>GET /credits/balance</code> (v4.3.0) —
+          authenticated. Returns <code>{balance: number}</code>
+          (<code>1 credit = $0.01 CAD</code>).</li>
       </ul>
       <p>
         Auth: <code>Authorization: Bearer &lt;jwt&gt;</code> on
@@ -168,15 +177,38 @@
         <a href="reference/api.html">reference/api.html</a>.
       </p>
 
+      <h4>Database access</h4>
+      <p>
+        <code>app.billing.db</code> owns an
+        <code>asyncpg</code> connection pool, opened/closed via the
+        FastAPI <code>lifespan</code>. Connects through the Supabase
+        <strong>Session pooler</strong> (port 5432, IPv4,
+        session-mode — preserves prepared-statement caching, unlike
+        the transaction pooler). Backend bypasses RLS via the role's
+        privileges; RLS policies on
+        <code>public.credit_ledger_entry</code> remain enabled as
+        defense-in-depth.
+      </p>
+      <p>
+        SQL migrations live in <code>server/migrations/</code> as
+        idempotent <code>NNNN_*.sql</code> files, applied manually
+        via Supabase dashboard or <code>psql</code>. No migration
+        runner yet — revisit if the file count grows past a handful.
+      </p>
+
       <h4>Configuration</h4>
       <p>
         Env vars (<code>SUPABASE_URL</code>,
         <code>SUPABASE_PUBLISHABLE_KEY</code>,
         <code>SUPABASE_SECRET_KEY</code>,
-        <code>SUPABASE_JWKS_URL</code>) live in DO App Platform's env
-        store. Local dev uses <code>server/.env</code> (gitignored);
+        <code>SUPABASE_JWKS_URL</code>,
+        <code>DATABASE_URL</code>) live in DO App Platform's env
+        store. <code>SUPABASE_SECRET_KEY</code> and
+        <code>DATABASE_URL</code> are marked encrypted (they embed
+        secrets); the others are public-by-design and stored as
+        plain. Local dev uses <code>server/.env</code> (gitignored);
         <code>server/.env.example</code> is the committed template.
-        <code>server/app/core/config.py</code> reads both via
+        <code>server/app/core/config.py</code> reads them via
         pydantic-settings.
       </p>
 
