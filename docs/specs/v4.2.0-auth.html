@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v4.2.0" />
+    <meta name="status" content="in-progress" />
+    <meta name="last-updated" content="2026-05-27" />
+    <title>Spec v4.2 — Auth in the extension</title>
+  </head>
+  <body>
+    <h1>Spec v4.2 — Auth in the extension</h1>
+
+    <section id="goal">
+      <h2>Goal</h2>
+      <p>
+        Wire end-to-end authentication: extension signs in with Google
+        via Supabase OAuth, stores the session JWT, sends it as
+        <code>Authorization: Bearer</code> to the FastAPI backend.
+        Backend verifies the JWT against Supabase JWKS and exposes
+        <code>GET /me</code> returning user identity.
+      </p>
+      <p>
+        Sign-in is <strong>optional</strong> in v4.2 — the extension
+        still scores via the user's own Gemini key. The hard
+        sign-in-or-no-scoring gate ships at v4.4 (server-side scoring).
+      </p>
+      <p>
+        Stack already locked. New ADR may follow if token refresh
+        strategy turns out to be load-bearing.
+      </p>
+    </section>
+
+    <section id="files">
+      <h2>Files</h2>
+
+      <h3>Backend</h3>
+      <dl>
+        <dt><code>server/app/auth/dependency.py</code> (added)</dt>
+        <dd>FastAPI <code>Depends(current_user)</code> that extracts
+          <code>Authorization: Bearer</code>, verifies the JWT against
+          Supabase JWKS (ES256/RS256, audience
+          <code>"authenticated"</code>, 10s leeway), and returns the
+          decoded claims dict.</dd>
+
+        <dt><code>server/app/auth/routes.py</code> (added)</dt>
+        <dd><code>GET /me</code> — authenticated; returns
+          <code>{user_id, email}</code> from JWT claims.</dd>
+
+        <dt><code>server/app/main.py</code> (changed)</dt>
+        <dd>Mount the auth router alongside health.</dd>
+
+        <dt><code>server/pyproject.toml</code> (changed)</dt>
+        <dd>Add <code>pyjwt[crypto]&gt;=2.10</code> for asymmetric JWT
+          verification. Version bumped to <code>4.2.0</code>.</dd>
+      </dl>
+
+      <h3>Extension</h3>
+      <dl>
+        <dt><code>manifest.json</code> (changed)</dt>
+        <dd>Add <code>"key"</code> field for stable extension ID
+          (<code>ceobdeelponblelbcbbnojfjijheffpi</code>).
+          Add <code>"identity"</code> permission. Add Supabase project
+          URL and deployed backend URL to <code>host_permissions</code>.
+          Version bumped to <code>4.2.0</code>.</dd>
+
+        <dt><code>options.html</code> + <code>src/options.js</code>
+          (changed — v4.2.1)</dt>
+        <dd>New Account section inside the Settings tab. Sign in /
+          Sign out controls; signed-in email display.</dd>
+
+        <dt><code>src/background.js</code> (changed — v4.2.2)</dt>
+        <dd>Token refresh handler. On 401 from backend, refresh via
+          Supabase token endpoint using the stored refresh token, then
+          retry the original request once.</dd>
+      </dl>
+    </section>
+
+    <section id="verify">
+      <h2>Verify</h2>
+      <ol>
+        <li><code>GET /health</code> still returns 200 with the
+          expected payload (regression check after auth router
+          mounted).</li>
+        <li><code>GET /me</code> with no Authorization header returns
+          <code>401</code> with <code>WWW-Authenticate: Bearer</code>.</li>
+        <li><code>GET /me</code> with a malformed/expired/unsigned JWT
+          returns <code>401</code>.</li>
+        <li><code>GET /me</code> with a valid Supabase session JWT
+          returns <code>200</code> with
+          <code>{user_id, email}</code>.</li>
+        <li>Extension manifest loaded by Chrome resolves to the
+          fixed ID <code>ceobdeelponblelbcbbnojfjijheffpi</code>.</li>
+        <li>Options page Settings tab shows the Account section
+          (v4.2.1+).</li>
+        <li>"Sign in with Google" opens the Supabase OAuth flow,
+          lands on Google's account picker, and returns to the
+          extension via <code>chrome.identity.launchWebAuthFlow</code>
+          (v4.2.1+).</li>
+        <li>After sign-in, the Account section displays the user's
+          email; Sign out clears the session and the UI reverts to
+          the Sign in button (v4.2.1+).</li>
+        <li>Access token expiry triggers a refresh-token roundtrip
+          and the original request succeeds (v4.2.2+).</li>
+      </ol>
+    </section>
+
+    <section id="notes">
+      <h2>Notes</h2>
+      <ul>
+        <li><strong>Extension ID is locked.</strong> The manifest
+          <code>"key"</code> deterministically produces
+          <code>ceobdeelponblelbcbbnojfjijheffpi</code>. OAuth
+          redirect URL is therefore
+          <code>https://ceobdeelponblelbcbbnojfjijheffpi.chromiumapp.org/</code>.</li>
+        <li><strong>Supabase dashboard prep (before v4.2.1).</strong>
+          Authentication → URL Configuration → Redirect URLs must
+          include the chromiumapp.org URL above. Without it, Supabase
+          refuses to redirect back after OAuth completes.</li>
+        <li><strong>Token refresh strategy (v4.2.2).</strong> Supabase
+          access tokens expire ~1 hour. Refresh tokens are
+          long-lived. Store both in
+          <code>chrome.storage.local</code>; on 401 from backend,
+          call Supabase token endpoint with the refresh token, replace
+          stored tokens, retry once. Background service worker owns
+          this logic so the UI doesn't see expiries.</li>
+        <li><strong>Why JWKS, not the JWT secret.</strong> Supabase
+          moved to asymmetric signing (ES256/RS256). FastAPI fetches
+          public keys via the well-known JWKS URL; no shared secret
+          stored on the backend. See
+          <a href="../decisions/0008-auth-and-db-via-supabase.html">ADR 0008</a>.</li>
+        <li><strong>Sign-in stays optional in v4.2.</strong> Existing
+          users without an account keep scoring via their own Gemini
+          key. v4.4 will gate scoring on a valid session.</li>
+      </ul>
+    </section>
+  </body>
+</html>

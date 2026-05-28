@@ -151,13 +151,22 @@
           built venv copied over.</dd>
       </dl>
 
-      <h4>Endpoints (as of baseline)</h4>
+      <h4>Endpoints</h4>
       <ul>
         <li><code>GET /health</code> — liveness probe. No auth.
-          Returns <code>{service, version, status}</code>. Full
-          contract in
-          <a href="reference/api.html">reference/api.html</a>.</li>
+          Returns <code>{service, version, status}</code>.</li>
+        <li><code>GET /me</code> (v4.2.0) — authenticated. Returns
+          <code>{user_id, email}</code> from the verified Supabase
+          JWT.</li>
       </ul>
+      <p>
+        Auth: <code>Authorization: Bearer &lt;jwt&gt;</code> on
+        authenticated routes. Backend verifies JWTs against Supabase
+        JWKS (ES256/RS256, audience <code>"authenticated"</code>)
+        via the <code>app.auth.dependency.current_user</code>
+        FastAPI dependency. Full contract in
+        <a href="reference/api.html">reference/api.html</a>.
+      </p>
 
       <h4>Configuration</h4>
       <p>

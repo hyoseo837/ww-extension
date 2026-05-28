@@ -1,12 +1,15 @@
 {
   "manifest_version": 3,
   "name": "WW Extension",
-  "version": "4.1.2",
+  "version": "4.2.0",
   "description": "AI job scorer for WaterlooWorks",
-  "permissions": ["storage"],
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyeCM6vVTZLpnNPPTitVx8HlxTsyHslhKxjHA0+hdfrmyYdUEwFTRoy2XGY/TRzg828duOhxZ1tbYxK4UbpHr1IBifi9CVwGYR0jCWGBuEoVhQNcNYhykBVvR+MV5nkt49qBVCqzk9HiZZ5laVTIznYgVR6EX6iCd9LN1afKFkEhgoUcyOyEPs6UESaoeYs/bxMoAX2zfSu9Nx0tCz5WUkH/v3hZLscOonCVb47RcrIF9UdRl7BijgjaODTspG3Ku4IefaUuf95wFKBYbLf3oMDNZy5MlXYPFC36mKApUeqfG6aTEAl5X2WlpExGlIjPIUsT6MxLaVV6JhwdARxXchQIDAQAB",
+  "permissions": ["storage", "identity"],
   "host_permissions": [
     "https://waterlooworks.uwaterloo.ca/*",
-    "https://generativelanguage.googleapis.com/*"
+    "https://generativelanguage.googleapis.com/*",
+    "https://bumrzedwwfhbxlttwboh.supabase.co/*",
+    "https://ww-extension-backend-x5h6h.ondigitalocean.app/*"
   ],
   "content_scripts": [
     {

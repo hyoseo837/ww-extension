@@ -7,7 +7,7 @@
     <meta name="subject" content="backend-api-contract" />
     <meta name="status" content="live" />
     <meta name="last-updated" content="2026-05-27" />
-    <title>Backend API Contract — ww-extension (placeholder)</title>
+    <title>Backend API Contract — ww-extension</title>
   </head>
   <body>
     <h1>Backend API Contract</h1>
@@ -25,11 +25,14 @@
       <code>https://ww-extension-backend-x5h6h.ondigitalocean.app</code>
     </p>
 
-    <h2>Auth header convention (planned, v4.2)</h2>
+    <h2>Auth header convention</h2>
     <p>
-      Authenticated endpoints will expect the Supabase session JWT in
+      Authenticated endpoints expect the Supabase session JWT in
       <code>Authorization: Bearer &lt;jwt&gt;</code>. Backend verifies
-      the JWT against Supabase JWKS before any business logic.
+      the JWT against Supabase JWKS (ES256/RS256, audience
+      <code>"authenticated"</code>, 10s leeway) before any business
+      logic. Failures return <code>401</code> with
+      <code>WWW-Authenticate: Bearer</code>.
     </p>
 
     <h2>Live endpoints</h2>
@@ -41,7 +44,7 @@
         <p><strong>Response:</strong> <code>200 OK</code></p>
         <pre><code>{
   "service": "ww-extension-backend",
-  "version": "4.1.2",
+  "version": "4.2.0",
   "status": "ok"
 }</code></pre>
         <p>
@@ -52,14 +55,28 @@
           confirming a deploy went through.
         </p>
       </dd>
+
+      <dt id="get-me"><code>GET /me</code></dt>
+      <dd>
+        <p>Authenticated. Returns the signed-in user's identity
+          extracted from the verified Supabase JWT.</p>
+        <p><strong>Response:</strong> <code>200 OK</code></p>
+        <pre><code>{
+  "user_id": "&lt;supabase-user-uuid&gt;",
+  "email": "user@example.com"
+}</code></pre>
+        <p><strong>Errors:</strong>
+          <code>401</code> if the Authorization header is missing or
+          the token fails verification (expired, wrong signature,
+          wrong audience, malformed, etc.). v4.2.0 returns the
+          underlying PyJWT error message in <code>detail</code> for
+          debugging; v4.3+ may sanitize.</p>
+      </dd>
     </dl>
 
     <h2>Planned endpoints (subject to phase planning)</h2>
 
     <dl>
-      <dt><code>GET /me</code> (v4.2)</dt>
-      <dd>Authenticated. Returns current user identity + credit
-        balance.</dd>
 
       <dt><code>GET /credits/balance</code> (v4.3)</dt>
       <dd>Authenticated. Returns current credit balance.</dd>
