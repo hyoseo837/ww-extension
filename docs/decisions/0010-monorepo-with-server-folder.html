@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-05-27" />
+    <meta name="supersedes" content="0004" />
+    <title>ADR 0010 — Monorepo: backend at server/, repo private</title>
+  </head>
+  <body>
+    <h1>ADR 0010 — Monorepo: backend at server/, repo private</h1>
+
+    <p>
+      Supersedes <a href="0004-backend-separate-repo.html">ADR 0004</a>.
+    </p>
+
+    <section id="context">
+      <h2>Context</h2>
+      <p>
+        ADR 0004 split the backend into its own repo so that proprietary
+        scoring prompts and pricing logic would not ship to end users via
+        the publicly inspectable Chrome extension bundle. After scaffolding
+        both repos (extension + <code>WW-extension-backend</code>) and
+        trying the cross-repo workflow, two issues surfaced.
+      </p>
+
+      <p><strong>1. Workflow friction.</strong> Two Claude sessions, two
+        doc trees, manual contract mirroring between two
+        <code>api.html</code> files. For a solo dev, the overhead
+        compounds on every cross-cutting phase — v4.4 (server-side
+        scoring) and v4.5 (Stripe checkout ↔ purchase UI) each touch
+        both halves and would require coordinated commits in two repos.</p>
+
+      <p><strong>2. Visibility leak vector was misidentified.</strong>
+        ADR 0004 framed the concern as "anything in this repo can be
+        inspected by any installed user." That conflated two surfaces:</p>
+      <ul>
+        <li><em>What end users see.</em> Determined by what ships in
+          <code>dist/</code> via the Chrome Web Store, not by what's in
+          the GitHub repo. A monorepo with backend in <code>server/</code>
+          and packaging that excludes <code>server/</code> keeps backend
+          code out of end-user installs just as effectively as a separate
+          repo.</li>
+        <li><em>What GitHub visitors see.</em> Determined by the GitHub
+          repo's visibility setting. A private repo is invisible to
+          anyone who's not a collaborator.</li>
+      </ul>
+      <p>
+        Making the ww-extension repo private closes the GitHub-visitor
+        surface; the Chrome Web Store packaging discipline closes the
+        end-user surface. Both surfaces can be closed in a monorepo,
+        making the repo split unnecessary for visibility reasons.
+      </p>
+      <p>
+        The user's portfolio / public-code concern (a reason a hobbyist
+        repo might stay public) is addressed by the Chrome Web Store
+        listing serving as the public surface for the project.
+      </p>
+    </section>
+
+    <section id="decision">
+      <h2>Decision</h2>
+      <ul>
+        <li>Merge the backend into the ww-extension repo as a
+          <code>server/</code> subdirectory (created at v4.1 bootstrap).</li>
+        <li>ww-extension repo visibility changed to private on GitHub.</li>
+        <li><code>WW-extension-backend</code> repo (and its sole commit
+          <code>v0.0.0</code>) deleted.</li>
+        <li>Single version line for the monorepo: <code>vX.Y.Z</code>
+          matches <code>manifest.json</code> per
+          <a href="0002-versioning-vXYZ.html">ADR 0002</a>.
+          <code>server/pyproject.toml</code> (created at v4.1) syncs to
+          the same string on every release commit.</li>
+        <li>Packaging discipline:
+          <code>./package.sh</code> (or its replacement) MUST exclude
+          <code>server/</code> from the Web Store zip. This replaces
+          the repo split as the mechanism keeping backend code out of
+          end-user installs.</li>
+      </ul>
+      <p>
+        ADRs 0007, 0008, 0009 (DO App Platform, Supabase auth+DB,
+        FastAPI) remain valid — they describe backend stack, not repo
+        layout, and survive this supersede.
+      </p>
+    </section>
+
+    <section id="consequences">
+      <h2>Consequences</h2>
+      <ul>
+        <li><strong>+</strong> Single Claude session covers the entire
+          v4 arc. One <code>CLAUDE.md</code>, one
+          <code>.claude/rules.html</code>, one
+          <code>.claude/settings.json</code> apply uniformly.</li>
+        <li><strong>+</strong> API contract drift impossible by
+          construction — one authoritative
+          <code>docs/reference/api.html</code>, not two mirrors.</li>
+        <li><strong>+</strong> Cross-cutting phases (v4.4 scoring,
+          v4.5 Stripe + purchase UI) become atomic commits instead of
+          coordinated two-repo releases.</li>
+        <li><strong>+</strong> No more "extension vX.Y talks to
+          backend vA.B" coordination — the whole project is at one
+          version.</li>
+        <li><strong>−</strong> Loss of public GitHub portfolio surface.
+          Mitigated by Chrome Web Store listing as the public face of
+          the project.</li>
+        <li><strong>−</strong> Packaging discipline replaces repo split
+          as the mechanism gating end-user visibility. If
+          <code>package.sh</code> ever stops excluding
+          <code>server/</code> (or its env files), backend code or
+          secrets could leak into the bundle. Web Store zip layout
+          must be verified at every release that touches packaging.</li>
+        <li><strong>−</strong> ADR 0004's "smaller agent context per
+          repo" advantage is gone. In practice, agents load
+          docs/specs selectively and rarely touch both halves' code in
+          one read, so the cost is marginal.</li>
+        <li><strong>−</strong> A future contributor who only wants to
+          look at the backend cannot clone just the backend — they
+          take the whole repo. Acceptable: no contributors yet.</li>
+      </ul>
+    </section>
+  </body>
+</html>

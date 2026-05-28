@@ -15,12 +15,17 @@
     <section id="goal">
       <h2>Goal</h2>
       <p>
-        Stand up the backend repo and ship a minimal deployed FastAPI
-        service: <code>/health</code> endpoint returning 200, a
-        Supabase project configured with Google OAuth, and the
-        feature-grouped folder skeleton in place. No client-side code
-        changes in this repo — extension wiring follows in v4.2. This
-        phase is the foundation for every later v4 phase.
+        Stand up the backend in <code>server/</code> with the minimum
+        viable shape: <code>pyproject.toml</code> at v4.1.0, FastAPI
+        app with feature-grouped folder skeleton (auth/, scoring/,
+        billing/, core/), a <code>/health</code> endpoint, a working
+        Dockerfile, deployment to DigitalOcean App Platform, and a
+        Supabase project configured with Google OAuth.
+        <code>package.sh</code> updated to exclude <code>server/</code>
+        from the Web Store zip — this packaging boundary replaces the
+        repo split as the visibility mechanism (see
+        <a href="../decisions/0010-monorepo-with-server-folder.html">ADR 0010</a>).
+        No client-side code changes — extension wiring follows in v4.2.
       </p>
       <p>
         Stack and platform are fixed by ADRs:
@@ -29,67 +34,121 @@
         <a href="../decisions/0008-auth-and-db-via-supabase.html">0008</a>
         (Supabase auth + DB),
         <a href="../decisions/0009-backend-stack-fastapi.html">0009</a>
-        (FastAPI).
+        (FastAPI). Repo layout fixed by
+        <a href="../decisions/0010-monorepo-with-server-folder.html">0010</a>
+        (monorepo).
       </p>
     </section>
 
     <section id="files">
       <h2>Files</h2>
 
-      <h3>This repo</h3>
+      <h3>Added (server/)</h3>
       <dl>
-        <dt><code>docs/architecture.html</code> (changed)</dt>
-        <dd>Replace the "not-yet-built" backend section with the
-          chosen stack: FastAPI on DO App Platform, Supabase
-          (auth + Postgres), Stripe (deferred to v4.5). Record the
-          backend repo's name and URL once known.</dd>
+        <dt><code>server/pyproject.toml</code></dt>
+        <dd>Project metadata, version <code>4.1.0</code> (syncs with
+          root <code>manifest.json</code>), dependencies (fastapi,
+          uvicorn, supabase, httpx, pydantic-settings). Dependency
+          manager choice (uv vs poetry vs pip-tools) decided at phase
+          start — record as an ADR.</dd>
 
-        <dt><code>docs/reference/api.html</code> (changed)</dt>
-        <dd>Replace the placeholder body with the real bootstrap
-          contract: <code>GET /health</code> spec (request, response,
-          status codes) and a "more endpoints land in later phases"
-          note. Anticipated endpoints list stays as a forward
-          reference.</dd>
+        <dt><code>server/Dockerfile</code></dt>
+        <dd>Multi-stage build: deps install, then thin runtime image.
+          Runs <code>uvicorn app.main:app --host 0.0.0.0 --port
+          $PORT</code>.</dd>
+
+        <dt><code>server/.do/app.yaml</code> (or dashboard-managed)</dt>
+        <dd>DO App Platform spec. Region selection recorded here —
+          match Supabase region.</dd>
+
+        <dt><code>server/.env.example</code></dt>
+        <dd>Documents required env vars: <code>SUPABASE_URL</code>,
+          <code>SUPABASE_ANON_KEY</code>,
+          <code>SUPABASE_SERVICE_ROLE_KEY</code>,
+          <code>SUPABASE_JWT_SECRET</code> (or JWKS URL).</dd>
+
+        <dt><code>server/app/main.py</code></dt>
+        <dd>FastAPI app object. Mounts feature routers.</dd>
+
+        <dt><code>server/app/core/config.py</code></dt>
+        <dd>Pydantic Settings — env loading.</dd>
+
+        <dt><code>server/app/core/health.py</code></dt>
+        <dd><code>GET /health</code> handler. Returns JSON with
+          service name + a build/commit identifier.</dd>
+
+        <dt><code>server/app/auth/__init__.py</code>,
+          <code>scoring/__init__.py</code>,
+          <code>billing/__init__.py</code>,
+          <code>core/__init__.py</code></dt>
+        <dd>Empty package markers establishing the feature-grouped
+          layout. Real routers land in later phases.</dd>
       </dl>
 
-      <h3>Backend repo (out of scope for this repo's specs — tracked there)</h3>
-      <p>
-        Listed here only so the cross-repo shape is visible. Detail
-        belongs in the backend repo's own spec.
-      </p>
+      <h3>Changed</h3>
+      <dl>
+        <dt><code>package.sh</code></dt>
+        <dd>Add <code>server/</code> to the exclusion list (alongside
+          existing exclusions for docs, .git, etc.). Verify by
+          inspecting the resulting zip — no <code>server/</code>
+          entries.</dd>
+
+        <dt><code>.gitignore</code></dt>
+        <dd>Add Python entries:
+          <code>server/__pycache__/</code>, <code>server/.venv/</code>,
+          <code>server/.env</code>, <code>server/*.egg-info/</code>,
+          <code>server/.pytest_cache/</code>,
+          <code>server/.ruff_cache/</code>,
+          <code>server/.mypy_cache/</code>.</dd>
+
+        <dt><code>docs/architecture.html</code></dt>
+        <dd>Replace the v4.1-not-yet-built placeholder backend section
+          with the deployed stack: FastAPI in <code>server/</code>,
+          DO App Platform, Supabase (auth + Postgres), Stripe
+          (deferred to v4.5). Record the deployed URL.</dd>
+
+        <dt><code>docs/reference/api.html</code></dt>
+        <dd>Replace the placeholder body with the real authoritative
+          contract: <code>GET /health</code> spec (request, response,
+          status codes). Anticipated endpoints list stays as a
+          forward reference for v4.2+.</dd>
+
+        <dt><code>manifest.json</code></dt>
+        <dd>Bump version to <code>4.1.0</code>.</dd>
+      </dl>
+
+      <h3>External setup (not files)</h3>
       <ul>
-        <li>New repo <code>WW-extension-backend</code>. Public or
-          private TBD at phase start.</li>
-        <li><code>Dockerfile</code>, <code>pyproject.toml</code>,
-          <code>main.py</code>, feature folders
-          (<code>app/auth/</code>, <code>app/scoring/</code>,
-          <code>app/billing/</code>, <code>app/core/</code>).</li>
-        <li>DO App Platform spec file (<code>.do/app.yaml</code> or
-          dashboard-managed).</li>
-        <li>Supabase project bootstrapped: Google OAuth provider
-          enabled, callback URL configured, JWT secret rotated to a
-          known value, project keys captured in DO App Platform env.</li>
+        <li>Supabase project created; Google OAuth provider enabled;
+          callback URL configured; project keys captured in DO App
+          Platform env.</li>
+        <li>DO App Platform app created, pointed at this repo's
+          <code>server/</code> sub-path, env vars set.</li>
       </ul>
     </section>
 
     <section id="verify">
       <h2>Verify</h2>
       <ol>
-        <li>The deployed backend URL responds <code>200 OK</code> on
+        <li>Deployed backend URL responds <code>200 OK</code> on
           <code>GET /health</code> with a JSON body containing the
           service name and a build/commit identifier.</li>
-        <li>The Supabase project's Google OAuth provider is
-          configured; a manual sign-in via the Supabase dashboard's
-          test flow returns a valid session JWT.</li>
-        <li>The backend repo's folder layout matches the
-          feature-grouped convention from
-          <a href="../decisions/0009-backend-stack-fastapi.html">ADR
-          0009</a>.</li>
-        <li><code>docs/reference/api.html</code> in this repo
-          documents <code>GET /health</code> with the actual response
-          shape (no longer a placeholder).</li>
+        <li>Supabase project's Google OAuth provider is configured;
+          a manual sign-in via the Supabase dashboard's test flow
+          returns a valid session JWT.</li>
+        <li><code>server/app/</code> matches the feature-grouped layout
+          from <a href="../decisions/0009-backend-stack-fastapi.html">ADR 0009</a>.</li>
+        <li><code>server/pyproject.toml</code> version equals
+          <code>4.1.0</code>; <code>manifest.json</code> version equals
+          <code>4.1.0</code>; commit message starts with
+          <code>v4.1.0</code>.</li>
+        <li><code>./package.sh</code> produces a zip with no
+          <code>server/</code> entries. Verify with
+          <code>unzip -l</code>.</li>
+        <li><code>docs/reference/api.html</code> documents
+          <code>GET /health</code> with the actual response shape.</li>
         <li><code>docs/architecture.html</code>'s backend section
-          names the stack, deploy target, and backend repo URL — no
+          names the stack, deploy target, and deployed URL — no
           remaining "TBD" markers in that section.</li>
       </ol>
     </section>
@@ -97,18 +156,18 @@
     <section id="notes">
       <h2>Notes</h2>
       <ul>
-        <li>This repo's specs only cover the client-visible surface.
-          Detailed backend work (routes, schemas, env config) is
-          tracked in the backend repo's own specs/ADRs.</li>
-        <li>Backend repo name is <code>WW-extension-backend</code>
-          (locked at v4 planning). Create at phase start; record the
-          URL in <code>architecture.html</code> and
-          <code>api.html</code> once the repo exists.</li>
         <li>Region selection (DO + Supabase) is a load-bearing call
-          for cross-vendor latency — match regions deliberately and
-          document the choice in the backend repo.</li>
-        <li>No extension code changes in this phase. The version
-          bump (v4.1.0) is a doc-only commit in this repo.</li>
+          for cross-vendor latency — decide and document in
+          <code>architecture.html</code> at phase start.</li>
+        <li>Dependency manager choice (uv vs poetry vs pip-tools) is
+          worth an ADR — decide at phase start.</li>
+        <li>DO App Platform deploys from the <code>server/</code>
+          sub-path of this repo's master branch. Configure the source
+          directory in the App Platform spec.</li>
+        <li>This is the first phase that ships executable backend
+          code; before this, all v4 work was docs. Pre-deploy, run the
+          FastAPI app locally via <code>docker run</code> to confirm
+          <code>/health</code> works.</li>
       </ul>
     </section>
   </body>

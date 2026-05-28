@@ -20,9 +20,9 @@
 
     <p>
       <strong>Baseline:</strong> v03.015 (last shipped client version before
-      v4 opening). The backend is a separate repo
-      (<code>WW-extension-backend</code>); its section below is a
-      placeholder until that work starts.
+      v4 opening). The backend lives at <code>server/</code> in this
+      repo (monorepo since ADR 0010 superseded 0004); its section
+      below is a placeholder until v4.1 bootstrap creates that folder.
     </p>
 
     <h2>Components</h2>
@@ -112,20 +112,31 @@
     </section>
 
     <section id="backend" data-status="not-yet-built">
-      <h3>Backend — separate repo (<code>WW-extension-backend</code>)</h3>
+      <h3>Backend — <code>server/</code> (created at v4.1 bootstrap)</h3>
       <p>
-        Will host user accounts, credit ledger, and the Gemini-calling
+        Will host user accounts, credit ledger, and Gemini-calling
         logic (moving prompts and scoring tuning off the client).
-        See <code>docs/roadmap.html#active</code> for the v4 arc and
-        <code>docs/decisions/0004-backend-separate-repo.html</code> for
-        why this is a separate repo rather than a folder here.
+        FastAPI on Python 3.12+, deployed to DigitalOcean App Platform,
+        backed by Supabase (auth + Postgres). Stack rationale:
+        <a href="decisions/0007-deploy-on-digitalocean-app-platform.html">ADR 0007</a>,
+        <a href="decisions/0008-auth-and-db-via-supabase.html">ADR 0008</a>,
+        <a href="decisions/0009-backend-stack-fastapi.html">ADR 0009</a>.
+        Monorepo rationale:
+        <a href="decisions/0010-monorepo-with-server-folder.html">ADR 0010</a>.
       </p>
       <p>
-        This section will be expanded with the backend's components,
-        stack, and deployment target once the backend bootstrap phase
-        lands. Link to the backend repo from
-        <code>docs/reference/api.html</code> when the API contract
-        firms up.
+        <strong>Packaging boundary.</strong> <code>server/</code> is
+        excluded from the Web Store zip by <code>package.sh</code>.
+        This packaging discipline replaces the repo split as the
+        mechanism keeping backend code out of end-user installs — if
+        <code>package.sh</code> ever stops excluding <code>server/</code>
+        (or its env files), backend code or secrets could leak into the
+        bundle. Verify the zip layout at every release that touches
+        packaging.
+      </p>
+      <p>
+        Components, endpoints, and deployment details will be expanded
+        here once v4.1 bootstrap lands.
       </p>
     </section>
 

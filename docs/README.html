@@ -120,10 +120,10 @@ docs/decisions/NNNN-*.html</code></pre>
         context window.</dd>
 
       <dt id="task-backend">Working on the backend</dt>
-      <dd>Backend lives in a separate repo
-        (<code>WW-extension-backend</code>). API contract
-        will be mirrored in <code>docs/reference/api.html</code> as
-        the client's view of the server.</dd>
+      <dd>Backend lives in <code>server/</code> in this repo (monorepo
+        since ADR 0010 superseded 0004). API contract is authoritative
+        in <code>docs/reference/api.html</code> — single source of
+        truth, no mirror.</dd>
     </dl>
 
     <h2>Conventions</h2>

@@ -13,31 +13,55 @@
     <h1>Backend API Contract</h1>
 
     <p>
-      <strong>Placeholder.</strong> Populated when the backend bootstrap
-      phase lands. Holds the client's view of the backend API —
-      endpoints, request/response shapes, error codes, auth headers.
-      Authoritative source remains the backend repo; this file is the
-      mirror the extension depends on.
+      <strong>Placeholder.</strong> Populated when v4.1 backend
+      bootstrap lands. This file is the <em>authoritative</em>
+      contract — endpoints, request/response shapes, error codes,
+      auth headers — for the FastAPI backend in <code>server/</code>.
+      Single source of truth; no mirror. The client (extension)
+      reads this file directly.
     </p>
 
     <p>
-      Backend lives in a separate repo
-      (<code>WW-extension-backend</code>). See
-      <code>docs/decisions/0004-backend-separate-repo.html</code> for
-      why.
+      Backend lives at <code>server/</code> in this repo (monorepo
+      since <a href="../decisions/0010-monorepo-with-server-folder.html">ADR 0010</a>
+      superseded 0004). The packaging boundary between client and
+      server is enforced by <code>package.sh</code> excluding
+      <code>server/</code> from the Web Store zip.
     </p>
 
-    <h2>Anticipated endpoints (subject to v4 design)</h2>
+    <h2>Auth header convention (planned, v4.2)</h2>
+    <p>
+      Authenticated endpoints will expect the Supabase session JWT in
+      <code>Authorization: Bearer &lt;jwt&gt;</code>. Backend verifies
+      the JWT against Supabase JWKS before any business logic.
+    </p>
 
-    <ul>
-      <li><code>POST /auth/signup</code>, <code>POST /auth/signin</code>,
-        <code>POST /auth/signout</code></li>
-      <li><code>GET /me</code> — current user + credit balance</li>
-      <li><code>POST /scan</code> — submit posting payload, receive
-        score + verdict + reason. Debits credit.</li>
-      <li><code>GET /credits/balance</code></li>
-      <li><code>POST /credits/purchase</code> — payment processor
-        callback / checkout init.</li>
-    </ul>
+    <h2>Anticipated endpoints (subject to phase planning)</h2>
+
+    <dl>
+      <dt><code>GET /health</code> (v4.1)</dt>
+      <dd>Liveness probe. No auth.</dd>
+
+      <dt><code>GET /me</code> (v4.2)</dt>
+      <dd>Authenticated. Returns current user identity + credit
+        balance.</dd>
+
+      <dt><code>GET /credits/balance</code> (v4.3)</dt>
+      <dd>Authenticated. Returns current credit balance.</dd>
+
+      <dt><code>POST /scan</code> (v4.4)</dt>
+      <dd>Authenticated. Submits a posting payload; backend forwards
+        to Gemini, debits one credit, returns
+        <code>{score, verdict, reason}</code>.</dd>
+
+      <dt><code>POST /credits/checkout</code> (v4.5)</dt>
+      <dd>Authenticated. Creates a Stripe Checkout session for credit
+        purchase; returns the checkout URL.</dd>
+
+      <dt><code>POST /webhooks/stripe</code> (v4.5)</dt>
+      <dd>Stripe-only (signature-verified). Receives
+        <code>checkout.session.completed</code>; grants credit
+        idempotently on Stripe's event ID.</dd>
+    </dl>
   </body>
 </html>

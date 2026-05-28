@@ -4,12 +4,23 @@
     <meta charset="UTF-8" />
     <meta name="project" content="ww-extension" />
     <meta name="type" content="adr" />
-    <meta name="status" content="accepted" />
+    <meta name="status" content="superseded" />
     <meta name="date" content="2026-05-27" />
-    <title>ADR 0004 — Backend lives in a separate repo</title>
+    <meta name="superseded-by" content="0010" />
+    <title>ADR 0004 — Backend lives in a separate repo (superseded)</title>
   </head>
   <body>
     <h1>ADR 0004 — Backend lives in a separate repo</h1>
+
+    <p>
+      <strong>Superseded by
+      <a href="0010-monorepo-with-server-folder.html">ADR 0010</a>
+      (2026-05-27).</strong> Backend now lives in this repo at
+      <code>server/</code>; the visibility concern is closed by making
+      this repo private and excluding <code>server/</code> from the
+      Web Store zip. The original decision body below is preserved as
+      a historical record.
+    </p>
 
     <section id="context">
       <h2>Context</h2>

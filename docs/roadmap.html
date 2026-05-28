@@ -43,16 +43,18 @@
 
       <p>
         <strong>Goal:</strong> turn the extension into a monetizable service.
-        A separate backend repo (<code>WW-extension-backend</code>) holds user accounts, a credit
-        ledger, and the Gemini-calling logic + prompts (moving them off the
-        client so they aren't shipped in the unpacked extension). The
-        extension becomes a thin client: authenticates the user, spends
-        credits per scan, displays results.
+        A FastAPI backend in <code>server/</code> (monorepo since
+        <a href="decisions/0010-monorepo-with-server-folder.html">ADR 0010</a>
+        superseded 0004) holds user accounts, a credit ledger, and the
+        Gemini-calling logic + prompts. The extension becomes a thin client:
+        authenticates the user, spends credits per scan, displays results.
       </p>
 
-      <p><strong>Rationale for split:</strong></p>
+      <p><strong>Rationale for moving the backend off the client:</strong></p>
       <ul>
-        <li>Hide proprietary scoring prompts and tuning logic.</li>
+        <li>Hide proprietary scoring prompts and tuning logic from
+          end users (kept out of the Web Store zip by
+          <code>package.sh</code>).</li>
         <li>Centralize Gemini key management — user no longer needs their
           own paid API key.</li>
         <li>Enable per-user billing (credits) without trusting the client.</li>
@@ -81,11 +83,14 @@
           <code>docs/specs/v4.0.0-restructure.html</code>.
         </li>
         <li>
-          <strong>v4.1 — Backend bootstrap</strong> — separate repo
-          created; <code>/health</code> live on DO App Platform;
-          Supabase project configured with Google OAuth; this repo's
+          <strong>v4.1 — Backend bootstrap</strong> —
+          <code>server/</code> folder created with FastAPI skeleton
+          (auth/, scoring/, billing/, core/) + Dockerfile +
+          pyproject.toml; <code>/health</code> live on DO App Platform;
+          Supabase project configured with Google OAuth;
           <code>api.html</code> + <code>architecture.html</code>
-          updated. No extension code changes. See
+          updated; <code>package.sh</code> excludes <code>server/</code>
+          from the Web Store zip. No extension code changes. See
           <code>docs/specs/v4.1.0-backend-bootstrap.html</code>.
         </li>
         <li>
