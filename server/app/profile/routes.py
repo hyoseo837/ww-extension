@@ -48,10 +48,55 @@ class MatchCriteria(BaseModel):
     languages: WeightedCriterion = WeightedCriterion()  # spoken/working, not programming
 
 
+# ── Structured profile (v5.1.0, ADR 0015) ──────────────────────────────────
+#
+# profile_json is the machine-extracted profile (overwritten by
+# POST /profile/extract); profile_supplement is user-authored and only touched
+# by PUT /profile, so re-extraction can't clobber it. All fields
+# optional/defaulted — a partial object and an empty {} / [] are valid.
+
+
+class EducationEntry(BaseModel):
+    institution: str = ""
+    credential: str = ""
+    field: str = ""
+    grade: str = ""
+    dates: str = ""
+
+
+class ExperienceEntry(BaseModel):
+    title: str = ""
+    org: str = ""
+    dates: str = ""
+    description: str = ""
+
+
+class ProjectEntry(BaseModel):
+    title: str = ""
+    description: str = ""
+
+
+class StructuredProfile(BaseModel):
+    summary: str = ""
+    education: list[EducationEntry] = []
+    experience: list[ExperienceEntry] = []
+    skills: list[str] = []
+    projects: list[ProjectEntry] = []
+    languages: list[str] = []  # spoken/working, not programming
+
+
+class SupplementEntry(BaseModel):
+    kind: Literal["experience", "project"]
+    title: str = ""
+    description: str = ""
+
+
 class Profile(BaseModel):
-    cv_text: str
+    cv_text: str  # legacy fallback, kept until the user re-extracts (ADR 0015)
     preferences: str  # re-purposed as "additional notes" (ADR 0013)
     match_criteria: MatchCriteria = MatchCriteria()
+    profile_json: StructuredProfile = StructuredProfile()
+    profile_supplement: list[SupplementEntry] = []
 
 
 class ProfileUpdate(BaseModel):
@@ -59,6 +104,8 @@ class ProfileUpdate(BaseModel):
     cv_text: str | None = None
     preferences: str | None = None
     match_criteria: MatchCriteria | None = None
+    profile_supplement: list[SupplementEntry] | None = None
+    # profile_json is set by POST /profile/extract, not patched here.
 
 
 @router.get("/profile", response_model=Profile)
@@ -75,6 +122,11 @@ async def put_profile(req: ProfileUpdate, user: CurrentUser) -> Profile:
         preferences=req.preferences,
         match_criteria=(
             req.match_criteria.model_dump() if req.match_criteria is not None else None
+        ),
+        profile_supplement=(
+            [e.model_dump() for e in req.profile_supplement]
+            if req.profile_supplement is not None
+            else None
         ),
     )
     return Profile(**data)

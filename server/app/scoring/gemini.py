@@ -138,6 +138,77 @@ def build_job_part(
     return f"{prefix}Job: {title} at {org}\nDescription:\n{description_text}"
 
 
+def _join(values: list) -> str:
+    return ", ".join(str(v) for v in values if v)
+
+
+def _serialize_profile_json(p: dict) -> str:
+    """Render the structured profile into a readable block for the scorer.
+    Only non-empty sections appear."""
+    lines: list[str] = []
+    if p.get("summary"):
+        lines.append(f"Summary: {p['summary']}")
+    for e in p.get("education") or []:
+        head = _join([e.get("credential"), e.get("field")])
+        tail = _join([e.get("institution"), e.get("dates"), e.get("grade")])
+        edu = " — ".join(s for s in [head, tail] if s)
+        if edu:
+            lines.append(f"Education: {edu}")
+    for x in p.get("experience") or []:
+        head = _join([x.get("title"), x.get("org"), x.get("dates")])
+        line = f"Experience: {head}" if head else "Experience:"
+        if x.get("description"):
+            line += f" — {x['description']}"
+        if head or x.get("description"):
+            lines.append(line)
+    if p.get("skills"):
+        lines.append(f"Skills: {_join(p['skills'])}")
+    for pr in p.get("projects") or []:
+        line = f"Project: {pr.get('title', '')}".rstrip()
+        if pr.get("description"):
+            line += f" — {pr['description']}"
+        if pr.get("title") or pr.get("description"):
+            lines.append(line)
+    if p.get("languages"):
+        lines.append(f"Languages: {_join(p['languages'])}")
+    return "\n".join(lines)
+
+
+def _serialize_supplement(entries: list) -> str:
+    """User-authored entries, kept distinct so the model sees them as
+    self-reported rather than resume-extracted."""
+    lines = []
+    for e in entries:
+        label = "Project" if e.get("kind") == "project" else "Experience"
+        title = e.get("title", "")
+        desc = e.get("description", "")
+        body = " — ".join(s for s in [title, desc] if s)
+        if body:
+            lines.append(f"{label}: {body}")
+    if not lines:
+        return ""
+    return "Additional (self-reported):\n" + "\n".join(lines)
+
+
+def build_profile_context(
+    profile_json: dict | None, supplement: list | None, cv_text: str
+) -> str:
+    """The "Candidate Profile" text passed to the scorer. Uses the structured
+    profile when present (ADR 0015), else falls back to the legacy cv_text
+    blob; self-reported supplement entries are always appended."""
+    parts: list[str] = []
+    serialized = _serialize_profile_json(profile_json) if profile_json else ""
+    if serialized:
+        parts.append(serialized)
+    elif cv_text and cv_text.strip():
+        parts.append(cv_text.strip())
+    if supplement:
+        sup = _serialize_supplement(supplement)
+        if sup:
+            parts.append(sup)
+    return "\n\n".join(parts)
+
+
 class GeminiError(Exception):
     """Raised when Gemini returns a non-2xx or an unparseable response."""
 
@@ -224,27 +295,77 @@ async def score(
     return parsed, usage
 
 
-_PDF_EXTRACT_PROMPT = (
-    "Extract all relevant content from this application package PDF as plain "
-    "text. Include education, work experience, skills, projects, grades, and "
-    "any other candidate information. Output only the extracted text — no "
-    "commentary, no markdown."
+_PROFILE_EXTRACT_PROMPT = (
+    "Extract the candidate's profile from this application package PDF into the "
+    "given JSON schema. summary: a 1–2 sentence overview. education, "
+    "experience, projects: one object per entry, most recent first. skills and "
+    "languages: arrays of short strings (languages = spoken/working languages "
+    "like English or French, not programming languages — those go in skills). "
+    "Use empty strings/arrays for anything the PDF doesn't state; do not invent "
+    "facts."
 )
 
+# Gemini structured-output schema. Optional fields throughout — the extractor
+# leaves them empty when the PDF is silent (validated app-side by StructuredProfile).
+_PROFILE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "summary": {"type": "string"},
+        "education": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "institution": {"type": "string"},
+                    "credential": {"type": "string"},
+                    "field": {"type": "string"},
+                    "grade": {"type": "string"},
+                    "dates": {"type": "string"},
+                },
+            },
+        },
+        "experience": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string"},
+                    "org": {"type": "string"},
+                    "dates": {"type": "string"},
+                    "description": {"type": "string"},
+                },
+            },
+        },
+        "skills": {"type": "array", "items": {"type": "string"}},
+        "projects": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string"},
+                    "description": {"type": "string"},
+                },
+            },
+        },
+        "languages": {"type": "array", "items": {"type": "string"}},
+    },
+}
 
-async def extract_pdf(
+
+async def extract_profile(
     model: str,
     pdf_b64: str,
     max_output_tokens: int = DEFAULT_EXTRACT_MAX_OUTPUT_TOKENS,
-) -> tuple[str, dict]:
-    """Extract text from a PDF via Gemini multimodal. Returns (text, usage)."""
+) -> tuple[dict, dict]:
+    """Extract a structured profile from a PDF via Gemini multimodal.
+    Returns (profile_dict, usage)."""
     client = _require_client()
     url = f"{_GEMINI_BASE}/models/{model}:generateContent"
     body = {
         "contents": [
             {
                 "parts": [
-                    {"text": _PDF_EXTRACT_PROMPT},
+                    {"text": _PROFILE_EXTRACT_PROMPT},
                     {"inline_data": {"mime_type": "application/pdf", "data": pdf_b64}},
                 ]
             }
@@ -253,6 +374,8 @@ async def extract_pdf(
             "temperature": _EXTRACT_TEMPERATURE,
             "maxOutputTokens": max_output_tokens,
             "thinkingConfig": {"thinkingBudget": 0},
+            "responseMimeType": "application/json",
+            "responseSchema": _PROFILE_SCHEMA,
         },
     }
     try:
@@ -276,12 +399,16 @@ async def extract_pdf(
     data = res.json()
     usage = data.get("usageMetadata", {}) or {}
     try:
-        text = data["candidates"][0]["content"]["parts"][0]["text"]
+        raw_text = data["candidates"][0]["content"]["parts"][0]["text"]
     except (KeyError, IndexError, TypeError) as exc:
         raise GeminiError(f"unexpected response shape: {exc}") from exc
-    if not isinstance(text, str) or not text.strip():
+    try:
+        profile = json.loads(raw_text)
+    except json.JSONDecodeError as exc:
+        raise GeminiError(f"parse: {exc}; raw: {raw_text[:120]}") from exc
+    if not isinstance(profile, dict) or not any(profile.values()):
         raise GeminiError("empty extract result")
-    return text, usage
+    return profile, usage
 
 
 def _valid_result(p: object) -> bool:

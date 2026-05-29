@@ -78,7 +78,12 @@ async def scan(req: ScanRequest, user: CurrentUser):
     async with pool.acquire() as conn:
         async with conn.transaction():
             profile = await profile_db.get_profile_in_tx(conn, user_id)
-            if not profile["cv_text"].strip():
+            profile_context = gemini.build_profile_context(
+                profile["profile_json"],
+                profile["profile_supplement"],
+                profile["cv_text"],
+            )
+            if not profile_context.strip():
                 raise HTTPException(
                     status_code=400,
                     detail={"error": "profile_not_set", "message": "Set up your Profile before scanning."},
@@ -90,7 +95,7 @@ async def scan(req: ScanRequest, user: CurrentUser):
                 preferences=profile["preferences"],
                 match_criteria=profile["match_criteria"],
             )
-            estimated_input = pricing.estimate_input_tokens(profile["cv_text"], job_part)
+            estimated_input = pricing.estimate_input_tokens(profile_context, job_part)
             estimate = pricing.estimate_scan_cost(req.model, estimated_input)
 
             existing = await billing_db.insert_scan_pending(
@@ -133,7 +138,7 @@ async def scan(req: ScanRequest, user: CurrentUser):
     gemini_started = time.perf_counter()
     try:
         result, usage = await gemini.score(
-            model=req.model, cv_text=profile["cv_text"], job_part=job_part
+            model=req.model, cv_text=profile_context, job_part=job_part
         )
     except gemini.GeminiError as exc:
         await _refund_and_fail(req.scan_id, user_id, estimate, str(exc))
@@ -183,7 +188,8 @@ class ExtractRequest(BaseModel):
 
 
 class ExtractResponse(BaseModel):
-    text: str
+    profile: dict  # structured profile (v5.1.0)
+    text: str      # readable serialization of `profile`, for display/back-compat
     cost: float
     balance: float
 
@@ -257,7 +263,9 @@ async def extract(req: ExtractRequest, user: CurrentUser):
 
     # --- Gemini multimodal call. ---
     try:
-        text, usage = await gemini.extract_pdf(model=req.model, pdf_b64=req.pdf_b64)
+        profile_json, usage = await gemini.extract_profile(
+            model=req.model, pdf_b64=req.pdf_b64
+        )
     except gemini.GeminiError as exc:
         await _refund_and_fail(req.scan_id, user_id, estimate, str(exc))
         log.warning(
@@ -282,24 +290,26 @@ async def extract(req: ExtractRequest, user: CurrentUser):
                     kind="scan_refund",
                     ref=str(req.scan_id),
                 )
-            await profile_db.upsert_cv_text_in_tx(conn, user_id, text)
+            await profile_db.upsert_profile_json_in_tx(conn, user_id, profile_json)
             await billing_db.update_scan_success(
                 conn,
                 scan_id=req.scan_id,
                 actual_cost=actual,
-                response={"text_chars": len(text)},  # don't blow up the row with full text
+                response={"fields": len(profile_json)},  # don't blow up the row with the profile
                 usage=usage,
             )
         new_balance = await billing_db.get_balance(user_id)
 
+    # Readable serialization of the structured profile, for display/back-compat.
+    text = gemini.build_profile_context(profile_json, [], "")
     total_ms = int((time.perf_counter() - started) * 1000)
     log.info(
-        "extract_ok scan_id=%s model=%s total_ms=%d text_chars=%d cost=%s",
-        req.scan_id, req.model, total_ms, len(text), actual,
+        "extract_ok scan_id=%s model=%s total_ms=%d fields=%d cost=%s",
+        req.scan_id, req.model, total_ms, len(profile_json), actual,
     )
 
     return ExtractResponse(
-        text=text, cost=float(actual), balance=float(new_balance)
+        profile=profile_json, text=text, cost=float(actual), balance=float(new_balance)
     )
 
 
@@ -330,14 +340,15 @@ async def _replay_extract(existing: dict, user_id: str) -> ExtractResponse:
             status_code=409,
             detail={"error": "scan_in_progress_or_failed", "status": existing["status"]},
         )
-    # The original text isn't stored on the scan row (would bloat it); read
-    # it from user_profile, which the original extract upserted.
+    # The profile isn't stored on the scan row (would bloat it); read it from
+    # user_profile, which the original extract upserted into profile_json.
     profile = await profile_db.get_profile(user_id)
-    balance = await billing_db.get_balance(user_id)
+    profile_json = profile["profile_json"]
     return ExtractResponse(
-        text=profile["cv_text"],
+        profile=profile_json,
+        text=gemini.build_profile_context(profile_json, [], ""),
         cost=float(existing["actual_cost"]),
-        balance=float(balance),
+        balance=float(await billing_db.get_balance(user_id)),
     )
 
 
