@@ -169,28 +169,44 @@
 
       <dt id="get-profile"><code>GET /profile</code></dt>
       <dd>
-        <p>Authenticated. Returns the user's stored CV text +
-          preferences. Empty strings if the row hasn't been
-          created yet.</p>
+        <p>Authenticated. Returns the user's stored CV text, structured
+          match criteria, and free-form notes. Empty values if the row
+          hasn't been created yet.</p>
         <p><strong>Response:</strong> <code>200 OK</code></p>
         <pre><code>{
   "cv_text": "...",
-  "preferences": "..."
+  "preferences": "...",            // free-form "Additional Notes" (v5.0.0)
+  "match_criteria": {              // structured criteria (v5.0.0); {} if unset
+    "work_authorization": "international" | "citizen" | "pr" | "other" | null,
+    "preferred_locations": { "weight": "strong",
+      "preferred": [...], "acceptable": [...], "avoid": [...], "excluded": [...] },
+    "work_modes":    { ...same WeightedCriterion shape... },
+    "target_term":   { ... },
+    "target_length": { ... },
+    "languages":     { ... }       // spoken/working, not programming
+  }
 }</code></pre>
+        <p><code>weight</code> is one of <code>must</code> |
+          <code>strong</code> | <code>nice-to-have</code>. Shape is
+          owned/validated by the backend Pydantic model (ADR 0013).</p>
       </dd>
 
       <dt id="put-profile"><code>PUT /profile</code></dt>
       <dd>
-        <p>Authenticated. Upserts the user's profile. Either field
+        <p>Authenticated. Upserts the user's profile. Any field
           may be omitted to leave that column untouched. No credit
           cost.</p>
         <p><strong>Request:</strong></p>
         <pre><code>{
-  "cv_text": "...",       // optional
-  "preferences": "..."    // optional
+  "cv_text": "...",        // optional
+  "preferences": "...",    // optional — "Additional Notes"
+  "match_criteria": { ... } // optional — full object (see GET); replaces the column
 }</code></pre>
+        <p>A bad <code>work_authorization</code> or <code>weight</code>
+          value is rejected (<code>422</code>). <code>match_criteria</code>
+          is replaced wholesale when present, so send the complete object.</p>
         <p><strong>Response:</strong> <code>200 OK</code> with the
-          updated <code>{cv_text, preferences}</code>.</p>
+          updated <code>{cv_text, preferences, match_criteria}</code>.</p>
       </dd>
 
       <dt id="post-profile-extract"><code>POST /profile/extract</code></dt>
