@@ -9,6 +9,7 @@ import base64
 import logging
 import time
 from decimal import Decimal
+from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, status
@@ -41,10 +42,16 @@ class ScanRequest(BaseModel):
     posting_id: str
 
 
+class BreakdownItem(BaseModel):
+    point: str
+    effect: Literal["plus", "minus"]
+
+
 class ScanResult(BaseModel):
-    score: int
-    verdict: str
+    score: int                          # 1–100 (ADR 0016)
+    verdict: str                        # server-derived from score
     reason: str
+    breakdown: list[BreakdownItem] = []
 
 
 class ScanResponse(BaseModel):
@@ -140,6 +147,9 @@ async def scan(req: ScanRequest, user: CurrentUser):
         result, usage = await gemini.score(
             model=req.model, cv_text=profile_context, job_part=job_part
         )
+        # Derive the 5-tier verdict from the score (ADR 0016) and fold it into
+        # the result so the stored row + replays carry the full shape.
+        result["verdict"] = gemini.verdict_for_score(result["score"])
     except gemini.GeminiError as exc:
         await _refund_and_fail(req.scan_id, user_id, estimate, str(exc))
         log.warning(

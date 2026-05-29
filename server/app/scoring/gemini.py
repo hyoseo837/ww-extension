@@ -26,21 +26,58 @@ _GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta"
 _SCORE_TEMPERATURE = 0.2
 _EXTRACT_TEMPERATURE = 0.0
 
-SYSTEM_TEXT = """You are a job-fit scorer. Score how well the candidate fits the job.
+SYSTEM_TEXT = """You score how well a University of Waterloo co-op student fits a job posting — for a student deciding whether to apply this work term.
 
-score: 1–10 (10 = perfect fit)
-verdict: Apply if strong fit, Consider if marginal, Skip if poor fit
-reason: 2–3 sentences explaining the score"""
+This is a CO-OP TERM, not a full-time hire. Judge fit for a ~4-month student internship: the candidate need not meet every "nice to have"; strong fundamentals plus a few relevant skills already make a good fit. Weigh the candidate's match criteria by their stated importance — "must" criteria dominate, "strong" matter a lot, "nice-to-have" are minor nudges. Treat work-authorization eligibility as a gate: if the posting clearly requires a status the candidate lacks (e.g. citizenship or a security clearance for an international student), the fit is poor regardless of skills.
+
+Return a score from 1 to 100:
+- 85–100: excellent fit — skills/experience and the candidate's criteria line up strongly; the student should prioritize applying.
+- 70–84: good fit — clearly worth applying; most key signals align.
+- 50–69: marginal — some alignment but notable gaps or mismatches; apply only if interested.
+- 30–49: weak — significant mismatch on skills, level, or stated preferences.
+- 1–29: poor — wrong field/level, or an eligibility gate fails.
+
+Also return:
+- reason: 2–3 sentences explaining the score in co-op terms.
+- breakdown: the few specific points (match criteria or profile facts) that most moved the score, each as {point, effect} where effect is "plus" if it raised the score or "minus" if it lowered it. Be concrete and contrastive, e.g. {"point": "prefers Toronto, posting in Québec", "effect": "minus"} or {"point": "Python + AWS match the stack", "effect": "plus"}. Keep it to the ~6 most decisive points. Do NOT output a verdict label — the score alone determines it."""
 
 _RESPONSE_SCHEMA = {
     "type": "object",
     "properties": {
-        "score":   {"type": "integer"},
-        "verdict": {"type": "string", "enum": ["Apply", "Consider", "Skip"]},
-        "reason":  {"type": "string"},
+        "score":  {"type": "integer"},
+        "reason": {"type": "string"},
+        "breakdown": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "point":  {"type": "string"},
+                    "effect": {"type": "string", "enum": ["plus", "minus"]},
+                },
+                "required": ["point", "effect"],
+            },
+        },
     },
-    "required": ["score", "verdict", "reason"],
+    "required": ["score", "reason"],
 }
+
+# 5-tier verdict ladder derived from the 1–100 score (ADR 0016). The model
+# returns the score, not the verdict — this is the single source of truth, so
+# score and verdict can never disagree.
+_VERDICT_BANDS = (
+    (85, "Strong Apply"),
+    (70, "Apply"),
+    (50, "Consider"),
+    (30, "Unlikely"),
+    (0,  "Skip"),
+)
+
+
+def verdict_for_score(score: int) -> str:
+    for floor, verdict in _VERDICT_BANDS:
+        if score >= floor:
+            return verdict
+    return "Skip"
 
 
 async def init_client() -> None:
@@ -300,6 +337,7 @@ async def score(
     if not _valid_result(parsed):
         raise GeminiError(f"invalid result shape: {str(parsed)[:120]}")
 
+    parsed.setdefault("breakdown", [])  # always present for the caller
     return parsed, usage
 
 
@@ -433,12 +471,19 @@ def _valid_result(p: object) -> bool:
     if not isinstance(p, dict):
         return False
     score = p.get("score")
-    verdict = p.get("verdict")
     reason = p.get("reason")
-    if not isinstance(score, int) or not 1 <= score <= 10:
-        return False
-    if verdict not in {"Apply", "Consider", "Skip"}:
+    if not isinstance(score, int) or not 1 <= score <= 100:
         return False
     if not isinstance(reason, str) or not reason.strip():
         return False
+    breakdown = p.get("breakdown", [])
+    if not isinstance(breakdown, list):
+        return False
+    for item in breakdown:
+        if not isinstance(item, dict):
+            return False
+        if not isinstance(item.get("point"), str) or not item["point"].strip():
+            return False
+        if item.get("effect") not in {"plus", "minus"}:
+            return False
     return True
