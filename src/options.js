@@ -6,6 +6,7 @@ const HELP_CONTENT = {
   model:    'Flash: cheaper per scan (~$0.001 CAD). Pro: more accurate, ~10× the cost. Flash is recommended.',
   workAuth: 'Your work-authorization status in Canada. The AI uses this to judge eligibility — e.g. an international student is flagged on roles that require citizenship or a security clearance. Leave unset to skip eligibility checks.',
   prefs:    'What you want in a role, as comma-separated values per tier. Preferred = ideal (full marks); under “More”, Acceptable = fine (no penalty), Avoid = allowed but penalized, Excluded = never. Weight sets how heavily a field counts. Leave a field blank for no preference.',
+  supplement: 'Experience or projects your one-page resume leaves out. The scorer treats these as self-reported context alongside your extracted profile. Re-uploading your PDF never erases these.',
   criteria: 'Free-form notes the AI weighs alongside your structured criteria. Examples: "prioritize high salary", "ignore Web3 or crypto", "prefer early-stage startups". Leave empty to score purely on profile + criteria fit — no extra token cost.'
 };
 
@@ -40,6 +41,12 @@ function setProfileStatus(msg, type) {
   s.className = 'status-line' + (type ? ' ' + type : '');
 }
 
+function setSupplementStatus(msg, type) {
+  const s = el('supplementStatus');
+  s.textContent = msg;
+  s.className = 'status-line' + (type ? ' ' + type : '');
+}
+
 // ── Theme toggle ──────────────────────────────────────────────────────────────
 
 function applyTheme(theme) {
@@ -67,9 +74,10 @@ el('themeToggle').addEventListener('click', () => {
 
 // ── Load saved settings (local cache) ─────────────────────────────────────────
 
-chrome.storage.local.get(['model', 'cvText', 'profileJson', 'preferences', 'matchCriteria', 'theme'], data => {
+chrome.storage.local.get(['model', 'cvText', 'profileJson', 'profileSupplement', 'preferences', 'matchCriteria', 'theme'], data => {
   if (data.model)         el('model').value       = data.model;
   renderProfile(data.profileJson, data.cvText || '');
+  renderSupplement(data.profileSupplement || []);
   if (data.preferences)   el('preferences').value = data.preferences;
   if (data.matchCriteria) applyMatchCriteria(data.matchCriteria);
   if (data.theme)         applyTheme(data.theme);
@@ -123,6 +131,59 @@ function renderProfile(profileJson, cvText) {
       'application package PDF and click Extract Profile.</div>';
   }
 }
+
+// ── Supplementary entries (user-authored {kind,title,description}) ─────────────
+// Add/remove rows locally; "Save entries" PUTs the full profile_supplement array.
+
+function supplementRowHtml(e) {
+  const kind = e && e.kind === 'project' ? 'project' : 'experience';
+  return `<div class="supplement-entry">
+    <select data-field="kind">
+      <option value="experience"${kind === 'experience' ? ' selected' : ''}>Experience</option>
+      <option value="project"${kind === 'project' ? ' selected' : ''}>Project</option>
+    </select>
+    <input type="text" data-field="title" placeholder="Title" value="${esc(e && e.title)}" />
+    <textarea data-field="description" placeholder="Description">${esc(e && e.description)}</textarea>
+    <button class="supplement-remove" type="button">Remove</button>
+  </div>`;
+}
+
+function renderSupplement(entries) {
+  const list = el('supplementList');
+  if (!list) return;
+  list.innerHTML = (entries || []).map(supplementRowHtml).join('');
+}
+
+function buildSupplement() {
+  return [...document.querySelectorAll('#supplementList .supplement-entry')].map(row => ({
+    kind: row.querySelector('[data-field="kind"]').value,
+    title: row.querySelector('[data-field="title"]').value.trim(),
+    description: row.querySelector('[data-field="description"]').value.trim(),
+  })).filter(e => e.title || e.description);  // drop empty rows
+}
+
+el('addSupplement').addEventListener('click', () => {
+  el('supplementList').insertAdjacentHTML('beforeend',
+    supplementRowHtml({ kind: 'experience', title: '', description: '' }));
+});
+
+el('supplementList').addEventListener('click', e => {
+  if (e.target.classList.contains('supplement-remove')) {
+    e.target.closest('.supplement-entry').remove();
+  }
+});
+
+el('saveSupplement').addEventListener('click', async () => {
+  const entries = buildSupplement();
+  setSupplementStatus('Saving…');
+  const res = await putProfile({ profile_supplement: entries });
+  if (res.ok) {
+    renderSupplement(res.data.profile_supplement || []);  // reflect server (drops empties)
+    setSupplementStatus('Entries saved.', 'ok');
+  } else {
+    setSupplementStatus(`Save failed: ${JSON.stringify(res.error).slice(0, 200)}`, 'err');
+  }
+});
 
 // ── Structured match criteria (form ⇄ object) ─────────────────────────────────
 // The five weighted/tiered preference fields share one shape, so they're
@@ -206,13 +267,15 @@ async function loadProfileFromServer() {
   });
   if (res?.ok && res.data) {
     renderProfile(res.data.profile_json || {}, res.data.cv_text || '');
+    renderSupplement(res.data.profile_supplement || []);
     el('preferences').value = res.data.preferences || '';
     applyMatchCriteria(res.data.match_criteria || {});
     chrome.storage.local.set({
-      cvText:        res.data.cv_text || '',
-      profileJson:   res.data.profile_json || {},
-      preferences:   res.data.preferences || '',
-      matchCriteria: res.data.match_criteria || {}
+      cvText:            res.data.cv_text || '',
+      profileJson:       res.data.profile_json || {},
+      profileSupplement: res.data.profile_supplement || [],
+      preferences:       res.data.preferences || '',
+      matchCriteria:     res.data.match_criteria || {}
     });
   }
   // Not-signed-in: keep whatever local cache has; sign-in flow will refresh.
@@ -230,10 +293,11 @@ async function putProfile(patch) {
   });
   if (res?.ok && res.data) {
     chrome.storage.local.set({
-      cvText:        res.data.cv_text || '',
-      profileJson:   res.data.profile_json || {},
-      preferences:   res.data.preferences || '',
-      matchCriteria: res.data.match_criteria || {}
+      cvText:            res.data.cv_text || '',
+      profileJson:       res.data.profile_json || {},
+      profileSupplement: res.data.profile_supplement || [],
+      preferences:       res.data.preferences || '',
+      matchCriteria:     res.data.match_criteria || {}
     });
     return { ok: true, data: res.data };
   }
@@ -449,8 +513,9 @@ el('signIn').addEventListener('click', async () => {
 });
 
 el('signOut').addEventListener('click', async () => {
-  await chrome.storage.local.remove(['auth', 'cvText', 'profileJson', 'preferences', 'matchCriteria']);
+  await chrome.storage.local.remove(['auth', 'cvText', 'profileJson', 'profileSupplement', 'preferences', 'matchCriteria']);
   renderProfile({}, '');
+  renderSupplement([]);
   el('preferences').value = '';
   applyMatchCriteria({});
   setAuthStatus('Signed out.', 'ok');

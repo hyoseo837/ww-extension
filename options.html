@@ -228,6 +228,26 @@
         overflow-y: auto;
       }
 
+      /* ── Supplementary entries (v5.1.x) ──────────────────────────────────── */
+      .supplement-entry {
+        border: 1px solid var(--outline);
+        border-radius: 4px;
+        padding: 10px;
+        margin-bottom: 8px;
+      }
+      .supplement-entry select { margin-bottom: 6px; }
+      .supplement-entry input[type="text"] { margin-bottom: 6px; }
+      .supplement-entry textarea { min-height: 60px; }
+      .supplement-remove {
+        background: none;
+        border: none;
+        color: var(--on-surface-dim);
+        font-size: 11px;
+        cursor: pointer;
+        padding: 4px 0 0;
+      }
+      .supplement-remove:hover { color: var(--primary-dim); }
+
       textarea {
         width: 100%;
         background: var(--bg-low);
@@ -567,6 +587,18 @@
               </div>
               <!-- Structured profile rendered by options.js; falls back to legacy text -->
               <div id="profileView"></div>
+            </div>
+
+            <div class="card">
+              <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
+                <span class="field-label" style="margin-bottom:0;">Supplementary Entries</span>
+                <button class="opts-help-btn" data-help="supplement">?</button>
+              </div>
+              <!-- {kind,title,description} rows rendered by options.js -->
+              <div id="supplementList"></div>
+              <button class="btn-secondary" id="addSupplement" style="margin-top:8px;">+ Add entry</button>
+              <button class="btn-primary" id="saveSupplement">Save entries</button>
+              <div id="supplementStatus" class="status-line"></div>
             </div>
           </div>
 
