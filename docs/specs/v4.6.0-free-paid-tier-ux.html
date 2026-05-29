@@ -169,6 +169,17 @@
           v4.4 scans on 2026-05-29. The copy's scan-count figures are derived
           from this and rounded to "about" — they vary with posting length,
           profile size, and model, so the UI never promises exact counts.</li>
+        <li><strong>Verified in production (2026-05-29).</strong> After the
+          5× margin deployed, 12 live Flash scans averaged
+          <strong>0.4485 credits</strong> (range 0.36–0.57, total 5.38) —
+          a clean 2.5× over the ~0.18 pre-deploy baseline, exactly as
+          intended. This puts the 100-credit signup bonus at ~220 scans (the
+          "~200, a meaningful trial" target) and confirmed the
+          estimate→debit→refund flow still refunds down to actual: the
+          pre-debit estimates were ~2.2–2.5 credits, refunded to the ~0.45
+          actual. Source: <code>select avg(actual_cost), sum(actual_cost)
+          from scan where model='gemini-2.5-flash' and kind='scan' and
+          status='success' and created_at &gt; '2026-05-29'</code>.</li>
         <li><strong>Margin rebalance is not an ADR.</strong> The original
           <code>2×</code> margin was recorded in spec v4.4.0 Notes and the
           <code>pricing.py</code> docstring, not an ADR; the v4.6 bump to
