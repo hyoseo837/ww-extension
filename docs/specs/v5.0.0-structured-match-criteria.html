@@ -37,36 +37,71 @@
       </p>
 
       <h3>The criteria object</h3>
-      <p>Stored as <code>user_profile.match_criteria</code> (JSONB). Shape,
-        owned/validated by a backend Pydantic model:</p>
+      <p>Stored as <code>user_profile.match_criteria</code> (JSONB),
+        owned/validated by a backend Pydantic model. ADR 0013's JSONB choice
+        holds — this richer weighted/graded shape supersedes the flat
+        scalars/arrays sketched there. Two kinds of field:</p>
+
+      <h4>Eligibility fact (not weighted)</h4>
       <dl>
         <dt><code>work_authorization</code></dt>
         <dd>Categorical, single value:
-          <code>"citizen"</code> (Canadian Citizen) ·
-          <code>"pr"</code> (Permanent Resident) ·
-          <code>"international"</code> (International — study permit) ·
-          <code>"other"</code> · or unset. The centerpiece; hard filters (#4)
-          will later key off this.</dd>
-        <dt><code>preferred_locations</code></dt>
-        <dd>String array, e.g. <code>["Toronto", "Waterloo"]</code>. Free
-          entry (comma-separated in the UI). Empty = no preference.</dd>
-        <dt><code>target_term</code></dt>
-        <dd>String, e.g. <code>"Fall 2026"</code> (season + year). Unset = no
-          preference.</dd>
-        <dt><code>target_length</code></dt>
-        <dd>Categorical: <code>"4-month"</code> · <code>"8-month"</code> ·
-          <code>"either"</code> · unset.</dd>
-        <dt><code>work_modes</code></dt>
-        <dd>String array (multi-select) of
-          <code>"remote"</code> / <code>"hybrid"</code> /
-          <code>"onsite"</code>. Empty = no preference (any).</dd>
-        <dt><code>languages</code></dt>
-        <dd>String array. <strong>Assumption to confirm:</strong> interpreted
-          as <em>spoken/working</em> languages (e.g.
-          <code>["English", "French"]</code>) for bilingual-required postings,
-          consistent with the other eligibility/logistics fields — not
-          programming languages. Flag if this should be tech stack instead.</dd>
+          <code>"citizen"</code> · <code>"pr"</code> ·
+          <code>"international"</code> (study permit) · <code>"other"</code> ·
+          or unset. This is the user's <em>status</em>, not a preference — so
+          it has no weight or tiers. Hard filters (#4) compare it to a
+          posting's <em>requirement</em> (e.g. a clearance role requiring
+          citizenship → an international user is ineligible → hard Skip).</dd>
       </dl>
+
+      <h4>Weighted, graded preferences</h4>
+      <p>Each preference below is an <strong>object</strong>, not a flat value:
+        a <code>weight</code> plus up to four value tiers.</p>
+      <dl>
+        <dt><code>weight</code></dt>
+        <dd><code>"must"</code> · <code>"strong"</code> ·
+          <code>"nice-to-have"</code> — how heavily this criterion moves the
+          score.</dd>
+        <dt><code>preferred</code> / <code>acceptable</code> /
+          <code>avoid</code> / <code>excluded</code></dt>
+        <dd>String arrays. <code>preferred</code> = ideal (full marks);
+          <code>acceptable</code> = fine (no penalty); <code>avoid</code> =
+          allowed but penalized; <code>excluded</code> = never. Values are
+          user-entered strings the LLM maps a posting against, so fuzzy entries
+          like <code>"West Canada"</code> work without an enum.</dd>
+      </dl>
+      <p>Applies to <code>preferred_locations</code>, <code>work_modes</code>,
+        <code>target_term</code>, <code>target_length</code>, and
+        <code>languages</code> (spoken/working, e.g. English, French — not
+        programming languages). Example (location):</p>
+      <pre><code>"preferred_locations": {
+  "weight": "strong",
+  "preferred":  ["Toronto"],
+  "acceptable": ["Ontario"],
+  "avoid":      ["West Canada"],
+  "excluded":   ["outside Canada"]
+}</code></pre>
+
+      <h4>How tiers + weight resolve</h4>
+      <ul>
+        <li><code>excluded</code> matched → <strong>hard Skip, no credit</strong>
+          (thread #4), at any weight.</li>
+        <li><code>avoid</code> / unlisted → score penalty <strong>scaled by
+          weight</strong>: <code>nice-to-have</code> = small nudge,
+          <code>strong</code> = significant, <code>must</code> = heaviest — can
+          sink the score into the Skip band, but it is <em>still scored and
+          shown</em> with its breakdown, not auto-skipped.</li>
+        <li><code>preferred</code> → full marks; <code>acceptable</code> → no
+          penalty; an empty criterion → no preference, no effect.</li>
+      </ul>
+      <p>
+        <strong>Scope boundary:</strong> the credit-free hard Skip on
+        <code>excluded</code> values and work-auth ineligibility is implemented
+        in thread #4. v5.0.0 <em>stores</em> the full tiered criteria and
+        <em>serializes</em> them into the prompt; until #4 lands, an
+        <code>excluded</code> match shows up only in the LLM's score (it'll read
+        as Skip) and still spends a credit.
+      </p>
       <p>
         Plus the existing <code>preferences</code> text, re-purposed unchanged
         as <strong>additional notes</strong> (free-form, the model weighs it as
@@ -88,15 +123,19 @@
           direction. (Already drafted with this commit.)</dd>
       </dl>
 
-      <h3>Backend (v5.0.2)</h3>
+      <h3>Backend phase</h3>
       <dl>
         <dt><code>server/migrations/0006_match_criteria.sql</code> (added)</dt>
         <dd><code>alter table public.user_profile add column if not exists
           match_criteria jsonb not null default '{}'::jsonb;</code>
           Idempotent. No change to <code>preferences</code>.</dd>
         <dt><code>server/app/profile/routes.py</code> (changed)</dt>
-        <dd>Add a <code>MatchCriteria</code> Pydantic model (the shape above,
-          with the work-auth enum + arrays, all optional). Add
+        <dd>Add a <code>MatchCriteria</code> Pydantic model: the
+          <code>work_authorization</code> enum, plus a reused
+          <code>WeightedCriterion</code> sub-model (weight enum +
+          <code>preferred</code>/<code>acceptable</code>/<code>avoid</code>/<code>excluded</code>
+          string arrays) for each of the five preference fields. All fields
+          optional/defaulted so a partial object is valid. Add
           <code>match_criteria</code> to the profile response and to
           <code>PUT /profile</code>. <code>preferences</code> stays (now means
           notes).</dd>
@@ -108,39 +147,50 @@
           <code>build_job_part</code> alongside <code>preferences</code>.</dd>
         <dt><code>server/app/scoring/gemini.py</code> (changed)</dt>
         <dd><code>build_job_part</code>: serialize populated criteria into a
-          short labelled block (only non-empty fields), then the existing
-          notes. Deterministic formatting — not the prompt rewrite.</dd>
+          short labelled block (only non-empty fields) — each preference as its
+          weight + tiered values (e.g. "Location [strong]: prefer Toronto;
+          ok Ontario; avoid West Canada; never outside Canada"), plus the
+          work-auth line and the notes. Deterministic formatting — not the
+          prompt rewrite (#3 reworks how the model is told to <em>use</em>
+          weights/tiers; v5.0.0 just states them).</dd>
         <dt><code>server/pyproject.toml</code> (changed)</dt>
-        <dd>Bump to <code>5.0.2</code>.</dd>
+        <dd>Bump to match the backend commit's version.</dd>
       </dl>
 
-      <h3>Client (v5.0.3)</h3>
+      <h3>Client phase</h3>
       <dl>
         <dt><code>options.html</code> (changed)</dt>
-        <dd>Replace the single criteria textarea with the structured form:
-          work-auth select, locations input, term input + length select,
-          work-mode checkboxes, languages input, and the existing textarea
-          relabeled "Additional notes". Update the help tooltip copy.</dd>
+        <dd>Replace the single criteria textarea with the structured form: a
+          simple work-auth select; then each preference field
+          (locations, work modes, term, length, languages) as a
+          <strong>weight selector + tiered value inputs</strong>
+          (preferred / acceptable / avoid / excluded); plus the existing
+          textarea relabeled "Additional notes". This is a dense form — use
+          progressive disclosure (e.g. a value's tier defaults sensibly;
+          advanced tiers/weight collapse) so the common case stays simple.
+          Update the help tooltip copy.</dd>
         <dt><code>options.js</code> (changed)</dt>
         <dd>Read/populate the new fields; build the <code>match_criteria</code>
           object; send it via <code>PUT /profile</code>; keep the
           chrome.storage cache in sync. Migrate any local-only
           <code>preferences</code> into the notes field on first load.</dd>
         <dt><code>manifest.json</code> (changed)</dt>
-        <dd>Bump to <code>5.0.3</code> (client wiring).</dd>
+        <dd>Bump to match the client commit's version.</dd>
       </dl>
 
-      <h3>Close-out (v5.0.4)</h3>
+      <h3>Close-out phase</h3>
       <dl>
         <dt><code>docs/architecture.html</code>,
           <code>docs/reference/data-model.html</code> (changed)</dt>
         <dd>Document the <code>match_criteria</code> column/shape and the
           <code>preferences</code> → notes mapping. Mark this spec
-          <code>done</code>. <code>manifest</code> 5.0.4.</dd>
+          <code>done</code>. <code>manifest</code> bumped to match.</dd>
       </dl>
       <p>Version bumps follow ADR 0002: <code>manifest.json</code> matches the
         commit-message version at each step; <code>pyproject.toml</code> bumps
-        only when backend code ships (v5.0.2).</p>
+        only when backend code ships. Exact Z numbers are assigned at build
+        time, not pre-reserved here — planning/housekeeping commits since
+        v5.0.0 have shifted them, so the spec names phases by role instead.</p>
     </section>
 
     <section id="verify">
@@ -151,8 +201,10 @@
           existing rows' <code>preferences</code> are untouched.</li>
         <li><code>GET /profile</code> returns <code>match_criteria</code> (and
           <code>preferences</code> as notes); <code>PUT /profile</code> with a
-          full criteria object round-trips and persists. A bad
-          <code>work_authorization</code> value is rejected by the model.</li>
+          full object — work-auth + a weighted/tiered preference (weight +
+          preferred/acceptable/avoid/excluded) — round-trips and persists. A
+          bad <code>work_authorization</code> or <code>weight</code> value is
+          rejected by the model.</li>
         <li>Options page shows the structured form; saving writes the criteria
           server-side; reloading repopulates every field. An existing user's
           old prose appears in "Additional notes".</li>
@@ -169,10 +221,9 @@
     <section id="notes">
       <h2>Notes</h2>
       <ul>
-        <li><strong>Open assumption — <code>languages</code>.</strong> Modeled
-          as spoken/working languages (see Goal). Confirm before v5.0.3; if it
-          should be programming languages / tech stack, only the field label
-          and help copy change (the storage is a string array either way).</li>
+        <li><strong><code>languages</code> = spoken/working.</strong> English,
+          French, etc. — for bilingual-required postings; not programming
+          languages / tech stack. Confirmed 2026-05-29.</li>
         <li><strong>No prompt rewrite here.</strong> v5.0.0 passes criteria
           into the <em>existing</em> prompt via deterministic serialization.
           Co-op framing, calibration, and few-shot examples are a separate v5
@@ -183,10 +234,17 @@
         <li><strong>Account section / external site untouched.</strong> Held
           pending the external-site direction (roadmap). v5.0.0 changes the
           Profile &amp; Context page only.</li>
-        <li><strong>Sub-version slicing.</strong> v5.0.0 docs (spec + ADR +
-          roadmap) → <em>v5.0.1 was v4-archive housekeeping, not part of this
-          feature</em> → v5.0.2 backend (migration + contract + serialization)
-          → v5.0.3 client (structured form) → v5.0.4 close-out.</li>
+        <li><strong>Weighted/graded model raises the cost.</strong> The
+          tiered, weighted criteria make the options-page form the heaviest
+          part of this phase; the client step may itself need more than one
+          sub-version (e.g. work-auth + simple fields first, then the
+          weight/tier UI). Confirmed with the user 2026-05-29 over the original
+          flat-field sketch.</li>
+        <li><strong>Sub-version slicing.</strong> Order: backend (migration +
+          contract + serialization) → client (the weighted/tiered form, which
+          may itself split into more than one sub-version) → close-out. v5.0.0
+          was the spec/ADR/roadmap; v5.0.1 was v4-archive housekeeping. Exact Z
+          numbers are assigned at build time.</li>
       </ul>
     </section>
   </body>
