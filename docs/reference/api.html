@@ -184,11 +184,24 @@
     "target_term":   { ... },
     "target_length": { ... },
     "languages":     { ... }       // spoken/working, not programming
-  }
+  },
+  "profile_json": {                // structured profile (v5.1.0); {} if not extracted
+    "summary": "...",
+    "education":  [{ "institution", "credential", "field", "grade", "dates" }],
+    "experience": [{ "title", "org", "dates", "description" }],
+    "skills":     ["..."],
+    "projects":   [{ "title", "description" }],
+    "languages":  ["..."]          // spoken/working
+  },
+  "profile_supplement": [          // user-authored entries (v5.1.0); [] if none
+    { "kind": "experience" | "project", "title": "...", "description": "..." }
+  ]
 }</code></pre>
         <p><code>weight</code> is one of <code>must</code> |
-          <code>strong</code> | <code>nice-to-have</code>. Shape is
-          owned/validated by the backend Pydantic model (ADR 0013).</p>
+          <code>strong</code> | <code>nice-to-have</code>. Shapes are
+          owned/validated by backend Pydantic models (ADR 0013, ADR 0015).
+          The scan uses <code>profile_json</code> when non-empty, else falls
+          back to <code>cv_text</code> (ADR 0015).</p>
       </dd>
 
       <dt id="put-profile"><code>PUT /profile</code></dt>
@@ -198,25 +211,32 @@
           cost.</p>
         <p><strong>Request:</strong></p>
         <pre><code>{
-  "cv_text": "...",        // optional
-  "preferences": "...",    // optional — "Additional Notes"
-  "match_criteria": { ... } // optional — full object (see GET); replaces the column
+  "cv_text": "...",            // optional
+  "preferences": "...",        // optional — "Additional Notes"
+  "match_criteria": { ... },   // optional — full object (see GET); replaces the column
+  "profile_supplement": [ ... ], // optional — full array; replaces the column
+  "profile_json": { ... }      // optional — normally set by /profile/extract;
+                               //   accepted here only for a full replace ({} clears)
 }</code></pre>
-        <p>A bad <code>work_authorization</code> or <code>weight</code>
-          value is rejected (<code>422</code>). <code>match_criteria</code>
-          is replaced wholesale when present, so send the complete object.</p>
-        <p><strong>Response:</strong> <code>200 OK</code> with the
-          updated <code>{cv_text, preferences, match_criteria}</code>.</p>
+        <p>A bad <code>work_authorization</code>, <code>weight</code>, or
+          supplement <code>kind</code> is rejected (<code>422</code>).
+          <code>match_criteria</code>, <code>profile_supplement</code>, and
+          <code>profile_json</code> are each replaced wholesale when present,
+          so send the complete value.</p>
+        <p><strong>Response:</strong> <code>200 OK</code> with the updated
+          <code>{cv_text, preferences, match_criteria, profile_json,
+          profile_supplement}</code>.</p>
       </dd>
 
       <dt id="post-profile-extract"><code>POST /profile/extract</code></dt>
       <dd>
-        <p>Authenticated. Sends a PDF to Gemini multimodal for text
-          extraction; on success, upserts the extracted text into
-          <code>user_profile.cv_text</code>. Same
-          estimate-debit-call-refund machinery as <code>/scan</code>
-          (same <code>scan_id</code> idempotency, same 402 / 502
-          shapes).</p>
+        <p>Authenticated. Sends a PDF to Gemini multimodal for structured
+          extraction (a profile <code>responseSchema</code>, v5.1.0); on
+          success, upserts the result into <code>user_profile.profile_json</code>
+          (leaving <code>cv_text</code> and <code>profile_supplement</code>
+          untouched, ADR 0015). Same estimate-debit-call-refund machinery as
+          <code>/scan</code> (same <code>scan_id</code> idempotency, same
+          402 / 502 shapes).</p>
         <p><strong>Request:</strong></p>
         <pre><code>{
   "scan_id": "&lt;uuid v4&gt;",
@@ -226,7 +246,8 @@
         <p>5 MB cap on the decoded PDF.</p>
         <p><strong>Response:</strong> <code>200 OK</code></p>
         <pre><code>{
-  "text": "...extracted text...",
+  "profile": { ...structured profile, see GET /profile... },
+  "text": "...readable serialization of `profile`, for display...",
   "cost": 1.85,
   "balance": 98.15
 }</code></pre>

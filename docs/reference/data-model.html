@@ -31,9 +31,24 @@
         — verify against current options page).</dd>
 
       <dt><code>cvText</code></dt>
-      <dd><strong>Type:</strong> <code>string</code>. Extracted profile
-        text from the user's uploaded PDF. Used as scoring context.
-        User-facing name: "application package."</dd>
+      <dd><strong>Type:</strong> <code>string</code>. Legacy raw extracted
+        profile text, cached from the server. As of v5.1.0 it's a fallback
+        only — the structured <code>profileJson</code> below supersedes it once
+        the user re-extracts (ADR 0015). User-facing name: "application
+        package."</dd>
+
+      <dt><code>profileJson</code> (v5.1.0)</dt>
+      <dd><strong>Type:</strong> structured profile object cached from
+        <code>GET /profile</code> (summary / education / experience / skills /
+        projects / languages). Rendered read-only by section on the options
+        page. Mirrors the server <code>user_profile.profile_json</code> column
+        below.</dd>
+
+      <dt><code>profileSupplement</code> (v5.1.0)</dt>
+      <dd><strong>Type:</strong> array of
+        <code>{ kind, title, description }</code> user-authored entries, cached
+        from <code>GET /profile</code>. Mirrors the server
+        <code>user_profile.profile_supplement</code> column below.</dd>
 
       <dt><code>preferences</code></dt>
       <dd><strong>Type:</strong> <code>string</code>. As of v5.0.0 this is the
@@ -211,8 +226,11 @@
       <dd>Owner. Profile row is removed if the auth user is deleted.</dd>
 
       <dt><code>cv_text text not null default ''</code></dt>
-      <dd>Extracted profile text from the user's uploaded PDF. Primary
-        scoring context.</dd>
+      <dd>Legacy raw extracted profile text. As of v5.1.0 it's a
+        <strong>fallback</strong> (ADR 0015): the scan serializes
+        <code>profile_json</code> when non-empty, else this. Existing users
+        keep scoring on it until they re-extract; a cleanup migration to drop
+        it is deferred.</dd>
 
       <dt><code>preferences text not null default ''</code></dt>
       <dd>Free-form prose. As of v5.0.0 its meaning narrows to the
@@ -244,6 +262,28 @@
         Credit-free hard-Skip on an <code>excluded</code> match or work-auth
         ineligibility is a later v5 thread (#4) — v5.0.0 only makes the model
         aware of the criteria.</dd>
+
+      <dt><code>profile_json jsonb not null default '{}'</code>
+        (v5.1.0, migration 0007)</dt>
+      <dd>Machine-extracted structured profile, owned/validated by the
+        <code>StructuredProfile</code> Pydantic model (ADR 0015). Fields:
+        <code>summary</code>, <code>education[]</code>
+        (institution/credential/field/grade/dates), <code>experience[]</code>
+        (title/org/dates/description), <code>skills[]</code>,
+        <code>projects[]</code> (title/description), <code>languages[]</code>
+        (spoken/working). Overwritten by <code>POST /profile/extract</code>;
+        <code>PUT /profile</code> accepts it only for a full replace
+        (<code>{}</code> clears). <code>build_profile_context()</code>
+        serializes it into the Candidate Profile block, falling back to
+        <code>cv_text</code> when empty.</dd>
+
+      <dt><code>profile_supplement jsonb not null default '[]'</code>
+        (v5.1.0, migration 0007)</dt>
+      <dd>User-authored entries a one-page resume omits: an array of
+        <code>{ kind: "experience" | "project", title, description }</code>.
+        Written only by <code>PUT /profile</code> — never by extraction — so
+        re-uploading a PDF can't clobber them (ADR 0015). Appended to the
+        Candidate Profile block as self-reported context at scan time.</dd>
 
       <dt><code>updated_at timestamptz not null default now()</code></dt>
       <dd>Touched on every upsert.</dd>
