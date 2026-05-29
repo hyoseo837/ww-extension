@@ -202,7 +202,7 @@
           work-authorization signal for international students. Storage in
           <a href="decisions/0013-structured-match-criteria-jsonb.html">ADR 0013</a>.</li>
         <li><strong>Structured PDF extraction.</strong>
-          <em>(v5.1.0 — active.)</em> Switch the
+          <em>(Shipped — v5.1.x.)</em> Switch the
           profile from a raw-text blob to a JSON profile
           (summary / education / experience / skills / projects /
           languages), extracted via a Gemini <code>responseSchema</code>.
@@ -220,16 +220,19 @@
           deliberately left for the v6 UI redesign.
           See <code>docs/specs/v5.1.0-structured-profile.html</code>.</li>
         <li><strong>Scan-prompt rewrite + richer scoring output.</strong>
-          Co-op framing, calibration anchors, few-shot examples from real
-          v4.4 disagreements. Moves scoring to a <strong>1–100 scale</strong>
+          <em>(v5.2.0 — active.)</em> Co-op framing and calibration anchors in
+          the prompt. Moves scoring to a <strong>1–100 scale</strong>
           with a <strong>5-tier verdict ladder</strong> (Strong Apply 85–100 /
-          Apply 70–84 / Consider 50–69 / Unlikely 30–49 / Skip 1–29), and
-          returns a <strong>structured per-aspect breakdown</strong> — the
-          specific criteria/profile points that gained or lost points (e.g.
-          "prefers Toronto, job in Québec"; "AWS preferred, not in profile"),
-          surfaced in the sidebar. Aspect attribution depends on structured
-          criteria (#1) and profile (#2); calibration waits on enough live
-          scoring data, which v4.4+ now provides.</li>
+          Apply 70–84 / Consider 50–69 / Unlikely 30–49 / Skip 1–29) derived
+          server-side from the score, and returns a <strong>structured
+          per-aspect breakdown</strong> — the specific criteria/profile points
+          that gained or lost points (e.g. "prefers Toronto, job in Québec";
+          "AWS preferred, not in profile"), surfaced in the sidebar. Contract in
+          <a href="decisions/0016-scoring-output-v2.html">ADR 0016</a>.
+          Calibration is <strong>anchored only</strong> this phase; few-shot
+          from real disagreements is a later tuning pass once enough live v5
+          scans accumulate. See
+          <code>docs/specs/v5.2.0-scan-prompt-rewrite.html</code>.</li>
         <li><strong>Hard filters.</strong> Once preferences are
           structured, auto-Skip postings that explicitly exclude the
           user (e.g. US-citizen-only) without spending a credit.

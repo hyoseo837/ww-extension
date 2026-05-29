@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v5.2.0" />
+    <meta name="status" content="planned" />
+    <meta name="last-updated" content="2026-05-29" />
+    <title>Spec v5.2.0 — Scan-prompt rewrite + richer scoring output</title>
+  </head>
+  <body>
+    <h1>Spec v5.2.0 — Scan-prompt rewrite + richer scoring output</h1>
+
+    <section id="goal">
+      <h2>Goal</h2>
+      <p>
+        Third v5 phase (thread #3) — the scoring-quality payoff. With criteria
+        (#1) and the profile (#2) now structured, rewrite the scan prompt and
+        the output. The prompt gains <strong>co-op framing</strong> (this is a
+        student work-term, not a full-time hire), explicit <strong>1–100 band
+        definitions</strong>, and <strong>worked verdict anchors</strong>. The
+        output moves to a <strong>1–100 score</strong>, a <strong>5-tier
+        verdict ladder</strong> derived server-side from the score, and a
+        <strong>structured per-aspect breakdown</strong> — the specific
+        criteria/profile points that gained or lost points — surfaced in the
+        sidebar. The output contract is fixed in
+        <a href="../decisions/0016-scoring-output-v2.html">ADR 0016</a>.
+      </p>
+      <p>
+        Scope: the prompt rewrite + the new output, end to end (backend
+        contract through badges/sidebar). Calibration is <strong>anchored
+        only</strong> — band/co-op framing and worked anchors in the system
+        prompt; <strong>no real few-shot</strong> yet (a later tuning pass adds
+        few-shot from accumulated live disagreements, ADR 0016). Hard filters
+        (#4) stay separate. The options-page profile/criteria UI is untouched
+        (its redesign is deferred to v6); the in-page sidebar/badge changes here
+        are kept <strong>minimal and functional</strong> — enough to render the
+        new scale, tiers, and breakdown, not a visual overhaul.
+      </p>
+
+      <h3>Output contract (ADR 0016)</h3>
+      <p>Model returns <code>score</code> (1–100), <code>reason</code> (2–3
+        sentence summary), and <code>breakdown</code> (array of
+        <code>{ point, effect }</code>, <code>effect</code> ∈ <code>plus</code>
+        | <code>minus</code>, may be empty). The server derives
+        <code>verdict</code> from the score:</p>
+      <dl>
+        <dt>Strong Apply</dt><dd>85–100</dd>
+        <dt>Apply</dt><dd>70–84</dd>
+        <dt>Consider</dt><dd>50–69</dd>
+        <dt>Unlikely</dt><dd>30–49</dd>
+        <dt>Skip</dt><dd>1–29</dd>
+      </dl>
+      <p><code>ScanResult</code> returned to the client is
+        <code>{ score, verdict, reason, breakdown }</code>.</p>
+    </section>
+
+    <section id="files">
+      <h2>Files</h2>
+
+      <h3>Docs (v5.2.0)</h3>
+      <dl>
+        <dt><code>docs/specs/v5.2.0-scan-prompt-rewrite.html</code> (added)</dt>
+        <dd>This spec.</dd>
+        <dt><code>docs/decisions/0016-scoring-output-v2.html</code> (added)</dt>
+        <dd>Output-contract ADR.</dd>
+        <dt><code>docs/roadmap.html</code> (changed)</dt>
+        <dd>#1/#2 shipped; #3 active as v5.2.0.</dd>
+      </dl>
+
+      <h3>Backend phase</h3>
+      <dl>
+        <dt><code>server/app/scoring/gemini.py</code> (changed)</dt>
+        <dd>Rewrite <code>SYSTEM_TEXT</code> (co-op framing, 1–100 band
+          definitions, worked anchors, how to weigh must/strong/nice criteria +
+          work-auth eligibility + profile fit, instruction to emit a concise
+          gain/loss <code>breakdown</code> — no verdict). Replace
+          <code>_RESPONSE_SCHEMA</code> with <code>{ score, reason, breakdown[] }</code>.
+          Update <code>_valid_result</code> (score 1–100; reason non-empty;
+          breakdown a list of <code>{point, effect∈plus|minus}</code>, tolerate
+          missing → <code>[]</code>). Add <code>verdict_for_score(score)</code>
+          implementing the band ladder.</dd>
+        <dt><code>server/app/scoring/routes.py</code> (changed)</dt>
+        <dd><code>ScanResult</code> gains <code>breakdown</code>; build it from
+          the parsed result + <code>verdict_for_score</code>. The stored
+          <code>scan.response</code> carries the full new shape (so replays are
+          faithful).</dd>
+        <dt><code>server/app/billing/pricing.py</code> (verify)</dt>
+        <dd><code>DEFAULT_MAX_OUTPUT_TOKENS</code> (1024) should comfortably fit
+          reason + a ~6-item breakdown; confirm and only raise if truncation is
+          observed.</dd>
+        <dt><code>server/pyproject.toml</code> (changed)</dt>
+        <dd>Bump to match the backend commit.</dd>
+      </dl>
+
+      <h3>Client phase</h3>
+      <dl>
+        <dt><code>src/content.js</code> (changed)</dt>
+        <dd><code>VERDICT_ORDER</code> → 5 tiers (Strong Apply · Apply ·
+          Consider · Unlikely · Skip). Badge class uses a slug
+          (<code>strong-apply</code>, <code>unlikely</code>). The
+          <code>scores</code> map entry + <code>ww_scores</code> gain
+          <code>breakdown</code>; load-validation accepts the new shape.
+          <strong>Clear-on-upgrade</strong>: a stored scoring-schema version;
+          when it changes, drop <code>ww_scores</code> /
+          <code>ww_posting_ids</code> (ADR 0016). Sidebar card renders the
+          breakdown as a compact gain/loss list under the reason. Save-to-folder
+          filter: score input <code>1–100</code> (sensible default, e.g. 70) and
+          5 verdict toggles; help copy updated. Sort order uses the new ladder.</dd>
+        <dt><code>src/sidebar.css</code> (changed)</dt>
+        <dd>Add badge + verdict-toggle classes and color vars (both themes) for
+          <code>strong-apply</code> and <code>unlikely</code>; minimal styling
+          for the breakdown list. No redesign (deferred to v6).</dd>
+        <dt><code>manifest.json</code> (changed)</dt>
+        <dd>Bump. (May split: scale/verdict/badge + clear-on-upgrade first, then
+          breakdown render + folder filter.)</dd>
+      </dl>
+
+      <h3>Close-out phase</h3>
+      <dl>
+        <dt><code>docs/reference/api.html</code> (changed)</dt>
+        <dd><code>/scan</code> result → <code>{score (1–100), verdict (5-tier),
+          reason, breakdown[]}</code>; document the band ladder.</dd>
+        <dt><code>docs/architecture.html</code>,
+          <code>docs/reference/data-model.html</code> (changed)</dt>
+        <dd>Update the scoring-output description and the <code>ww_scores</code>
+          schema (new verdict set + breakdown). Mark this spec <code>done</code>.</dd>
+      </dl>
+      <p>Version bumps follow ADR 0002. Exact Z numbers assigned at build time.</p>
+    </section>
+
+    <section id="verify">
+      <h2>Verify</h2>
+      <ol>
+        <li>A real scan returns a 1–100 <code>score</code>, a non-empty
+          <code>reason</code>, and a <code>breakdown</code> of gain/loss points;
+          the server-derived <code>verdict</code> matches the score's band at
+          each boundary (e.g. 84→Apply, 85→Strong Apply).</li>
+        <li>A bad model output (score out of range, bad <code>effect</code>) is
+          rejected → 502 + full refund, as today.</li>
+        <li>After upgrading the extension, previously cached scores are gone
+          (no mixed 1–10 / 1–100 badges); re-scanning a posting produces the
+          new shape.</li>
+        <li>Badges show <code>score · verdict</code> across all five tiers with
+          distinct colors (light + dark). The sidebar card shows the breakdown
+          list; the badge tooltip still shows the reason.</li>
+        <li>Save-to-folder: the score threshold works on the 1–100 scale and the
+          5 verdict toggles filter correctly.</li>
+        <li>Calibration sanity: a clearly-ineligible posting (e.g. work-auth
+          mismatch via #1 criteria) lands in Unlikely/Skip with the mismatch
+          named in the breakdown; a strong match lands in Apply/Strong Apply.</li>
+      </ol>
+    </section>
+
+    <section id="notes">
+      <h2>Notes</h2>
+      <ul>
+        <li><strong>Anchored calibration only</strong> (decided with the user).
+          Few-shot from real disagreements is a later tuning pass once live v5
+          scans accumulate; it won't change the ADR 0016 contract.</li>
+        <li><strong>Server-derived verdict</strong> keeps score and verdict
+          consistent; the band ladder is one function (ADR 0016).</li>
+        <li><strong>Minimal sidebar/badge work</strong> — render the new scale,
+          tiers, and breakdown; no visual overhaul (the in-page and options UI
+          redesign is v6).</li>
+        <li><strong>Clear-on-upgrade</strong> via a stored scoring-schema
+          version, not just load-validation (old 1–10 entries would otherwise
+          pass validation and mix scales).</li>
+        <li><strong>Slicing.</strong> backend (prompt + schema + contract +
+          verdict ladder) → client (scale/verdict/badge + clear-on-upgrade,
+          then breakdown render + folder filter — may be two sub-versions) →
+          close-out. Z numbers at build time.</li>
+      </ul>
+    </section>
+  </body>
+</html>

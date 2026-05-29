@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-05-29" />
+    <title>ADR 0016 — Scoring output v2: 1–100 score, server-derived 5-tier verdict, structured breakdown</title>
+  </head>
+  <body>
+    <h1>ADR 0016 — Scoring output v2: 1–100 score, server-derived 5-tier verdict, structured breakdown</h1>
+
+    <section id="context">
+      <h2>Context</h2>
+      <p>
+        Through v5.1 the scorer returns <code>{ score: 1–10, verdict:
+        Apply|Consider|Skip, reason }</code>. The 1–10 scale is coarse (a "7"
+        vs "8" carries little meaning), three verdicts collapse very different
+        situations ("worth a look" and "borderline" both land in Consider),
+        and the single prose <code>reason</code> gives the user no structured
+        sense of <em>which</em> criteria or profile points moved the score.
+        v5 thread #3
+        (<a href="../specs/v5.2.0-scan-prompt-rewrite.html">spec v5.2.0</a>)
+        rewrites the prompt and the output to fix all three, now that the
+        inputs are structured (criteria #1, profile #2).
+      </p>
+      <p>
+        The output shape is a contract across three surfaces — the Gemini
+        response schema, the <code>/scan</code> API + stored
+        <code>scan.response</code>, and the extension's badges / sidebar /
+        score cache (<code>ww_scores</code>) — so it's a decision that
+        constrains future work, not a per-phase detail.
+      </p>
+      <p>Sub-decisions:</p>
+      <ol>
+        <li><strong>Who owns the verdict.</strong> The model could emit the
+          verdict directly, or the server could derive it from the score via
+          fixed bands. Model-emitted risks the verdict and score disagreeing
+          (a 90 labelled "Consider"); fixed bands keep them consistent but
+          remove model nuance at the boundaries.</li>
+        <li><strong>How to express per-aspect reasoning.</strong> Keep prose
+          only, or add a machine-readable breakdown the sidebar can render as
+          discrete gain/loss points.</li>
+        <li><strong>What happens to scores already cached</strong> on the old
+          1–10 scale when the new scale ships.</li>
+      </ol>
+    </section>
+
+    <section id="decision">
+      <h2>Decision</h2>
+      <p>The scoring output becomes:</p>
+      <pre><code>{
+  "score": 1–100,                  // model-produced
+  "reason": "2–3 sentence summary", // model-produced
+  "breakdown": [                   // model-produced; may be empty
+    { "point": "prefers Toronto, job in Québec", "effect": "minus" },
+    { "point": "Python + AWS match", "effect": "plus" }
+  ],
+  "verdict": "Strong Apply"        // SERVER-DERIVED from score (not from the model)
+}</code></pre>
+      <ul>
+        <li><strong>1–100 score, model-produced.</strong> Finer resolution for
+          ranking and band placement.</li>
+        <li><strong>Server derives the verdict from fixed score bands</strong>
+          — Strong Apply 85–100 · Apply 70–84 · Consider 50–69 · Unlikely
+          30–49 · Skip 1–29 — so score and verdict can never disagree and the
+          ladder is one greppable source of truth. The model is told the bands
+          (for calibration) but does not emit the verdict.</li>
+        <li><strong><code>breakdown</code> is a short array of
+          <code>{ point, effect }</code></strong> (<code>effect</code> ∈
+          <code>plus</code> | <code>minus</code>) — the specific criteria /
+          profile points that moved the score, rendered in the sidebar.
+          <code>reason</code> stays as the prose summary alongside it.</li>
+        <li><strong>Cached scores are cleared on upgrade.</strong> The client
+          drops <code>ww_scores</code> / <code>ww_posting_ids</code> when its
+          stored scoring-schema version changes, so badges never mix 1–10 and
+          1–100 values; postings re-score on the next scan.</li>
+      </ul>
+      <p>
+        Calibration in v5.2.0 is <strong>anchored only</strong> — band
+        definitions, co-op framing, and worked anchors in the system prompt.
+        Few-shot examples from real scored disagreements are a later tuning
+        pass once enough live v5 scans accumulate; they don't change this
+        contract.
+      </p>
+    </section>
+
+    <section id="consequences">
+      <h2>Consequences</h2>
+      <ul>
+        <li><strong>+</strong> Score and verdict are always consistent; the
+          band ladder lives in one server-side function.</li>
+        <li><strong>+</strong> The sidebar can show <em>why</em> a posting
+          scored as it did, point by point — the core value of this phase.</li>
+        <li><strong>+</strong> Finer 1–100 ranking improves sort order and the
+          save-to-folder threshold.</li>
+        <li><strong>−</strong> Breaking output change: the extension's badge /
+          sidebar / sort / save-filter / load-validation and the
+          <code>ww_scores</code> schema all change in lockstep, and old cached
+          scores are discarded (a re-scan spends credits).</li>
+        <li><strong>−</strong> Fixed bands mean a posting one point from a
+          boundary flips verdict tier with no model say; acceptable given the
+          consistency win, and the bands can be retuned in a later ADR.</li>
+        <li><strong>−</strong> Replaying an old (pre-v5.2) successful
+          <code>scan_id</code> returns the stored old-shape result (1–10, no
+          breakdown). Harmless in practice — new scans use fresh ids — but
+          noted.</li>
+      </ul>
+    </section>
+  </body>
+</html>
