@@ -195,6 +195,39 @@
         margin: 8px 0 3px;
       }
 
+      /* ── Structured profile view (v5.1.x) ────────────────────────────────── */
+      #profileView { min-height: 200px; }
+      .profile-empty {
+        color: var(--on-surface-dim);
+        font-size: 13px;
+        padding: 24px 4px;
+      }
+      .profile-section { margin-bottom: 14px; }
+      .profile-section:last-child { margin-bottom: 0; }
+      .profile-section-label {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: var(--on-surface-dim);
+        margin-bottom: 4px;
+      }
+      .profile-entry { margin-bottom: 6px; font-size: 13px; line-height: 1.4; }
+      .profile-entry-head { color: var(--on-surface); font-weight: 600; }
+      .profile-entry-desc { color: var(--on-surface-dim); }
+      .profile-chips { color: var(--on-surface); font-size: 13px; }
+      .profile-legacy pre {
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 12px;
+        color: var(--on-surface-dim);
+        margin: 0;
+        max-height: 360px;
+        overflow-y: auto;
+      }
+
       textarea {
         width: 100%;
         background: var(--bg-low);
@@ -530,9 +563,10 @@
             <div class="card ai-card">
               <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
                 <span class="field-label" style="margin-bottom:0;">Extracted Profile</span>
-                <button class="btn-secondary" id="clearCv" style="margin-top:0; padding:4px 12px; font-size:12px;">Clear profile text</button>
+                <button class="btn-secondary" id="clearCv" style="margin-top:0; padding:4px 12px; font-size:12px;">Clear profile</button>
               </div>
-              <textarea id="extractedText" readonly placeholder="Extracted text will appear here after clicking Extract Profile..."></textarea>
+              <!-- Structured profile rendered by options.js; falls back to legacy text -->
+              <div id="profileView"></div>
             </div>
           </div>
 

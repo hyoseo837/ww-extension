@@ -67,13 +67,62 @@ el('themeToggle').addEventListener('click', () => {
 
 // ── Load saved settings (local cache) ─────────────────────────────────────────
 
-chrome.storage.local.get(['model', 'cvText', 'preferences', 'matchCriteria', 'theme'], data => {
-  if (data.model)         el('model').value          = data.model;
-  if (data.cvText)        el('extractedText').value  = data.cvText;
-  if (data.preferences)   el('preferences').value    = data.preferences;
+chrome.storage.local.get(['model', 'cvText', 'profileJson', 'preferences', 'matchCriteria', 'theme'], data => {
+  if (data.model)         el('model').value       = data.model;
+  renderProfile(data.profileJson, data.cvText || '');
+  if (data.preferences)   el('preferences').value = data.preferences;
   if (data.matchCriteria) applyMatchCriteria(data.matchCriteria);
   if (data.theme)         applyTheme(data.theme);
 });
+
+// ── Structured profile view (read-only render of profile_json) ────────────────
+// Renders the extracted structured profile by section; falls back to the legacy
+// cv_text blob for users who haven't re-extracted (ADR 0015).
+
+const esc = s => String(s == null ? '' : s).replace(
+  /[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function profileHasContent(p) {
+  return !!(p && (p.summary || (p.education || []).length || (p.experience || []).length ||
+    (p.skills || []).length || (p.projects || []).length || (p.languages || []).length));
+}
+
+const section = (label, inner) =>
+  `<div class="profile-section"><div class="profile-section-label">${label}</div>${inner}</div>`;
+const entry = (head, desc) =>
+  `<div class="profile-entry">${head ? `<span class="profile-entry-head">${head}</span>` : ''}` +
+  `${desc ? `<div class="profile-entry-desc">${desc}</div>` : ''}</div>`;
+
+function profileSectionsHtml(p) {
+  const out = [];
+  if (p.summary) out.push(section('Summary', entry('', esc(p.summary))));
+  if ((p.education || []).length) out.push(section('Education', p.education.map(e =>
+    entry([e.credential, e.field].filter(Boolean).map(esc).join(', '),
+          [e.institution, e.dates, e.grade].filter(Boolean).map(esc).join(' · '))).join('')));
+  if ((p.experience || []).length) out.push(section('Experience', p.experience.map(x =>
+    entry([x.title, x.org, x.dates].filter(Boolean).map(esc).join(' · '), esc(x.description))).join('')));
+  if ((p.skills || []).length) out.push(section('Skills',
+    `<div class="profile-chips">${esc(p.skills.join(', '))}</div>`));
+  if ((p.projects || []).length) out.push(section('Projects', p.projects.map(pr =>
+    entry(esc(pr.title), esc(pr.description))).join('')));
+  if ((p.languages || []).length) out.push(section('Languages',
+    `<div class="profile-chips">${esc(p.languages.join(', '))}</div>`));
+  return out.join('');
+}
+
+function renderProfile(profileJson, cvText) {
+  const view = el('profileView');
+  if (!view) return;
+  if (profileHasContent(profileJson)) {
+    view.innerHTML = profileSectionsHtml(profileJson);
+  } else if (cvText && cvText.trim()) {
+    view.innerHTML = '<div class="profile-legacy"><div class="profile-section-label">' +
+      'Profile (legacy text)</div><pre>' + esc(cvText) + '</pre></div>';
+  } else {
+    view.innerHTML = '<div class="profile-empty">No profile yet. Upload your ' +
+      'application package PDF and click Extract Profile.</div>';
+  }
+}
 
 // ── Structured match criteria (form ⇄ object) ─────────────────────────────────
 // The five weighted/tiered preference fields share one shape, so they're
@@ -156,11 +205,12 @@ async function loadProfileFromServer() {
     init: { method: 'GET' }
   });
   if (res?.ok && res.data) {
-    el('extractedText').value = res.data.cv_text || '';
-    el('preferences').value   = res.data.preferences || '';
+    renderProfile(res.data.profile_json || {}, res.data.cv_text || '');
+    el('preferences').value = res.data.preferences || '';
     applyMatchCriteria(res.data.match_criteria || {});
     chrome.storage.local.set({
       cvText:        res.data.cv_text || '',
+      profileJson:   res.data.profile_json || {},
       preferences:   res.data.preferences || '',
       matchCriteria: res.data.match_criteria || {}
     });
@@ -181,6 +231,7 @@ async function putProfile(patch) {
   if (res?.ok && res.data) {
     chrome.storage.local.set({
       cvText:        res.data.cv_text || '',
+      profileJson:   res.data.profile_json || {},
       preferences:   res.data.preferences || '',
       matchCriteria: res.data.match_criteria || {}
     });
@@ -261,14 +312,14 @@ el('extract').addEventListener('click', async () => {
       }
     });
 
-    if (res?.ok && res.data?.text) {
-      el('extractedText').value = res.data.text;
+    if (res?.ok && res.data?.profile) {
+      renderProfile(res.data.profile, '');
       // Local cache + push balance to storage so the chip ticks down.
-      chrome.storage.local.set({ cvText: res.data.text });
+      chrome.storage.local.set({ profileJson: res.data.profile });
       if (typeof res.data.balance === 'number') {
         chrome.storage.local.set({ creditBalance: res.data.balance });
       }
-      setExtractStatus(`Extracted ${res.data.text.length.toLocaleString()} characters (cost ${res.data.cost?.toFixed(2)} credits).`, 'ok');
+      setExtractStatus(`Profile extracted (cost ${res.data.cost?.toFixed(2)} credits).`, 'ok');
     } else if (res?.status === 0) {
       setExtractStatus('Sign in first under Settings.', 'err');
     } else if (res?.status === 402) {
@@ -296,13 +347,15 @@ el('showWelcome').addEventListener('click', () => {
 // ── Clear CV text ─────────────────────────────────────────────────────────────
 
 el('clearCv').addEventListener('click', async () => {
-  if (!confirm('Clear extracted profile text? You will need to re-upload your application package to score new jobs.')) return;
-  const res = await putProfile({ cv_text: '' });
+  if (!confirm('Clear your profile? You will need to re-upload your application package to score new jobs.')) return;
+  // Clear both the structured profile and the legacy cv_text fallback so /scan
+  // is blocked until the user re-extracts.
+  const res = await putProfile({ cv_text: '', profile_json: {} });
   if (res.ok) {
-    el('extractedText').value = '';
+    renderProfile({}, '');
     el('fileName').textContent = '';
     droppedFile = null;
-    setExtractStatus('Profile text cleared.', 'ok');
+    setExtractStatus('Profile cleared.', 'ok');
   } else {
     setExtractStatus(`Clear failed: ${JSON.stringify(res.error).slice(0, 200)}`, 'err');
   }
@@ -396,8 +449,8 @@ el('signIn').addEventListener('click', async () => {
 });
 
 el('signOut').addEventListener('click', async () => {
-  await chrome.storage.local.remove(['auth', 'cvText', 'preferences', 'matchCriteria']);
-  el('extractedText').value = '';
+  await chrome.storage.local.remove(['auth', 'cvText', 'profileJson', 'preferences', 'matchCriteria']);
+  renderProfile({}, '');
   el('preferences').value = '';
   applyMatchCriteria({});
   setAuthStatus('Signed out.', 'ok');
