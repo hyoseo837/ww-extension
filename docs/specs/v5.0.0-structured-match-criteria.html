@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v5.0.0" />
+    <meta name="status" content="planned" />
+    <meta name="last-updated" content="2026-05-29" />
+    <title>Spec v5.0.0 — Structured match criteria</title>
+  </head>
+  <body>
+    <h1>Spec v5.0.0 — Structured match criteria</h1>
+
+    <section id="goal">
+      <h2>Goal</h2>
+      <p>
+        First v5 phase — the start of the scoring-quality pass. Today a user's
+        match preferences are a single free-form textarea
+        (<code>user_profile.preferences</code>), prepended to the Gemini prompt
+        as "Candidate Preferences". The most important signal — whether the
+        candidate is even <em>eligible</em> for a posting (work authorization)
+        — gets buried in prose and is unreliable, especially for international
+        students. v5.0.0 replaces the single textarea with structured fields
+        and demotes the prose to an "additional notes" field, so the scorer
+        gets clean, consistent eligibility/logistics signal. Storage shape and
+        the migration approach are fixed in
+        <a href="../decisions/0013-structured-match-criteria-jsonb.html">ADR 0013</a>.
+      </p>
+      <p>
+        Scope is deliberately the <strong>structured-criteria foundation</strong>:
+        the fields, their storage, and a faithful pass into the
+        <em>existing</em> prompt. The richer prompt rewrite (co-op framing,
+        calibration anchors, few-shot) and hard filters are later v5 threads
+        that build on this. The Account-section consolidation is out of scope
+        (held pending the external-site direction — see roadmap).
+      </p>
+
+      <h3>The criteria object</h3>
+      <p>Stored as <code>user_profile.match_criteria</code> (JSONB). Shape,
+        owned/validated by a backend Pydantic model:</p>
+      <dl>
+        <dt><code>work_authorization</code></dt>
+        <dd>Categorical, single value:
+          <code>"citizen"</code> (Canadian Citizen) ·
+          <code>"pr"</code> (Permanent Resident) ·
+          <code>"international"</code> (International — study permit) ·
+          <code>"other"</code> · or unset. The centerpiece; hard filters (#4)
+          will later key off this.</dd>
+        <dt><code>preferred_locations</code></dt>
+        <dd>String array, e.g. <code>["Toronto", "Waterloo"]</code>. Free
+          entry (comma-separated in the UI). Empty = no preference.</dd>
+        <dt><code>target_term</code></dt>
+        <dd>String, e.g. <code>"Fall 2026"</code> (season + year). Unset = no
+          preference.</dd>
+        <dt><code>target_length</code></dt>
+        <dd>Categorical: <code>"4-month"</code> · <code>"8-month"</code> ·
+          <code>"either"</code> · unset.</dd>
+        <dt><code>work_modes</code></dt>
+        <dd>String array (multi-select) of
+          <code>"remote"</code> / <code>"hybrid"</code> /
+          <code>"onsite"</code>. Empty = no preference (any).</dd>
+        <dt><code>languages</code></dt>
+        <dd>String array. <strong>Assumption to confirm:</strong> interpreted
+          as <em>spoken/working</em> languages (e.g.
+          <code>["English", "French"]</code>) for bilingual-required postings,
+          consistent with the other eligibility/logistics fields — not
+          programming languages. Flag if this should be tech stack instead.</dd>
+      </dl>
+      <p>
+        Plus the existing <code>preferences</code> text, re-purposed unchanged
+        as <strong>additional notes</strong> (free-form, the model weighs it as
+        before). Old prose carries over with no data migration (ADR 0013).
+      </p>
+    </section>
+
+    <section id="files">
+      <h2>Files</h2>
+
+      <h3>Docs (v5.0.0)</h3>
+      <dl>
+        <dt><code>docs/specs/v5.0.0-structured-match-criteria.html</code> (added)</dt>
+        <dd>This spec.</dd>
+        <dt><code>docs/decisions/0013-structured-match-criteria-jsonb.html</code> (added)</dt>
+        <dd>Storage-shape ADR.</dd>
+        <dt><code>docs/roadmap.html</code> (changed)</dt>
+        <dd>v5 phase-start: sequence, v5.0.0 designation, external-site
+          direction. (Already drafted with this commit.)</dd>
+      </dl>
+
+      <h3>Backend (v5.0.1)</h3>
+      <dl>
+        <dt><code>server/migrations/0006_match_criteria.sql</code> (added)</dt>
+        <dd><code>alter table public.user_profile add column if not exists
+          match_criteria jsonb not null default '{}'::jsonb;</code>
+          Idempotent. No change to <code>preferences</code>.</dd>
+        <dt><code>server/app/profile/routes.py</code> (changed)</dt>
+        <dd>Add a <code>MatchCriteria</code> Pydantic model (the shape above,
+          with the work-auth enum + arrays, all optional). Add
+          <code>match_criteria</code> to the profile response and to
+          <code>PUT /profile</code>. <code>preferences</code> stays (now means
+          notes).</dd>
+        <dt><code>server/app/profile/db.py</code> (changed)</dt>
+        <dd>Read/write the new <code>match_criteria</code> column
+          (select it; upsert it). Default <code>{}</code> when absent.</dd>
+        <dt><code>server/app/scoring/routes.py</code> (changed)</dt>
+        <dd>Pass <code>profile["match_criteria"]</code> into
+          <code>build_job_part</code> alongside <code>preferences</code>.</dd>
+        <dt><code>server/app/scoring/gemini.py</code> (changed)</dt>
+        <dd><code>build_job_part</code>: serialize populated criteria into a
+          short labelled block (only non-empty fields), then the existing
+          notes. Deterministic formatting — not the prompt rewrite.</dd>
+        <dt><code>server/pyproject.toml</code> (changed)</dt>
+        <dd>Bump to <code>5.0.1</code>.</dd>
+      </dl>
+
+      <h3>Client (v5.0.2)</h3>
+      <dl>
+        <dt><code>options.html</code> (changed)</dt>
+        <dd>Replace the single criteria textarea with the structured form:
+          work-auth select, locations input, term input + length select,
+          work-mode checkboxes, languages input, and the existing textarea
+          relabeled "Additional notes". Update the help tooltip copy.</dd>
+        <dt><code>options.js</code> (changed)</dt>
+        <dd>Read/populate the new fields; build the <code>match_criteria</code>
+          object; send it via <code>PUT /profile</code>; keep the
+          chrome.storage cache in sync. Migrate any local-only
+          <code>preferences</code> into the notes field on first load.</dd>
+        <dt><code>manifest.json</code> (changed)</dt>
+        <dd>Bump to <code>5.0.2</code> (client wiring).</dd>
+      </dl>
+
+      <h3>Close-out (v5.0.3)</h3>
+      <dl>
+        <dt><code>docs/architecture.html</code>,
+          <code>docs/reference/data-model.html</code> (changed)</dt>
+        <dd>Document the <code>match_criteria</code> column/shape and the
+          <code>preferences</code> → notes mapping. Mark this spec
+          <code>done</code>. <code>manifest</code> 5.0.3.</dd>
+      </dl>
+      <p>Version bumps follow ADR 0002: <code>manifest.json</code> matches the
+        commit-message version at each step; <code>pyproject.toml</code> bumps
+        only when backend code ships (v5.0.1).</p>
+    </section>
+
+    <section id="verify">
+      <h2>Verify</h2>
+      <ol>
+        <li>Apply <code>0006</code> → <code>user_profile</code> has a
+          <code>match_criteria</code> JSONB column defaulting to <code>{}</code>;
+          existing rows' <code>preferences</code> are untouched.</li>
+        <li><code>GET /profile</code> returns <code>match_criteria</code> (and
+          <code>preferences</code> as notes); <code>PUT /profile</code> with a
+          full criteria object round-trips and persists. A bad
+          <code>work_authorization</code> value is rejected by the model.</li>
+        <li>Options page shows the structured form; saving writes the criteria
+          server-side; reloading repopulates every field. An existing user's
+          old prose appears in "Additional notes".</li>
+        <li>Run a real scan: the Gemini job part includes the serialized
+          criteria block (verify via a logged prompt or a scan whose verdict
+          reflects, e.g., a work-authorization mismatch). Cost is unchanged in
+          shape (criteria add a few input tokens).</li>
+        <li>Regression: a user with empty criteria scores exactly as before
+          (no criteria block emitted, notes-only behaves like the old
+          preferences).</li>
+      </ol>
+    </section>
+
+    <section id="notes">
+      <h2>Notes</h2>
+      <ul>
+        <li><strong>Open assumption — <code>languages</code>.</strong> Modeled
+          as spoken/working languages (see Goal). Confirm before v5.0.2; if it
+          should be programming languages / tech stack, only the field label
+          and help copy change (the storage is a string array either way).</li>
+        <li><strong>No prompt rewrite here.</strong> v5.0.0 passes criteria
+          into the <em>existing</em> prompt via deterministic serialization.
+          Co-op framing, calibration, and few-shot examples are a separate v5
+          thread (#3), now unblocked by structured inputs + live scoring data.</li>
+        <li><strong>Hard filters deferred.</strong> Auto-Skip on
+          work-authorization mismatch (#4) builds on this column but is its own
+          phase; v5.0.0 only makes the model <em>aware</em> of criteria.</li>
+        <li><strong>Account section / external site untouched.</strong> Held
+          pending the external-site direction (roadmap). v5.0.0 changes the
+          Profile &amp; Context page only.</li>
+        <li><strong>Sub-version slicing.</strong> v5.0.0 docs (spec + ADR +
+          roadmap) → v5.0.1 backend (migration + contract + serialization) →
+          v5.0.2 client (structured form) → v5.0.3 close-out.</li>
+      </ul>
+    </section>
+  </body>
+</html>

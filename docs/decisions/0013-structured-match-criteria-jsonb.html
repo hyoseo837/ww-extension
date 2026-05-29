@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-05-29" />
+    <title>ADR 0013 — Structured match criteria as a JSONB column</title>
+  </head>
+  <body>
+    <h1>ADR 0013 — Structured match criteria as a JSONB column</h1>
+
+    <section id="context">
+      <h2>Context</h2>
+      <p>
+        Through v4, a user's match preferences are a single free-form prose
+        field: <code>user_profile.preferences</code> (text), synced from the
+        options page and prepended to the Gemini prompt by
+        <code>build_job_part()</code> as "Candidate Preferences". v5.0.0
+        (<a href="../specs/v5.0.0-structured-match-criteria.html">spec</a>)
+        replaces that single textarea with structured fields — work
+        authorization, preferred locations, target term + length, work mode,
+        languages — and demotes the prose to an "additional notes" field. The
+        biggest motivation is a reliable <strong>work-authorization</strong>
+        signal for international students, which today is lost in prose.
+      </p>
+      <p>
+        This is foundational: hard filters
+        (<a href="../roadmap.html">v5 thread #4</a>) will auto-Skip postings
+        that exclude the user (e.g. citizenship-required) by reading work
+        authorization, and the exploratory external-site direction may also
+        read and write criteria. So the storage shape is a decision that
+        constrains future work, not a per-phase detail.
+      </p>
+      <p>Two sub-decisions are in play:</p>
+      <ol>
+        <li>
+          <strong>How to store the structured criteria.</strong>
+          <em>Discrete typed columns</em> (one column per field) are
+          directly queryable and Postgres-checkable, but every new or changed
+          field is a migration, and multi-value fields (locations, languages,
+          work modes) need arrays or join tables. <em>A single
+          <code>JSONB</code> column</em> holds the whole evolving object,
+          validated in the app by Pydantic, and is still queryable
+          (<code>match_criteria-&gt;&gt;'work_authorization'</code>) and
+          indexable if a hard filter ever needs it.
+        </li>
+        <li>
+          <strong>What to do with the existing <code>preferences</code>
+          text.</strong> Either rename/migrate it into a new notes column, or
+          keep the column as-is and re-purpose it as the "additional notes"
+          field. The data is identical in both cases — only the label and the
+          prompt framing change.
+        </li>
+      </ol>
+    </section>
+
+    <section id="decision">
+      <h2>Decision</h2>
+      <p>
+        Store the structured criteria as one <strong><code>match_criteria
+        JSONB</code></strong> column on <code>user_profile</code>
+        (<code>not null default '{}'</code>). The object shape is owned and
+        validated by a Pydantic model on the backend — the database enforces
+        only that it is valid JSON. <code>work_authorization</code> is a
+        closed categorical enum (<code>citizen</code> | <code>pr</code> |
+        <code>international</code> | <code>other</code>); the remaining fields
+        are scalars or string arrays (see the spec for the full shape).
+      </p>
+      <p>
+        <strong>Keep the existing <code>preferences</code> text column</strong>
+        and re-purpose it unchanged as the "additional notes" field. No data
+        migration: every existing user's prose simply becomes their notes. The
+        v5.0.0 migration only <code>add column … match_criteria</code>.
+      </p>
+      <p>
+        <code>build_job_part()</code> serializes the populated criteria into a
+        short deterministic labelled block ahead of the notes. The richer
+        prompt work (co-op framing, calibration anchors, few-shot) stays a
+        separate v5 thread — this ADR covers storage and a faithful pass into
+        the existing prompt, not the prompt rewrite.
+      </p>
+    </section>
+
+    <section id="consequences">
+      <h2>Consequences</h2>
+      <ul>
+        <li><strong>+</strong> The criteria object can grow (new fields,
+          changed options) without a schema migration — only the Pydantic
+          model and the UI change. Good fit for a set still being discovered.</li>
+        <li><strong>+</strong> Multi-value fields (locations, languages, work
+          modes) are natural JSON arrays — no array columns or join tables.</li>
+        <li><strong>+</strong> Zero data migration for existing users; the
+          re-purposed <code>preferences</code> column keeps their prose as
+          notes, and old rows read back as <code>match_criteria = {}</code>.</li>
+        <li><strong>+</strong> Hard filters (#4) can still key off work
+          authorization via a JSONB expression, and a
+          <code>->>'work_authorization'</code> expression index can be added
+          later if needed.</li>
+        <li><strong>−</strong> The database can't enforce the criteria shape
+          or the work-auth enum; that contract lives only in the app. A bad
+          writer outside the API could store a malformed object. Acceptable —
+          all writes go through the authenticated <code>PUT /profile</code>.</li>
+        <li><strong>−</strong> Querying/aggregating individual criteria is less
+          ergonomic than typed columns (JSON operators, casts). The product
+          doesn't analytically query criteria today; if that changes, promote
+          hot fields (likely <code>work_authorization</code>) to a generated
+          column.</li>
+        <li><strong>−</strong> Keeping the column name <code>preferences</code>
+          while its meaning narrows to "notes" is a slight naming drift; the
+          spec and data-model reference note the mapping so it isn't
+          surprising.</li>
+      </ul>
+    </section>
+  </body>
+</html>

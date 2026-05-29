@@ -172,9 +172,18 @@
         product to work; it isn't enough for the scoring to be
         <em>trustworthy</em>. v5 is the quality pass.
       </p>
-      <p>Threads (vague plan — concrete slicing decided at phase-start):</p>
+      <p>
+        <strong>Phase-started 2026-05-29.</strong> Sequence chosen by
+        dependency: <strong>structured match criteria</strong> leads (the
+        <strong>v5.0.0</strong> phase — biggest accuracy gap, and it unblocks
+        hard filters), then structured profile, then the prompt rewrite (now
+        that live v4.4–v4.6 scoring data exists to calibrate against), then
+        hard filters. The Account section is deferred — see the external-site
+        direction below. Threads:
+      </p>
       <ul>
-        <li><strong>Structured Custom Match Criteria.</strong> Replace
+        <li><strong>Structured Custom Match Criteria.</strong>
+          <em>(v5.0.0 — first v5 phase.)</em> Replace
           the single textarea with essential structured fields (work
           authorization, preferred locations, target term + length,
           work mode, languages) and demote the existing free-form
@@ -194,12 +203,25 @@
           structured, auto-Skip postings that explicitly exclude the
           user (e.g. US-citizen-only) without spending a credit.
           Catches the worst false-Apply class cheaply.</li>
-        <li><strong>Account section in options page.</strong>
-          Consolidate sign-in / balance / credit history into a
-          dedicated Account area. Promoted from the whiteboard;
-          fits here because the Profile &amp; Context page is being
-          restructured anyway.</li>
+        <li><strong>Account section.</strong> Consolidate sign-in /
+          balance / credit history into a dedicated Account area.
+          <strong>Deferred</strong> out of v5.0.0: likely subsumed by the
+          external-site direction below rather than built into the options
+          page. If that direction doesn't proceed, it falls back to an
+          options-page phase.</li>
       </ul>
+
+      <p>
+        <strong>Exploratory direction — external project website
+        (2026-05-29).</strong> A separate web app (a second frontend on the
+        existing FastAPI backend) for managing the account, CV / profile text,
+        and payment — moving that surface off the extension, which would stay
+        focused on in-page scoring. Not committed and not yet scheduled into a
+        phase; it would reshape where Account (#5), profile management, and the
+        Stripe purchase UI live, so those are held pending this call. Revisit
+        once v5.0.0 ships.
+      </p>
+
       <p>
         Other v5+ candidates still on the table: non-Gemini provider
         support, cover-letter generation, team / recruiter views,
