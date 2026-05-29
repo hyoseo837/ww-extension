@@ -16,6 +16,25 @@ Read in order:
 
 Don't re-derive what these files already say. Don't duplicate them here.
 
+## How to work (phase workflow)
+
+This order is load-bearing — follow it for every phase, not just when asked:
+
+1. **Documentation first.** Before writing any code, write the phase spec
+   (`docs/specs/vX.Y.Z-slug.html`) and an ADR
+   (`docs/decisions/NNNN-slug.html`) for any significant decision. Build the
+   code from them. Treat existing specs/roadmap as user-confirmed; if a phase
+   is vague or involves product / pricing / money calls, clarify scope with
+   the user **before** locking the spec.
+2. **Then implement** what the spec describes — nothing more.
+3. **Commit between phases.** Each sub-version (`vX.Y.Z`) is its own commit,
+   with the version in the message matching `manifest.json` (ADR 0002). Slice
+   the work (backend / client / close-out) the way the spec lays out — don't
+   batch a whole feature into one commit, and don't defer all commits to the
+   end.
+
+(Earlier agents skipped straight to code, and batched commits — don't.)
+
 ## Quick orientation
 
 - `docs/roadmap.html` — vision across major versions
@@ -34,7 +53,9 @@ Don't re-derive what these files already say. Don't duplicate them here.
 
 ## Build / package
 
-No build step. Load `dist/` as unpacked in Chrome for dev.
-`./package.sh` produces the Web Store zip.
+No build step. Load the **repo root** as unpacked in Chrome for dev
+(`manifest.json` is at the root and references `src/`). `dist/` holds only
+the packaged Web Store zips — it is not a loadable unpacked directory.
+`./package.sh` produces the Web Store zip into `dist/`.
 
 Version is in `manifest.json` and MUST match the commit-message version.
