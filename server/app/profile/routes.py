@@ -105,7 +105,9 @@ class ProfileUpdate(BaseModel):
     preferences: str | None = None
     match_criteria: MatchCriteria | None = None
     profile_supplement: list[SupplementEntry] | None = None
-    # profile_json is set by POST /profile/extract, not patched here.
+    # profile_json is normally set by POST /profile/extract; PUT accepts it only
+    # for a full replace (the client uses {} to clear the profile).
+    profile_json: StructuredProfile | None = None
 
 
 @router.get("/profile", response_model=Profile)
@@ -127,6 +129,9 @@ async def put_profile(req: ProfileUpdate, user: CurrentUser) -> Profile:
             [e.model_dump() for e in req.profile_supplement]
             if req.profile_supplement is not None
             else None
+        ),
+        profile_json=(
+            req.profile_json.model_dump() if req.profile_json is not None else None
         ),
     )
     return Profile(**data)

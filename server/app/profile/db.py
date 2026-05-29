@@ -70,34 +70,40 @@ async def upsert_profile(
     preferences: str | None = None,
     match_criteria: dict[str, Any] | None = None,
     profile_supplement: list[Any] | None = None,
+    profile_json: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Upsert. Fields left as None aren't touched; all None is a no-op
-    that still returns the current row. profile_json is not written here —
-    it's set by the extract flow (upsert_profile_json_in_tx)."""
+    that still returns the current row. profile_json is normally set by the
+    extract flow (upsert_profile_json_in_tx); it's accepted here only for a
+    full replace (the client clears the profile by passing {})."""
     # No JSONB codec on the pool, so pass JSON as a string and cast in SQL.
     criteria_json = json.dumps(match_criteria) if match_criteria is not None else None
     supplement_json = (
         json.dumps(profile_supplement) if profile_supplement is not None else None
     )
+    profile_json_str = json.dumps(profile_json) if profile_json is not None else None
     async with pool().acquire() as conn:
         await conn.execute(
             "insert into user_profile "
             "  (user_id, cv_text, preferences, match_criteria, profile_supplement, "
-            "   updated_at) "
+            "   profile_json, updated_at) "
             "values ($1::uuid, coalesce($2, ''), coalesce($3, ''), "
             "        coalesce($4::jsonb, '{}'::jsonb), "
-            "        coalesce($5::jsonb, '[]'::jsonb), now()) "
+            "        coalesce($5::jsonb, '[]'::jsonb), "
+            "        coalesce($6::jsonb, '{}'::jsonb), now()) "
             "on conflict (user_id) do update set "
             "  cv_text            = coalesce($2, user_profile.cv_text), "
             "  preferences        = coalesce($3, user_profile.preferences), "
             "  match_criteria     = coalesce($4::jsonb, user_profile.match_criteria), "
             "  profile_supplement = coalesce($5::jsonb, user_profile.profile_supplement), "
+            "  profile_json       = coalesce($6::jsonb, user_profile.profile_json), "
             "  updated_at         = now()",
             user_id,
             cv_text,
             preferences,
             criteria_json,
             supplement_json,
+            profile_json_str,
         )
     return await get_profile(user_id)
 
