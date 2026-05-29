@@ -5,7 +5,7 @@
     <meta name="project" content="ww-extension" />
     <meta name="type" content="roadmap" />
     <meta name="active-major-version" content="v04" />
-    <meta name="last-updated" content="2026-05-27" />
+    <meta name="last-updated" content="2026-05-28" />
     <title>Roadmap — ww-extension</title>
   </head>
   <body>
@@ -83,7 +83,7 @@
           <code>docs/specs/v4.0.0-restructure.html</code>.
         </li>
         <li>
-          <strong>v4.1 — Backend bootstrap</strong> —
+          <strong>v4.1 — Backend bootstrap</strong> (shipped) —
           <code>server/</code> folder created with FastAPI skeleton
           (auth/, scoring/, billing/, core/) + Dockerfile +
           pyproject.toml; <code>/health</code> live on DO App Platform;
@@ -94,22 +94,22 @@
           <code>docs/specs/v4.1.0-backend-bootstrap.html</code>.
         </li>
         <li>
-          <strong>v4.2 — Auth in the extension</strong> — sign-in via
-          <code>chrome.identity.launchWebAuthFlow</code>, Supabase
-          session JWT stored, sign-out. Extension can authenticate
-          against the backend.
+          <strong>v4.2 — Auth in the extension</strong> (shipped) —
+          sign-in via <code>chrome.identity.launchWebAuthFlow</code>,
+          Supabase session JWT stored, sign-out. Extension can
+          authenticate against the backend.
         </li>
         <li>
-          <strong>v4.3 — Credit ledger</strong> — server-side balance,
-          debit on scan, refund on failure. Extension shows balance.
-          Scoring still uses the extension's own Gemini key in this
-          phase.
+          <strong>v4.3 — Credit ledger</strong> (shipped) —
+          server-side balance, append-only ledger, signup-bonus
+          trigger, extension shows balance.
         </li>
         <li>
-          <strong>v4.4 — Server-side scoring</strong> — Gemini calls
-          move to the backend. Extension sends posting payload,
-          backend returns score. Removes API-key requirement from the
-          extension.
+          <strong>v4.4 — Server-side scoring</strong> (shipped) —
+          Gemini calls (scoring + PDF extract) and the scoring prompt
+          itself moved to the backend; estimate-debit-refund flow on
+          <code>POST /scan</code>; profile lives server-side. Extension
+          no longer holds a Gemini key.
         </li>
         <li>
           <strong>v4.5 — Stripe credit purchase</strong> — Stripe
@@ -137,11 +137,48 @@
     </section>
 
     <section id="future">
-      <h2>Beyond v4</h2>
+      <h2>v5 — Profile structure + scoring quality (planned)</h2>
       <p>
-        No v5 commitments yet. Candidates to consider once v4 stabilizes:
-        non-Gemini provider support, cover-letter generation, team /
-        recruiter views. Update this section when a v5 direction is set.
+        <strong>Direction set 2026-05-28.</strong> v4 ships a
+        functional monetized product but treats user preferences as
+        one free-form prose field and the candidate profile as a raw
+        text dump of the resume PDF. That's enough for the
+        product to work; it isn't enough for the scoring to be
+        <em>trustworthy</em>. v5 is the quality pass.
+      </p>
+      <p>Threads (vague plan — concrete slicing decided at phase-start):</p>
+      <ul>
+        <li><strong>Structured Custom Match Criteria.</strong> Replace
+          the single textarea with essential structured fields (work
+          authorization, preferred locations, target term + length,
+          work mode, languages) and demote the existing free-form
+          prose to an "additional notes" field. Biggest gap today is
+          work-authorization signal for international students.</li>
+        <li><strong>Structured PDF extraction.</strong> Switch the
+          profile from a raw-text blob to a JSON profile
+          (summary / education / experience / skills / projects /
+          languages). Cheaper signal per scan than re-sending resume
+          prose, and sharper matching.</li>
+        <li><strong>Scan-prompt rewrite.</strong> Co-op framing,
+          calibration anchors, few-shot examples — using real
+          disagreements from v4.4 scans as the examples. Wait until
+          v4.4 has produced enough live scoring data to iterate
+          against, not before.</li>
+        <li><strong>Hard filters.</strong> Once preferences are
+          structured, auto-Skip postings that explicitly exclude the
+          user (e.g. US-citizen-only) without spending a credit.
+          Catches the worst false-Apply class cheaply.</li>
+        <li><strong>Account section in options page.</strong>
+          Consolidate sign-in / balance / credit history into a
+          dedicated Account area. Promoted from the whiteboard;
+          fits here because the Profile &amp; Context page is being
+          restructured anyway.</li>
+      </ul>
+      <p>
+        Other v5+ candidates still on the table: non-Gemini provider
+        support, cover-letter generation, team / recruiter views,
+        re-score on demand. No commitment yet — revisit when v5 phase
+        planning starts.
       </p>
     </section>
   </body>
