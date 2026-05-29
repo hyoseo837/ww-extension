@@ -213,6 +213,11 @@
           the profile for scoring. Existing <code>cv_text</code> kept as a
           fallback (no forced re-upload); storage + cutover in
           <a href="decisions/0015-structured-json-profile.html">ADR 0015</a>.
+          The application package is multi-document: the CV is structured,
+          while the grade report, UW co-op work history, and cover letter are
+          captured as raw-text fields on <code>profile_json</code> (v5.1.6
+          follow-up). The options-page field visibility is poor and is
+          deliberately left for the v6 UI redesign.
           See <code>docs/specs/v5.1.0-structured-profile.html</code>.</li>
         <li><strong>Scan-prompt rewrite + richer scoring output.</strong>
           Co-op framing, calibration anchors, few-shot examples from real

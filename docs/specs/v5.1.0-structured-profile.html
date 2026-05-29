@@ -5,7 +5,7 @@
     <meta name="project" content="ww-extension" />
     <meta name="type" content="spec" />
     <meta name="version" content="v5.1.0" />
-    <meta name="status" content="done" />
+    <meta name="status" content="in-progress" />
     <meta name="last-updated" content="2026-05-29" />
     <title>Spec v5.1.0 — Structured profile extraction</title>
   </head>
@@ -44,12 +44,16 @@
         validated by a backend Pydantic model. All fields optional/defaulted so
         a partial object is valid; <code>{}</code> = not yet extracted.</p>
       <pre><code>{
-  "summary":    "string",
-  "education":  [{ "institution", "credential", "field", "grade", "dates" }],
-  "experience": [{ "title", "org", "dates", "description" }],
-  "skills":     ["string"],
-  "projects":   [{ "title", "description" }],
-  "languages":  ["string"]    // spoken/working, not programming
+  "summary":      "string",
+  "education":    [{ "institution", "credential", "field", "grade", "dates" }],
+  "experience":   [{ "title", "org", "dates", "description" }],
+  "skills":       ["string"],
+  "projects":     [{ "title", "description" }],
+  "languages":    ["string"],  // spoken/working, not programming
+  // raw-text dumps of the package's other documents (v5.1.6 follow-up):
+  "grade_report": "string",    // transcript, verbatim
+  "coop_history": "string",    // UW co-op work-history summary, verbatim
+  "cover_letter": "string"     // verbatim, if present
 }</code></pre>
 
       <h3>The profile_supplement array</h3>
@@ -67,6 +71,25 @@
         their existing blob and upgrade to JSON the next time they extract.
         <code>profile_supplement</code> is always serialized alongside whichever
         profile source is used.</p>
+
+      <h3>Follow-up — full application-package extraction (v5.1.6)</h3>
+      <p>
+        The initial extraction (v5.1.1) only pulled <strong>CV</strong>-shaped
+        fields, but a WaterlooWorks application package PDF bundles several
+        documents: a résumé/CV, a grade report (transcript), a UW co-op
+        work-history summary, and sometimes a cover letter. The CV stays
+        structured; the other three are captured as <strong>raw text</strong>
+        (they don't need structure) in three new <code>profile_json</code>
+        string fields — <code>grade_report</code>, <code>coop_history</code>,
+        <code>cover_letter</code> — and appended to the scan's Candidate Profile
+        block. No DB migration (the JSONB column grows under the same Pydantic
+        ownership, ADR 0015); only the model, the extraction prompt/schema, and
+        the serializer change, plus a minimal read-only render of the three raw
+        sections. <strong>UI:</strong> the options-page form's poor
+        field-visibility is a known issue but is deliberately left as-is — the
+        whole profile/criteria UI is slated for a redesign in v6, so this
+        follow-up keeps the existing pattern and adds no UX polish.
+      </p>
     </section>
 
     <section id="files">
@@ -174,6 +197,11 @@
           fallback, unchanged from v5.0.</li>
         <li>Measure per-scan input tokens for a JSON profile vs the equivalent
           raw <code>cv_text</code> — expect ≤.</li>
+        <li><em>(v5.1.6)</em> Extract a full application package (CV + grade
+          report + co-op history + cover letter) → <code>profile_json</code>
+          gains populated <code>grade_report</code>, <code>coop_history</code>,
+          and <code>cover_letter</code> raw text; they render read-only and feed
+          the scan context. A CV-only package leaves them empty.</li>
       </ol>
     </section>
 
