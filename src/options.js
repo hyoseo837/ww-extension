@@ -92,7 +92,8 @@ const esc = s => String(s == null ? '' : s).replace(
 
 function profileHasContent(p) {
   return !!(p && (p.summary || (p.education || []).length || (p.experience || []).length ||
-    (p.skills || []).length || (p.projects || []).length || (p.languages || []).length));
+    (p.skills || []).length || (p.projects || []).length || (p.languages || []).length ||
+    p.grade_report || p.coop_history || p.cover_letter));
 }
 
 const section = (label, inner) =>
@@ -115,6 +116,11 @@ function profileSectionsHtml(p) {
     entry(esc(pr.title), esc(pr.description))).join('')));
   if ((p.languages || []).length) out.push(section('Languages',
     `<div class="profile-chips">${esc(p.languages.join(', '))}</div>`));
+  // Raw-text sections from the package's other documents (v5.1.6).
+  [['grade_report', 'Grade Report'], ['coop_history', 'Co-op Work History'],
+   ['cover_letter', 'Cover Letter']].forEach(([k, label]) => {
+    if (p[k]) out.push(section(label, `<pre class="profile-raw">${esc(p[k])}</pre>`));
+  });
   return out.join('');
 }
 
