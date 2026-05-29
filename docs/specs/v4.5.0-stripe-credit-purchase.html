@@ -323,6 +323,17 @@
           need it.
         </li>
         <li>
+          <strong>StripeObject has no <code>.get()</code> (v4.5.3 fix).</strong>
+          In stripe-python v15, <code>event["data"]["object"]</code> and
+          its <code>metadata</code> are <code>StripeObject</code>s, which
+          support subscript (<code>session["payment_status"]</code>) and
+          attribute access but <em>not</em> <code>dict.get()</code>.
+          Calling <code>.get()</code> raises <code>AttributeError</code>,
+          which 500s the webhook (and makes Stripe retry forever).
+          Caught in local testing before deploy; the handler uses
+          subscript access throughout.
+        </li>
+        <li>
           <strong>Why grant on webhook, not redirect.</strong> The user
           can close the success tab or never reach it; the
           <code>checkout.session.completed</code> webhook is the only

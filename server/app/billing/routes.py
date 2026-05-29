@@ -46,9 +46,11 @@ async def stripe_webhook(request: Request) -> dict[str, bool]:
         raise HTTPException(status_code=400, detail="invalid_signature") from exc
 
     if event["type"] == "checkout.session.completed":
+        # event.data.object is a stripe.StripeObject — use subscript access,
+        # not dict.get() (StripeObject has no .get()).
         session = event["data"]["object"]
-        if session.get("payment_status") == "paid":
-            meta = session.get("metadata") or {}
+        if session["payment_status"] == "paid":
+            meta = session["metadata"] or {}
             await db.grant_purchase(
                 user_id=meta["user_id"],
                 credits=Decimal(meta["credits"]),
@@ -56,7 +58,7 @@ async def stripe_webhook(request: Request) -> dict[str, bool]:
             )
             log.info(
                 "purchase_granted user=%s credits=%s event=%s",
-                meta.get("user_id"), meta.get("credits"), event["id"],
+                meta["user_id"], meta["credits"], event["id"],
             )
 
     # 200 for handled and ignored events so Stripe stops retrying. A raised
