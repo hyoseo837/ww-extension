@@ -21,6 +21,29 @@ moved out or dropped.
 
 ---
 
-## 2026-05-27
+## Existing Bugs
 
-- (add ideas here)
+-
+
+## Future features
+
+- Diffrent models (Gemini pro, Claude Haiku, Sonnet, Opus, Gpt 5.5, mini ...)
+- Admin page (Manage users, credit gift)
+- re-score feature
+
+## fixes needed
+
+- JavaScript to TypeScript
+- upgrade prompt for job scan
+- upgrade prompt for upload application package (not just extracting text)
+
+## Possible questions
+
+- Add project website for account setting
+
+## Solved
+
+- ~~add account section in option page~~ — shipped (v4.2–v4.5): Account
+  card in options page with sign-in, email, balance, Buy credits, sign-out.
+  Further consolidation (dedicated area + credit history) still tracked as
+  v5 roadmap thread #5, possibly subsumed by the external-site direction.

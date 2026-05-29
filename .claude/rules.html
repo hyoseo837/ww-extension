@@ -83,7 +83,7 @@
     </p>
     <ul>
       <li>
-        <strong>Current (v04+)</strong>: <code>docs/README.html</code>
+        <strong>Current (v05+)</strong>: <code>docs/README.html</code>
         (index), <code>docs/roadmap.html</code> (vision),
         <code>docs/architecture.html</code> (living system doc),
         <code>docs/specs/vX.Y.Z-slug.html</code> (per-phase specs),
@@ -91,11 +91,16 @@
         <code>docs/reference/</code> (stable lookup).
       </li>
       <li>
-        <strong>Archived (v01, v02, v03)</strong>:
-        <code>docs/archive/vNN/{plan,impl,history}.html</code>. Frozen
-        historical reference using the older three-doc shape. Do not
-        extend. See <code>docs/decisions/0005-doc-architecture-spec-adr.html</code>
-        for the architecture change.
+        <strong>Archived (shipped majors)</strong>:
+        <code>docs/archive/vNN/</code>. v01–v03 use the older
+        <code>plan/impl/history</code> three-doc shape; v04+ keep their
+        per-phase specs as-is, relocated here when the major ships. Frozen,
+        read-only history — don't edit archived docs, but the archive itself
+        grows by one folder per shipped major. See
+        <code>docs/decisions/0005-doc-architecture-spec-adr.html</code> (the
+        spec+ADR architecture) and
+        <code>docs/decisions/0014-archive-shipped-major-version-specs.html</code>
+        (the archive-on-ship policy).
       </li>
     </ul>
     <p>

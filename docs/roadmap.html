@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="project" content="ww-extension" />
     <meta name="type" content="roadmap" />
-    <meta name="active-major-version" content="v04" />
+    <meta name="active-major-version" content="v05" />
     <meta name="last-updated" content="2026-05-29" />
     <title>Roadmap — ww-extension</title>
   </head>
@@ -13,8 +13,9 @@
 
     <p>
       Vision across major versions. Living document — updated in place
-      across version bumps, not archived. For shipped phase detail see
-      <code>docs/specs/</code>; for system architecture see
+      across version bumps, not archived. For active-version phase detail see
+      <code>docs/specs/</code>; shipped majors' specs are archived under
+      <code>docs/archive/vNN/</code> (ADR 0014); for system architecture see
       <code>docs/architecture.html</code>.
     </p>
 
@@ -38,8 +39,17 @@
       </dl>
     </section>
 
-    <section id="active" data-status="in-progress">
-      <h2>v4 — Monetization (active)</h2>
+    <section id="v4" data-status="done">
+      <h2>v4 — Monetization (shipped)</h2>
+
+      <p>
+        <strong>Shipped and frozen.</strong> All v4 phase specs are archived
+        under <code>docs/archive/v04/</code> (kept in spec format — see
+        <a href="decisions/0014-archive-shipped-major-version-specs.html">ADR 0014</a>);
+        the cross-cutting decisions remain in <code>docs/decisions/</code>.
+        This section is retained for the vision/rationale; per-phase detail
+        lives in the archived specs.
+      </p>
 
       <p>
         <strong>Goal:</strong> turn the extension into a monetizable service.
@@ -81,7 +91,7 @@
         <li>
           <strong>v4.0 — Doc restructure + v4 opening</strong> (shipped
           as v4.0.0 and v4.0.1). See
-          <code>docs/specs/v4.0.0-restructure.html</code>.
+          <code>docs/archive/v04/v4.0.0-restructure.html</code>.
         </li>
         <li>
           <strong>v4.1 — Backend bootstrap</strong> (shipped) —
@@ -92,7 +102,7 @@
           <code>api.html</code> + <code>architecture.html</code>
           updated; <code>package.sh</code> excludes <code>server/</code>
           from the Web Store zip. No extension code changes. See
-          <code>docs/specs/v4.1.0-backend-bootstrap.html</code>.
+          <code>docs/archive/v04/v4.1.0-backend-bootstrap.html</code>.
         </li>
         <li>
           <strong>v4.2 — Auth in the extension</strong> (shipped) —
@@ -121,7 +131,7 @@
           activation and swap the DigitalOcean env vars to live values
           (<code>sk_live_…</code> + a live-mode webhook secret); no code
           change. See
-          <code>docs/specs/v4.5.0-stripe-credit-purchase.html</code> and
+          <code>docs/archive/v04/v4.5.0-stripe-credit-purchase.html</code> and
           <a href="decisions/0012-stripe-checkout-webhook-grants.html">ADR 0012</a>.
         </li>
         <li>
@@ -133,7 +143,7 @@
           wrong welcome/options copy to show approximate scan counts and a
           pricing explainer; added a sidebar "Buy credits" nudge when a scan
           batch halts out of credits. See
-          <code>docs/specs/v4.6.0-free-paid-tier-ux.html</code>.
+          <code>docs/archive/v04/v4.6.0-free-paid-tier-ux.html</code>.
         </li>
         <li>
           <strong>v4.7 — Tunable constants consolidation</strong> (shipped) —
@@ -144,7 +154,7 @@
           cost estimate can't desync from the call); default model and scoring
           temperatures are named constants; the signup bonus is a named
           constant in the trigger. No behavior change. Client left as-is. See
-          <code>docs/specs/v4.7.0-tunable-constants.html</code>.
+          <code>docs/archive/v04/v4.7.0-tunable-constants.html</code>.
         </li>
       </ol>
 
@@ -162,8 +172,8 @@
       </p>
     </section>
 
-    <section id="future">
-      <h2>v5 — Profile structure + scoring quality (planned)</h2>
+    <section id="active" data-status="in-progress">
+      <h2>v5 — Profile structure + scoring quality (active)</h2>
       <p>
         <strong>Direction set 2026-05-28.</strong> v4 ships a
         functional monetized product but treats user preferences as
@@ -178,8 +188,8 @@
         <strong>v5.0.0</strong> phase — biggest accuracy gap, and it unblocks
         hard filters), then structured profile, then the prompt rewrite (now
         that live v4.4–v4.6 scoring data exists to calibrate against), then
-        hard filters. The Account section is deferred — see the external-site
-        direction below. Threads:
+        hard filters. (Account-management and external-web-surface work moved
+        to v6 — see below.) Threads:
       </p>
       <ul>
         <li><strong>Structured Custom Match Criteria.</strong>
@@ -193,40 +203,46 @@
           profile from a raw-text blob to a JSON profile
           (summary / education / experience / skills / projects /
           languages). Cheaper signal per scan than re-sending resume
-          prose, and sharper matching.</li>
-        <li><strong>Scan-prompt rewrite.</strong> Co-op framing,
-          calibration anchors, few-shot examples — using real
-          disagreements from v4.4 scans as the examples. Wait until
-          v4.4 has produced enough live scoring data to iterate
-          against, not before.</li>
+          prose, and sharper matching. Also lets the user add
+          <strong>supplementary experience/projects</strong> as structured
+          entries (title + description) for things a one-page resume omits,
+          merged into the JSON profile.</li>
+        <li><strong>Scan-prompt rewrite + richer scoring output.</strong>
+          Co-op framing, calibration anchors, few-shot examples from real
+          v4.4 disagreements. Moves scoring to a <strong>1–100 scale</strong>
+          with a <strong>5-tier verdict ladder</strong> (Strong Apply 85–100 /
+          Apply 70–84 / Consider 50–69 / Unlikely 30–49 / Skip 1–29), and
+          returns a <strong>structured per-aspect breakdown</strong> — the
+          specific criteria/profile points that gained or lost points (e.g.
+          "prefers Toronto, job in Québec"; "AWS preferred, not in profile"),
+          surfaced in the sidebar. Aspect attribution depends on structured
+          criteria (#1) and profile (#2); calibration waits on enough live
+          scoring data, which v4.4+ now provides.</li>
         <li><strong>Hard filters.</strong> Once preferences are
           structured, auto-Skip postings that explicitly exclude the
           user (e.g. US-citizen-only) without spending a credit.
           Catches the worst false-Apply class cheaply.</li>
-        <li><strong>Account section.</strong> Consolidate sign-in /
-          balance / credit history into a dedicated Account area.
-          <strong>Deferred</strong> out of v5.0.0: likely subsumed by the
-          external-site direction below rather than built into the options
-          page. If that direction doesn't proceed, it falls back to an
-          options-page phase.</li>
       </ul>
+    </section>
 
+    <section id="future">
+      <h2>v6 — Web surface + account management (planned)</h2>
       <p>
-        <strong>Exploratory direction — external project website
-        (2026-05-29).</strong> A separate web app (a second frontend on the
-        existing FastAPI backend) for managing the account, CV / profile text,
-        and payment — moving that surface off the extension, which would stay
-        focused on in-page scoring. Not committed and not yet scheduled into a
-        phase; it would reshape where Account (#5), profile management, and the
-        Stripe purchase UI live, so those are held pending this call. Revisit
-        once v5.0.0 ships.
+        <strong>Exploratory (2026-05-29) — deferred out of v5.</strong> A
+        separate web app (a second frontend on the existing FastAPI backend)
+        for managing the account, CV / profile text, and payment — moving that
+        surface off the extension, which stays focused on in-page scoring. This
+        absorbs the older "consolidate the options-page Account section" idea:
+        rather than build a dedicated Account area into the options page,
+        account / balance / credit-history / profile / payment management would
+        live on the web app. Not committed; if the web direction doesn't
+        proceed, the fallback is an options-page Account consolidation. Revisit
+        once the v5 quality pass ships.
       </p>
-
       <p>
-        Other v5+ candidates still on the table: non-Gemini provider
-        support, cover-letter generation, team / recruiter views,
-        re-score on demand. No commitment yet — revisit when v5 phase
-        planning starts.
+        Further-out candidates still on the table (v6+): non-Gemini provider
+        support, cover-letter generation, team / recruiter views, re-score on
+        demand. No commitment yet — revisit at phase-planning time.
       </p>
     </section>
   </body>

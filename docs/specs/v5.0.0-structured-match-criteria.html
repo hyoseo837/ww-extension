@@ -88,7 +88,7 @@
           direction. (Already drafted with this commit.)</dd>
       </dl>
 
-      <h3>Backend (v5.0.1)</h3>
+      <h3>Backend (v5.0.2)</h3>
       <dl>
         <dt><code>server/migrations/0006_match_criteria.sql</code> (added)</dt>
         <dd><code>alter table public.user_profile add column if not exists
@@ -111,10 +111,10 @@
           short labelled block (only non-empty fields), then the existing
           notes. Deterministic formatting — not the prompt rewrite.</dd>
         <dt><code>server/pyproject.toml</code> (changed)</dt>
-        <dd>Bump to <code>5.0.1</code>.</dd>
+        <dd>Bump to <code>5.0.2</code>.</dd>
       </dl>
 
-      <h3>Client (v5.0.2)</h3>
+      <h3>Client (v5.0.3)</h3>
       <dl>
         <dt><code>options.html</code> (changed)</dt>
         <dd>Replace the single criteria textarea with the structured form:
@@ -127,20 +127,20 @@
           chrome.storage cache in sync. Migrate any local-only
           <code>preferences</code> into the notes field on first load.</dd>
         <dt><code>manifest.json</code> (changed)</dt>
-        <dd>Bump to <code>5.0.2</code> (client wiring).</dd>
+        <dd>Bump to <code>5.0.3</code> (client wiring).</dd>
       </dl>
 
-      <h3>Close-out (v5.0.3)</h3>
+      <h3>Close-out (v5.0.4)</h3>
       <dl>
         <dt><code>docs/architecture.html</code>,
           <code>docs/reference/data-model.html</code> (changed)</dt>
         <dd>Document the <code>match_criteria</code> column/shape and the
           <code>preferences</code> → notes mapping. Mark this spec
-          <code>done</code>. <code>manifest</code> 5.0.3.</dd>
+          <code>done</code>. <code>manifest</code> 5.0.4.</dd>
       </dl>
       <p>Version bumps follow ADR 0002: <code>manifest.json</code> matches the
         commit-message version at each step; <code>pyproject.toml</code> bumps
-        only when backend code ships (v5.0.1).</p>
+        only when backend code ships (v5.0.2).</p>
     </section>
 
     <section id="verify">
@@ -170,7 +170,7 @@
       <h2>Notes</h2>
       <ul>
         <li><strong>Open assumption — <code>languages</code>.</strong> Modeled
-          as spoken/working languages (see Goal). Confirm before v5.0.2; if it
+          as spoken/working languages (see Goal). Confirm before v5.0.3; if it
           should be programming languages / tech stack, only the field label
           and help copy change (the storage is a string array either way).</li>
         <li><strong>No prompt rewrite here.</strong> v5.0.0 passes criteria
@@ -184,8 +184,9 @@
           pending the external-site direction (roadmap). v5.0.0 changes the
           Profile &amp; Context page only.</li>
         <li><strong>Sub-version slicing.</strong> v5.0.0 docs (spec + ADR +
-          roadmap) → v5.0.1 backend (migration + contract + serialization) →
-          v5.0.2 client (structured form) → v5.0.3 close-out.</li>
+          roadmap) → <em>v5.0.1 was v4-archive housekeeping, not part of this
+          feature</em> → v5.0.2 backend (migration + contract + serialization)
+          → v5.0.3 client (structured form) → v5.0.4 close-out.</li>
       </ul>
     </section>
   </body>
