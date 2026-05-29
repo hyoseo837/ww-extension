@@ -113,10 +113,14 @@
           no longer holds a Gemini key.
         </li>
         <li>
-          <strong>v4.5 — Stripe credit purchase</strong> (code
-          complete; live Stripe verification pending account setup) —
-          Stripe Checkout integration, webhook-driven credit grants,
-          purchase UI in options page. See
+          <strong>v4.5 — Stripe credit purchase</strong> (shipped;
+          verified end-to-end in Stripe <em>test</em> mode, including the
+          live extension Buy flow) — Stripe Checkout integration,
+          webhook-driven credit grants, purchase UI in options page.
+          Remaining for real payments: complete Stripe account
+          activation and swap the DigitalOcean env vars to live values
+          (<code>sk_live_…</code> + a live-mode webhook secret); no code
+          change. See
           <code>docs/specs/v4.5.0-stripe-credit-purchase.html</code> and
           <a href="decisions/0012-stripe-checkout-webhook-grants.html">ADR 0012</a>.
         </li>
