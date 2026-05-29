@@ -1,41 +1,63 @@
 """Per-token credit pricing.
 
-1 credit = $0.01 CAD. Rates below are credits-per-token, pre-computed
-as `USD_per_token × (USD→CAD FX) × margin / 0.01`.
+1 credit = $0.01 CAD. The credit-per-token rates are *derived* at import
+from Google's raw USD list prices and three dials — the FX rate, the
+credit value, and `MARGIN`:
+
+    credits_per_token = USD_per_Mtok × (USD→CAD FX) × MARGIN
+                        / (CAD per credit) / 1e6
+
+To re-price, edit `MARGIN` (one number) — not the individual rates.
 
 Calibration snapshot
 --------------------
-Date:    2026-05-28
+Date:    2026-05-29
 Source:  https://ai.google.dev/pricing
 USD→CAD: 1.37
-Margin:  2.0× over raw Google rates (covers DO + Supabase fixed costs
-         + FX cushion + actual margin; revisit when real cost data
-         lands from the v4.4.0 logs).
+Margin:  5.0× over raw Google rates (covers DO + Supabase fixed costs
+         + FX cushion + actual margin). Rebalanced from 2.0× → 5.0× in
+         v4.6 so the 100-credit signup bonus buys ~200 Flash scans (a
+         meaningful trial) instead of a whole co-op term: at 2.0× the
+         real v4.4 logs put a Flash scan at ~0.18 credits (~550 scans
+         per bonus), too generous to ever drive a purchase. See spec
+         v4.6.0 Notes for the rebalance rationale.
 
-Updating a rate is a code review + redeploy on purpose — see spec
+Updating the price is a code review + redeploy on purpose — see spec
 v4.4.0 Notes ("Pricing constants live in code, not env").
 """
 
 from decimal import Decimal
 
-# Per-million-token USD rates from the snapshot above.
-# Kept here as comments alongside the derived credit rates so future
-# diffs of this file show both numerators side-by-side.
-#
-# gemini-2.5-flash:  input $0.30  · cached $0.075 · output $2.50  per 1M
-# gemini-2.5-pro:    input $1.25  · cached $0.31  · output $10.00 per 1M
-
-_RATES: dict[str, dict[str, Decimal]] = {
+# Google's published per-million-token list prices, in USD.
+_USD_PER_MTOK: dict[str, dict[str, Decimal]] = {
     "gemini-2.5-flash": {
-        "input":        Decimal("0.0000822"),  # 0.30  * 1.37 * 2 / 0.01 / 1e6
-        "cached_input": Decimal("0.0000206"),  # 0.075 * 1.37 * 2 / 0.01 / 1e6
-        "output":       Decimal("0.0006850"),  # 2.50  * 1.37 * 2 / 0.01 / 1e6
+        "input":        Decimal("0.30"),
+        "cached_input": Decimal("0.075"),
+        "output":       Decimal("2.50"),
     },
     "gemini-2.5-pro": {
-        "input":        Decimal("0.0003425"),  # 1.25  * 1.37 * 2 / 0.01 / 1e6
-        "cached_input": Decimal("0.0000850"),  # 0.31  * 1.37 * 2 / 0.01 / 1e6
-        "output":       Decimal("0.0027400"),  # 10.00 * 1.37 * 2 / 0.01 / 1e6
+        "input":        Decimal("1.25"),
+        "cached_input": Decimal("0.31"),
+        "output":       Decimal("10.00"),
     },
+}
+
+USD_TO_CAD = Decimal("1.37")       # FX snapshot (see docstring date)
+CAD_PER_CREDIT = Decimal("0.01")   # 1 credit = $0.01 CAD
+
+# The margin dial: multiplies raw Google cost to cover DO + Supabase
+# fixed costs, FX cushion, and actual margin. THIS is the number to edit
+# when re-pricing. v4.6 raised it 2.0 → 5.0 so the 100-credit signup
+# bonus buys ~200 Flash scans instead of a whole co-op term.
+MARGIN = Decimal("5.0")
+
+# Credit-per-token rates, derived from the dials above.
+_RATES: dict[str, dict[str, Decimal]] = {
+    model: {
+        unit: usd * USD_TO_CAD * MARGIN / CAD_PER_CREDIT / Decimal(1_000_000)
+        for unit, usd in units.items()
+    }
+    for model, units in _USD_PER_MTOK.items()
 }
 
 # Conservative chars-per-token used for the pre-call estimate. English
