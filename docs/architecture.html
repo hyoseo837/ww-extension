@@ -72,7 +72,8 @@
       <h4>Storage</h4>
       <p>See <code>reference/data-model.html</code> for the full key list
         with schemas. Summary: settings (apiKey, model, cvText,
-        preferences), theme, cumulative token usage, score map per posting,
+        preferences/notes + structured matchCriteria), theme, cumulative
+        token usage, score map per posting,
         ordered posting-id list for cross-page navigation,
         <code>auth</code> (Supabase session, v4.2.1+) and
         <code>creditBalance</code> (last-known balance from
@@ -179,7 +180,8 @@
           (<code>1 credit = $0.01 CAD</code>).</li>
         <li><code>GET /profile</code>, <code>PUT /profile</code>
           (v4.4) — authenticated. Read/upsert the user's server-side
-          CV text + preferences.</li>
+          CV text, structured match criteria (<code>match_criteria</code>
+          JSONB, v5.0.0), and free-form notes.</li>
         <li><code>POST /scan</code>, <code>POST /profile/extract</code>
           (v4.4) — authenticated. Billable Gemini calls;
           estimate-debit-call-refund against the ledger, idempotent on

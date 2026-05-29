@@ -36,8 +36,16 @@
         User-facing name: "application package."</dd>
 
       <dt><code>preferences</code></dt>
-      <dd><strong>Type:</strong> <code>string</code>. Soft preferences /
-        custom match criteria (free-form prose).</dd>
+      <dd><strong>Type:</strong> <code>string</code>. As of v5.0.0 this is the
+        "Additional Notes" field — free-form prose the scorer weighs alongside
+        the structured criteria below. Column/key name unchanged so old prose
+        carries over (ADR 0013); only the label and prompt framing narrowed.</dd>
+
+      <dt><code>matchCriteria</code> (v5.0.4)</dt>
+      <dd><strong>Type:</strong> structured match-criteria object, cached from
+        <code>GET /profile</code> (server is authoritative). Shape mirrors the
+        server <code>user_profile.match_criteria</code> column documented
+        below.</dd>
 
       <dt><code>theme</code></dt>
       <dd><strong>Type:</strong> <code>'dark' | 'light'</code>. Default
@@ -190,6 +198,60 @@
       above. ADR 0012 chose this over a dedicated
       <code>stripe_event</code> table (minimal-code; add one later if
       full payment-funnel auditing is ever needed).
+    </p>
+
+    <h3 id="user_profile"><code>public.user_profile</code></h3>
+    <p>
+      Server-authoritative profile, one row per user (migration 0003, v4.4).
+      All writes go through the authenticated <code>PUT /profile</code>;
+      <code>POST /profile/extract</code> sets <code>cv_text</code>.
+    </p>
+    <dl>
+      <dt><code>user_id uuid primary key references auth.users(id) on delete cascade</code></dt>
+      <dd>Owner. Profile row is removed if the auth user is deleted.</dd>
+
+      <dt><code>cv_text text not null default ''</code></dt>
+      <dd>Extracted profile text from the user's uploaded PDF. Primary
+        scoring context.</dd>
+
+      <dt><code>preferences text not null default ''</code></dt>
+      <dd>Free-form prose. As of v5.0.0 its meaning narrows to the
+        "Additional Notes" field; the column name is kept (ADR 0013) so
+        existing users' prose carries over with no data migration.</dd>
+
+      <dt><code>match_criteria jsonb not null default '{}'</code>
+        (v5.0.0, migration 0006)</dt>
+      <dd>Structured match criteria. Shape is owned/validated by the
+        backend <code>MatchCriteria</code> Pydantic model — the DB enforces
+        only valid JSON (ADR 0013). Fields:
+        <ul>
+          <li><code>work_authorization</code> — enum
+            <code>citizen</code> | <code>pr</code> |
+            <code>international</code> | <code>other</code> | unset. An
+            eligibility fact, not weighted.</li>
+          <li><code>preferred_locations</code>, <code>work_modes</code>,
+            <code>target_term</code>, <code>target_length</code>,
+            <code>languages</code> (spoken/working, not programming) — each a
+            <code>WeightedCriterion</code>: a <code>weight</code>
+            (<code>must</code> | <code>strong</code> |
+            <code>nice-to-have</code>) plus four string-array tiers
+            <code>preferred</code> / <code>acceptable</code> /
+            <code>avoid</code> / <code>excluded</code>.</li>
+        </ul>
+        <code>build_job_part()</code> serializes populated criteria into a
+        short labelled block ahead of the notes; empty criteria emit nothing,
+        so an empty-criteria scan is byte-identical to the pre-v5 prompt.
+        Credit-free hard-Skip on an <code>excluded</code> match or work-auth
+        ineligibility is a later v5 thread (#4) — v5.0.0 only makes the model
+        aware of the criteria.</dd>
+
+      <dt><code>updated_at timestamptz not null default now()</code></dt>
+      <dd>Touched on every upsert.</dd>
+    </dl>
+    <p>
+      <strong>RLS:</strong> enabled with own-row select/modify policies; the
+      backend uses service-role credentials and bypasses RLS for its own
+      queries.
     </p>
   </body>
 </html>
