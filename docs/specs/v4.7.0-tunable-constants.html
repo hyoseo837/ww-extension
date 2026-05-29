@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v4.7.0" />
+    <meta name="status" content="done" />
+    <meta name="last-updated" content="2026-05-29" />
+    <title>Spec v4.7 — Tunable constants consolidation</title>
+  </head>
+  <body>
+    <h1>Spec v4.7 — Tunable constants consolidation</h1>
+
+    <section id="goal">
+      <h2>Goal</h2>
+      <p>
+        Follow-up to the v4.6 <code>MARGIN</code> dial. Several other
+        adjustable knobs were either <strong>duplicated across files</strong>
+        (so changing one silently desyncs the other) or buried as bare
+        literals. v4.7 pulls the server-side ones into single named constants
+        so they are safe to adjust. No behavior change — every value keeps its
+        current number.
+      </p>
+      <p>The duplications that mattered:</p>
+      <ul>
+        <li><strong>Output-token caps</strong> were defined twice: the scan
+          cap (<code>1024</code>) in both <code>pricing.py</code>
+          (<code>DEFAULT_MAX_OUTPUT_TOKENS</code>) and <code>gemini.py</code>;
+          the extract cap (<code>8192</code>) likewise. <code>pricing.py</code>
+          uses its copy for the pre-debit estimate, <code>gemini.py</code> uses
+          its copy for the actual call — so a change to one without the other
+          makes the cost estimate wrong (over- or under-debiting before the
+          refund corrects it). This is the real footgun.</li>
+        <li><strong>Default model</strong> (<code>"gemini-2.5-flash"</code>)
+          appeared as a bare literal in <code>scoring/routes.py</code>'s
+          <code>ExtractRequest</code>.</li>
+        <li><strong>Scoring temperatures</strong> (<code>0.2</code> for scan,
+          <code>0</code> for extract) were inline literals in
+          <code>gemini.py</code>.</li>
+        <li><strong>Signup bonus</strong> (<code>100</code> credits) was a bare
+          literal inside the <code>grant_signup_bonus()</code> plpgsql trigger.</li>
+      </ul>
+      <p>
+        <strong>Scope decisions (confirmed with the user 2026-05-29):</strong>
+      </p>
+      <ul>
+        <li><strong>Client left as-is.</strong> The client model fallback
+          (<code>'gemini-2.5-flash'</code> in <code>content.js</code>,
+          <code>background.js</code>, <code>options.js</code>) is a low-risk
+          fallback — the real source is the options-page model selector — and
+          the client has no shared-module system (plain scripts, no
+          <code>"type":"module"</code>), so true single-sourcing would mean an
+          ES-module restructure. Not worth it now.</li>
+        <li><strong>Signup bonus stays in SQL</strong> as a <em>named
+          constant</em> inside the trigger function (a <code>declare … constant
+          int := 100</code>), not moved to the app layer. Changing it is still
+          a migration, but the amount is no longer buried in the
+          <code>insert</code>.</li>
+      </ul>
+    </section>
+
+    <section id="files">
+      <h2>Files</h2>
+      <dl>
+        <dt><code>server/app/billing/pricing.py</code> (changed)</dt>
+        <dd>Add a <code>DEFAULT_MODEL = "gemini-2.5-flash"</code> constant
+          (sits with <code>supported_models()</code> / <code>_RATES</code>;
+          it is one of the <code>_RATES</code> keys). Update the comments on
+          <code>DEFAULT_MAX_OUTPUT_TOKENS</code> /
+          <code>DEFAULT_EXTRACT_MAX_OUTPUT_TOKENS</code> to say
+          <code>gemini.py</code> now imports them (this module is the single
+          source).</dd>
+
+        <dt><code>server/app/scoring/gemini.py</code> (changed)</dt>
+        <dd>Import <code>DEFAULT_MAX_OUTPUT_TOKENS</code> and
+          <code>DEFAULT_EXTRACT_MAX_OUTPUT_TOKENS</code> from
+          <code>app.billing.pricing</code> and use them as the
+          <code>max_output_tokens</code> defaults in <code>score()</code>
+          (was <code>1024</code>) and <code>extract_pdf()</code> (was
+          <code>8192</code>) — removing the duplicate literals.
+          (<code>pricing.py</code> imports only <code>decimal</code>, so no
+          import cycle.) Add module-level <code>_SCORE_TEMPERATURE = 0.2</code>
+          and <code>_EXTRACT_TEMPERATURE = 0.0</code> and reference them in the
+          two <code>generationConfig</code>/<code>generation_config</code>
+          blocks.</dd>
+
+        <dt><code>server/app/scoring/routes.py</code> (changed)</dt>
+        <dd><code>ExtractRequest.model</code> default
+          <code>"gemini-2.5-flash"</code> → <code>pricing.DEFAULT_MODEL</code>
+          (<code>pricing</code> is already imported).
+          <code>ScanRequest.model</code> is unchanged — it has no default
+          (the client always sends one).</dd>
+
+        <dt><code>server/migrations/0005_signup_bonus_constant.sql</code> (added)</dt>
+        <dd><code>create or replace function public.grant_signup_bonus()</code>
+          with the body unchanged except a declared
+          <code>bonus_amount constant int := 100</code> used in the
+          <code>insert</code>. Same <code>security definer</code> /
+          <code>search_path</code>; the trigger itself is untouched. Migrations
+          are append-only — 0001 is not edited.</dd>
+
+        <dt><code>server/pyproject.toml</code>, <code>manifest.json</code> (changed)</dt>
+        <dd>Bump to <code>4.7.0</code>.</dd>
+
+        <dt><code>docs/roadmap.html</code> (changed)</dt>
+        <dd>Add a v4.7 entry (shipped) under the v4 phase arc.</dd>
+      </dl>
+      <p>No API, response-schema, or balance/ledger behavior changes.</p>
+    </section>
+
+    <section id="verify">
+      <h2>Verify</h2>
+      <ol>
+        <li><code>python -c "from app.billing import pricing; from
+          app.scoring import gemini"</code> imports cleanly (no cycle); a scan
+          and an extract still produce the same estimate and actual cost as
+          before (the numbers are unchanged).</li>
+        <li><code>GET /health</code> → <code>4.7.0</code> after deploy.</li>
+        <li>Apply <code>0005</code> on a fresh test user → still granted
+          exactly <code>100</code> signup-bonus credits (the partial unique
+          index from 0001 still enforces one-per-user).</li>
+        <li>Grep confirms the literals are gone from their old spots:
+          <code>1024</code>/<code>8192</code> no longer in
+          <code>gemini.py</code> defaults; no bare
+          <code>"gemini-2.5-flash"</code> in <code>routes.py</code>.</li>
+      </ol>
+    </section>
+
+    <section id="notes">
+      <h2>Notes</h2>
+      <ul>
+        <li><strong>Single source = <code>pricing.py</code> for billing-coupled
+          numbers.</strong> The output-token caps live there because that
+          module computes the pre-debit estimate; <code>gemini.py</code> (the
+          actual call) imports them. Keep new billing-relevant tunables in
+          <code>pricing.py</code> so estimate and actual can never desync.</li>
+        <li><strong>Not an ADR.</strong> This is mechanical consolidation, no
+          new architectural constraint beyond the line above — recorded here in
+          Notes, consistent with how the pricing dials are handled.</li>
+        <li><strong>Single commit.</strong> Small, cohesive, server-only phase
+          (spec + code + migration + version bump + roadmap) ships as one
+          <code>v4.7.0</code> commit rather than the multi-sub-version slicing
+          a larger phase uses.</li>
+        <li><strong>Deferred.</strong> Client-side model single-sourcing (needs
+          an ES-module restructure), and moving the signup bonus to the app
+          layer.</li>
+      </ul>
+    </section>
+  </body>
+</html>

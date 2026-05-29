@@ -11,11 +11,20 @@ import json
 
 import httpx
 
+from app.billing.pricing import (
+    DEFAULT_EXTRACT_MAX_OUTPUT_TOKENS,
+    DEFAULT_MAX_OUTPUT_TOKENS,
+)
 from app.core.config import settings
 
 _client: httpx.AsyncClient | None = None
 
 _GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta"
+
+# Sampling temperatures. Scan wants a little variety; extract must be
+# deterministic so the same PDF yields the same text.
+_SCORE_TEMPERATURE = 0.2
+_EXTRACT_TEMPERATURE = 0.0
 
 SYSTEM_TEXT = """You are a job-fit scorer. Score how well the candidate fits the job.
 
@@ -76,7 +85,7 @@ async def score(
     cv_text: str,
     job_part: str,
     cache_name: str | None = None,
-    max_output_tokens: int = 1024,
+    max_output_tokens: int = DEFAULT_MAX_OUTPUT_TOKENS,
 ) -> tuple[dict, dict]:
     """Score one job. Returns (parsed_result, usage_metadata).
 
@@ -87,7 +96,7 @@ async def score(
     url = f"{_GEMINI_BASE}/models/{model}:generateContent"
 
     generation_config = {
-        "temperature": 0.2,
+        "temperature": _SCORE_TEMPERATURE,
         "maxOutputTokens": max_output_tokens,
         "thinkingConfig": {"thinkingBudget": 0},
         "responseMimeType": "application/json",
@@ -160,7 +169,7 @@ _PDF_EXTRACT_PROMPT = (
 async def extract_pdf(
     model: str,
     pdf_b64: str,
-    max_output_tokens: int = 8192,
+    max_output_tokens: int = DEFAULT_EXTRACT_MAX_OUTPUT_TOKENS,
 ) -> tuple[str, dict]:
     """Extract text from a PDF via Gemini multimodal. Returns (text, usage)."""
     client = _require_client()
@@ -175,7 +184,7 @@ async def extract_pdf(
             }
         ],
         "generationConfig": {
-            "temperature": 0,
+            "temperature": _EXTRACT_TEMPERATURE,
             "maxOutputTokens": max_output_tokens,
             "thinkingConfig": {"thinkingBudget": 0},
         },

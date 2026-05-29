@@ -68,8 +68,14 @@ _CHARS_PER_TOKEN = 3
 # Overhead the system prompt + JSON response schema add to every scan.
 _SYSTEM_OVERHEAD_TOKENS = 200
 
-# What we tell Gemini to cap output at (mirrors background.js).
+# Scan output cap. Single source of truth — gemini.py imports this for the
+# actual Gemini call, so the pre-debit estimate and the call can't desync.
 DEFAULT_MAX_OUTPUT_TOKENS = 1024
+
+
+# Default model for requests that don't carry one (e.g. PDF extract).
+# Must be a key of _RATES above.
+DEFAULT_MODEL = "gemini-2.5-flash"
 
 
 def supported_models() -> list[str]:
@@ -121,7 +127,8 @@ _PDF_BYTES_PER_PAGE_ESTIMATE = 100 * 1024  # ~100 KB per page; varies wildly
 _PDF_MAX_PAGES_ESTIMATE = 10               # ceiling for the worst-case bill
 _PDF_PROMPT_OVERHEAD_TOKENS = 100
 
-# Hard cap that mirrors the extension's old 8192-token max for extraction.
+# PDF-extract output cap. Single source of truth — gemini.py imports this
+# for the actual call (mirrors the extension's old 8192-token max).
 DEFAULT_EXTRACT_MAX_OUTPUT_TOKENS = 8192
 
 

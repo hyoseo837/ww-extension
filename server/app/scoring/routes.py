@@ -177,7 +177,7 @@ async def scan(req: ScanRequest, user: CurrentUser):
 
 class ExtractRequest(BaseModel):
     scan_id: UUID
-    model: str = "gemini-2.5-flash"
+    model: str = pricing.DEFAULT_MODEL
     pdf_b64: str = Field(..., description="Base64 PDF (no data: prefix)")
 
 

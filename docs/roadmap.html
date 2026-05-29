@@ -135,6 +135,17 @@
           batch halts out of credits. See
           <code>docs/specs/v4.6.0-free-paid-tier-ux.html</code>.
         </li>
+        <li>
+          <strong>v4.7 — Tunable constants consolidation</strong> (shipped) —
+          follow-up to the v4.6 <code>MARGIN</code> dial: pull the duplicated
+          server-side knobs into single named constants so they're safe to
+          adjust. Output-token caps now have one source in
+          <code>pricing.py</code> (imported by <code>gemini.py</code>, so the
+          cost estimate can't desync from the call); default model and scoring
+          temperatures are named constants; the signup bonus is a named
+          constant in the trigger. No behavior change. Client left as-is. See
+          <code>docs/specs/v4.7.0-tunable-constants.html</code>.
+        </li>
       </ol>
 
       <p>
