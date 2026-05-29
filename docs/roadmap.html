@@ -72,7 +72,8 @@
           Postgres for the credit ledger)
           (<a href="decisions/0008-auth-and-db-via-supabase.html">ADR 0008</a>).</li>
         <li>Payments: Stripe Checkout (hosted page) + webhook-driven
-          credit grants. ADR to be written at v4.5 planning.</li>
+          credit grants
+          (<a href="decisions/0012-stripe-checkout-webhook-grants.html">ADR 0012</a>).</li>
       </ul>
 
       <p><strong>Phase arcs:</strong></p>
@@ -112,9 +113,12 @@
           no longer holds a Gemini key.
         </li>
         <li>
-          <strong>v4.5 — Stripe credit purchase</strong> — Stripe
-          Checkout integration, webhook-driven credit grants, purchase
-          UI in options page.
+          <strong>v4.5 — Stripe credit purchase</strong> (code
+          complete; live Stripe verification pending account setup) —
+          Stripe Checkout integration, webhook-driven credit grants,
+          purchase UI in options page. See
+          <code>docs/specs/v4.5.0-stripe-credit-purchase.html</code> and
+          <a href="decisions/0012-stripe-checkout-webhook-grants.html">ADR 0012</a>.
         </li>
         <li>
           <strong>v4.6 — Free tier + paid tier UX</strong> —

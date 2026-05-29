@@ -76,7 +76,12 @@
         <code>GET /credits/balance</code>, v4.3.1+). The credits chip
         in the sidebar header and the Account section in options both
         render <code>creditBalance</code> live via
-        <code>chrome.storage.onChanged</code>.</p>
+        <code>chrome.storage.onChanged</code>. The options Account
+        section also hosts the v4.5 Buy-credits buttons: a click routes
+        through the background <code>createCheckout</code> handler to
+        <code>POST /credits/checkout</code> and opens the returned
+        Stripe URL in a new tab; the options page re-fetches the balance
+        on <code>visibilitychange</code> when the user returns.</p>
 
       <h4>Key architectural decisions to preserve</h4>
       <ul>
@@ -158,6 +163,8 @@
       </dl>
 
       <h4>Endpoints</h4>
+      <p>Authoritative request/response contract:
+        <a href="reference/api.html">reference/api.html</a>. Summary:</p>
       <ul>
         <li><code>GET /health</code> — liveness probe. No auth.
           Returns <code>{service, version, status}</code>.</li>
@@ -167,6 +174,25 @@
         <li><code>GET /credits/balance</code> (v4.3.0) —
           authenticated. Returns <code>{balance: number}</code>
           (<code>1 credit = $0.01 CAD</code>).</li>
+        <li><code>GET /profile</code>, <code>PUT /profile</code>
+          (v4.4) — authenticated. Read/upsert the user's server-side
+          CV text + preferences.</li>
+        <li><code>POST /scan</code>, <code>POST /profile/extract</code>
+          (v4.4) — authenticated. Billable Gemini calls;
+          estimate-debit-call-refund against the ledger, idempotent on
+          <code>scan_id</code>.</li>
+        <li><code>POST /credits/checkout</code> (v4.5) —
+          authenticated. Creates a Stripe Checkout session for a fixed
+          credit package; returns its URL. No credit movement.</li>
+        <li><code>POST /webhooks/stripe</code> (v4.5) — Stripe-only,
+          signature-verified (not JWT-authed). Grants
+          <code>kind='purchase'</code> credits on a paid
+          <code>checkout.session.completed</code>, idempotent on the
+          Stripe event id (ledger <code>ref</code>).</li>
+        <li><code>GET /credits/checkout/result</code> (v4.5) — no auth.
+          Minimal HTML landing page for Stripe's success/cancel
+          redirect (a <code>chrome-extension://</code> URL can't be a
+          Stripe <code>success_url</code>).</li>
       </ul>
       <p>
         Auth: <code>Authorization: Bearer &lt;jwt&gt;</code> on
@@ -202,11 +228,18 @@
         <code>SUPABASE_PUBLISHABLE_KEY</code>,
         <code>SUPABASE_SECRET_KEY</code>,
         <code>SUPABASE_JWKS_URL</code>,
-        <code>DATABASE_URL</code>) live in DO App Platform's env
-        store. <code>SUPABASE_SECRET_KEY</code> and
-        <code>DATABASE_URL</code> are marked encrypted (they embed
-        secrets); the others are public-by-design and stored as
-        plain. Local dev uses <code>server/.env</code> (gitignored);
+        <code>DATABASE_URL</code>,
+        <code>GEMINI_API_KEY</code>,
+        <code>STRIPE_SECRET_KEY</code>,
+        <code>STRIPE_WEBHOOK_SECRET</code>,
+        <code>PUBLIC_BASE_URL</code>) live in DO App Platform's env
+        store. <code>SUPABASE_SECRET_KEY</code>,
+        <code>DATABASE_URL</code>, <code>GEMINI_API_KEY</code>,
+        <code>STRIPE_SECRET_KEY</code>, and
+        <code>STRIPE_WEBHOOK_SECRET</code> are marked encrypted (they
+        embed secrets); the others (including
+        <code>PUBLIC_BASE_URL</code>) are public-by-design and stored
+        as plain. Local dev uses <code>server/.env</code> (gitignored);
         <code>server/.env.example</code> is the committed template.
         <code>server/app/core/config.py</code> reads them via
         pydantic-settings.
