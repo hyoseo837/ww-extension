@@ -88,6 +88,7 @@ async def scan(req: ScanRequest, user: CurrentUser):
                 meta=req.meta.model_dump(),
                 description_text=req.description_text,
                 preferences=profile["preferences"],
+                match_criteria=profile["match_criteria"],
             )
             estimated_input = pricing.estimate_input_tokens(profile["cv_text"], job_part)
             estimate = pricing.estimate_scan_cost(req.model, estimated_input)

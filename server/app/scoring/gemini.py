@@ -65,11 +65,77 @@ def _require_client() -> httpx.AsyncClient:
     return _client
 
 
-def build_job_part(meta: dict, description_text: str, preferences: str) -> str:
-    prefs = f"Candidate Preferences:\n{preferences}\n\n" if preferences else ""
+# Human-readable labels for the structured criteria block. Deterministic
+# serialization only — the prompt rewrite (v5 thread #3) reworks how the model
+# is told to *use* weights/tiers; v5.0.0 just states them faithfully.
+_AUTH_LABELS = {
+    "citizen": "Canadian citizen",
+    "pr": "permanent resident",
+    "international": "international student (study permit)",
+    "other": "other",
+}
+_CRITERION_LABELS = {
+    "preferred_locations": "Location",
+    "work_modes": "Work mode",
+    "target_term": "Target term",
+    "target_length": "Term length",
+    "languages": "Languages",
+}
+_TIER_LABELS = (
+    ("preferred", "prefer"),
+    ("acceptable", "ok"),
+    ("avoid", "avoid"),
+    ("excluded", "never"),
+)
+
+
+def _format_criterion(label: str, c: dict) -> str | None:
+    """One line like 'Location [strong]: prefer Toronto; ok Ontario; avoid
+    West Canada; never outside Canada'. Returns None when no tier is filled."""
+    tiers = [
+        f"{verb} {', '.join(c[key])}"
+        for key, verb in _TIER_LABELS
+        if c.get(key)
+    ]
+    if not tiers:
+        return None
+    weight = c.get("weight")
+    suffix = f" [{weight}]" if weight else ""
+    return f"{label}{suffix}: " + "; ".join(tiers)
+
+
+def _format_criteria(match_criteria: dict) -> str:
+    """Serialize populated criteria into a short labelled block. Only
+    non-empty fields appear, so empty criteria emit nothing."""
+    lines: list[str] = []
+    auth = match_criteria.get("work_authorization")
+    if auth:
+        lines.append(f"Work authorization: {_AUTH_LABELS.get(auth, auth)}")
+    for field, label in _CRITERION_LABELS.items():
+        c = match_criteria.get(field)
+        if isinstance(c, dict):
+            line = _format_criterion(label, c)
+            if line:
+                lines.append(line)
+    return "\n".join(lines)
+
+
+def build_job_part(
+    meta: dict,
+    description_text: str,
+    preferences: str,
+    match_criteria: dict | None = None,
+) -> str:
+    blocks: list[str] = []
+    criteria = _format_criteria(match_criteria) if match_criteria else ""
+    if criteria:
+        blocks.append(f"Candidate Match Criteria:\n{criteria}")
+    if preferences:
+        blocks.append(f"Additional Notes:\n{preferences}")
+    prefix = "\n\n".join(blocks) + "\n\n" if blocks else ""
     title = meta.get("title", "")
     org = meta.get("org", "")
-    return f"{prefs}Job: {title} at {org}\nDescription:\n{description_text}"
+    return f"{prefix}Job: {title} at {org}\nDescription:\n{description_text}"
 
 
 class GeminiError(Exception):
