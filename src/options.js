@@ -4,7 +4,8 @@ const el = id => document.getElementById(id);
 
 const HELP_CONTENT = {
   model:    'Flash: cheaper per scan (~$0.001 CAD). Pro: more accurate, ~10× the cost. Flash is recommended.',
-  criteria: 'Free-form preferences the AI weighs when scoring. Examples: "Remote or hybrid only", "Toronto preferred", "No Web3 or crypto". Leave empty to score purely on profile fit — no extra token cost.'
+  workAuth: 'Your work-authorization status in Canada. The AI uses this to judge eligibility — e.g. an international student is flagged on roles that require citizenship or a security clearance. Leave unset to skip eligibility checks.',
+  criteria: 'Free-form notes the AI weighs alongside your structured criteria. Examples: "prioritize high salary", "ignore Web3 or crypto", "prefer early-stage startups". Leave empty to score purely on profile + criteria fit — no extra token cost.'
 };
 
 // ── Tab navigation ────────────────────────────────────────────────────────────
@@ -65,12 +66,27 @@ el('themeToggle').addEventListener('click', () => {
 
 // ── Load saved settings (local cache) ─────────────────────────────────────────
 
-chrome.storage.local.get(['model', 'cvText', 'preferences', 'theme'], data => {
-  if (data.model)       el('model').value          = data.model;
-  if (data.cvText)      el('extractedText').value  = data.cvText;
-  if (data.preferences) el('preferences').value    = data.preferences;
-  if (data.theme)       applyTheme(data.theme);
+chrome.storage.local.get(['model', 'cvText', 'preferences', 'matchCriteria', 'theme'], data => {
+  if (data.model)         el('model').value          = data.model;
+  if (data.cvText)        el('extractedText').value  = data.cvText;
+  if (data.preferences)   el('preferences').value    = data.preferences;
+  if (data.matchCriteria) applyMatchCriteria(data.matchCriteria);
+  if (data.theme)         applyTheme(data.theme);
 });
+
+// ── Structured match criteria (form ⇄ object) ─────────────────────────────────
+// applyMatchCriteria populates form fields from a match_criteria object;
+// buildMatchCriteria reads them back into a full object for PUT /profile.
+// (v5.0.4 covers work_authorization; the weighted/tiered preferences are
+// added in a later slice.)
+
+function applyMatchCriteria(mc) {
+  el('workAuth').value = (mc && mc.work_authorization) || '';
+}
+
+function buildMatchCriteria() {
+  return { work_authorization: el('workAuth').value || null };
+}
 
 // ── Profile fetch (server is authoritative) ───────────────────────────────────
 
@@ -83,9 +99,11 @@ async function loadProfileFromServer() {
   if (res?.ok && res.data) {
     el('extractedText').value = res.data.cv_text || '';
     el('preferences').value   = res.data.preferences || '';
+    applyMatchCriteria(res.data.match_criteria || {});
     chrome.storage.local.set({
-      cvText:      res.data.cv_text || '',
-      preferences: res.data.preferences || ''
+      cvText:        res.data.cv_text || '',
+      preferences:   res.data.preferences || '',
+      matchCriteria: res.data.match_criteria || {}
     });
   }
   // Not-signed-in: keep whatever local cache has; sign-in flow will refresh.
@@ -103,8 +121,9 @@ async function putProfile(patch) {
   });
   if (res?.ok && res.data) {
     chrome.storage.local.set({
-      cvText:      res.data.cv_text || '',
-      preferences: res.data.preferences || ''
+      cvText:        res.data.cv_text || '',
+      preferences:   res.data.preferences || '',
+      matchCriteria: res.data.match_criteria || {}
     });
     return { ok: true, data: res.data };
   }
@@ -119,7 +138,10 @@ el('save').addEventListener('click', () => {
 
 el('saveProfile').addEventListener('click', async () => {
   setProfileStatus('Saving…');
-  const res = await putProfile({ preferences: el('preferences').value.trim() });
+  const res = await putProfile({
+    preferences: el('preferences').value.trim(),
+    match_criteria: buildMatchCriteria()
+  });
   if (res.ok) setProfileStatus('Profile updated.', 'ok');
   else setProfileStatus(`Save failed: ${JSON.stringify(res.error).slice(0, 200)}`, 'err');
 });
@@ -315,9 +337,10 @@ el('signIn').addEventListener('click', async () => {
 });
 
 el('signOut').addEventListener('click', async () => {
-  await chrome.storage.local.remove(['auth', 'cvText', 'preferences']);
+  await chrome.storage.local.remove(['auth', 'cvText', 'preferences', 'matchCriteria']);
   el('extractedText').value = '';
   el('preferences').value = '';
+  applyMatchCriteria({});
   setAuthStatus('Signed out.', 'ok');
 });
 

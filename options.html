@@ -519,10 +519,23 @@
             <div class="card">
               <div class="field">
                 <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
-                  <span class="field-label" style="margin-bottom:0;">Custom Match Criteria</span>
+                  <span class="field-label" style="margin-bottom:0;">Work Authorization</span>
+                  <button class="opts-help-btn" data-help="workAuth">?</button>
+                </div>
+                <select id="workAuth" style="margin-top:0;">
+                  <option value="">Unset / prefer not to say</option>
+                  <option value="citizen">Canadian citizen</option>
+                  <option value="pr">Permanent resident</option>
+                  <option value="international">International student (study permit)</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div class="field">
+                <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
+                  <span class="field-label" style="margin-bottom:0;">Additional Notes</span>
                   <button class="opts-help-btn" data-help="criteria">?</button>
                 </div>
-                <textarea id="preferences" style="margin-top:0;" style="min-height:180px;" placeholder="e.g. Only show remote roles, prioritize high salary, ignore Web3 companies..."></textarea>
+                <textarea id="preferences" style="margin-top:0; min-height:180px;" placeholder="Anything else the AI should weigh — e.g. prioritize high salary, ignore Web3 companies, prefer early-stage startups..."></textarea>
               </div>
               <button class="btn-primary" id="saveProfile">Update Profile</button>
               <div id="profileStatus" class="status-line"></div>
