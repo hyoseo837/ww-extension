@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-05-29" />
+    <title>ADR 0015 — Structured JSON profile with cv_text fallback and a separate supplement column</title>
+  </head>
+  <body>
+    <h1>ADR 0015 — Structured JSON profile with cv_text fallback and a separate supplement column</h1>
+
+    <section id="context">
+      <h2>Context</h2>
+      <p>
+        Through v4 and v5.0, the candidate profile is a single raw-text blob:
+        <code>user_profile.cv_text</code> (text), produced by
+        <code>POST /profile/extract</code> (Gemini multimodal → plain text)
+        and sent to the scorer as the "Candidate Profile" context on every
+        scan. Re-sending full resume prose each scan is token-heavy and hands
+        the model an unstructured blob to reason over.
+      </p>
+      <p>
+        v5 thread #2
+        (<a href="../specs/v5.1.0-structured-profile.html">spec v5.1.0</a>)
+        switches the profile to a structured JSON object
+        (summary / education / experience / skills / projects / languages) and
+        lets the user add <strong>supplementary</strong> experience/project
+        entries that a one-page resume omits. This is foundational: the prompt
+        rewrite (thread #3) needs structured profile fields to attribute score
+        deltas to specific points ("AWS preferred, not in profile"). So the
+        storage shape constrains future work, like the criteria shape did in
+        <a href="0013-structured-match-criteria-jsonb.html">ADR 0013</a>.
+      </p>
+      <p>Three sub-decisions are in play:</p>
+      <ol>
+        <li><strong>How to store the extracted structured profile.</strong>
+          Discrete typed columns/tables per field, or a single
+          <code>JSONB</code> column validated in the app by Pydantic (as
+          ADR 0013 chose for criteria).</li>
+        <li><strong>How existing <code>cv_text</code> users cut over.</strong>
+          Replace <code>cv_text</code> (forcing a re-upload), backfill JSON by
+          re-extracting every stored blob, or keep <code>cv_text</code> as a
+          fallback and upgrade users on their next extract.</li>
+        <li><strong>Where user-authored supplementary entries live.</strong>
+          Folded into the same JSON the extractor produces (risking being
+          clobbered on re-extract), or kept separate.</li>
+      </ol>
+    </section>
+
+    <section id="decision">
+      <h2>Decision</h2>
+      <p>
+        Add <strong><code>profile_json jsonb not null default '{}'</code></strong>
+        to <code>user_profile</code> — the extracted structured profile,
+        owned and validated by a backend Pydantic model (the DB enforces only
+        valid JSON, consistent with ADR 0013).
+      </p>
+      <p>
+        <strong>Keep <code>cv_text</code> as a fallback.</strong> The scan
+        serializes <code>profile_json</code> when non-empty, else falls back to
+        <code>cv_text</code>. No data migration: existing users keep working on
+        their <code>cv_text</code> blob and upgrade to JSON naturally the next
+        time they extract. The v5.1.0 migration only adds columns.
+      </p>
+      <p>
+        <strong>Store supplementary entries in a separate
+        <code>profile_supplement jsonb not null default '[]'</code> column</strong>
+        — an array of <code>{kind, title, description}</code> objects
+        (<code>kind</code> = <code>experience</code> | <code>project</code>),
+        written only by <code>PUT /profile</code>.
+        <code>POST /profile/extract</code> overwrites <code>profile_json</code>
+        but never touches <code>profile_supplement</code>, so re-uploading a
+        PDF can't wipe hand-entered entries. At scan time both are serialized
+        into the Candidate Profile block — "merged" for matching, separate at
+        rest.
+      </p>
+    </section>
+
+    <section id="consequences">
+      <h2>Consequences</h2>
+      <ul>
+        <li><strong>+</strong> The scorer gets clean structured signal, and
+          (expected) fewer input tokens per scan than full resume prose —
+          measured at build time.</li>
+        <li><strong>+</strong> Zero-migration cutover: <code>cv_text</code>
+          stays a safety net for users who haven't re-extracted, and old rows
+          read back as <code>profile_json = {}</code>.</li>
+        <li><strong>+</strong> A separate supplement column makes
+          "re-extraction preserves user-entered entries" a structural
+          guarantee rather than careful read-merge-write code in the extract
+          transaction.</li>
+        <li><strong>+</strong> Consistent with ADR 0013 (JSONB owned by
+          Pydantic) — same validation and evolution story; new profile fields
+          need no migration.</li>
+        <li><strong>−</strong> Three profile columns now (<code>cv_text</code>,
+          <code>profile_json</code>, <code>profile_supplement</code>);
+          <code>cv_text</code> becomes legacy once a user re-extracts. A later
+          cleanup migration can drop it once adoption is complete — deferred,
+          not now.</li>
+        <li><strong>−</strong> The DB can't enforce the profile shape; the
+          contract lives only in the app (same trade-off as ADR 0013).</li>
+        <li><strong>−</strong> Structured extraction adds a
+          <code>responseSchema</code> to the extract call; a malformed or empty
+          extraction must fail without destroying the user's existing
+          <code>profile_json</code> (handled in the extract flow).</li>
+      </ul>
+    </section>
+  </body>
+</html>

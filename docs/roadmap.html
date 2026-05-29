@@ -193,20 +193,27 @@
       </p>
       <ul>
         <li><strong>Structured Custom Match Criteria.</strong>
-          <em>(v5.0.0 — first v5 phase.)</em> Replace
-          the single textarea with essential structured fields (work
-          authorization, preferred locations, target term + length,
-          work mode, languages) and demote the existing free-form
-          prose to an "additional notes" field. Biggest gap today is
-          work-authorization signal for international students.</li>
-        <li><strong>Structured PDF extraction.</strong> Switch the
+          <em>(Shipped — v5.0.0 phase: backend v5.0.3, client
+          v5.0.4–v5.0.5, docs v5.0.6–v5.0.7.)</em> Replaced
+          the single textarea with structured fields (work
+          authorization, plus weighted/tiered preferred locations, target
+          term + length, work mode, languages) and demoted the existing
+          free-form prose to an "additional notes" field. Biggest gap closed:
+          work-authorization signal for international students. Storage in
+          <a href="decisions/0013-structured-match-criteria-jsonb.html">ADR 0013</a>.</li>
+        <li><strong>Structured PDF extraction.</strong>
+          <em>(v5.1.0 — active.)</em> Switch the
           profile from a raw-text blob to a JSON profile
           (summary / education / experience / skills / projects /
-          languages). Cheaper signal per scan than re-sending resume
-          prose, and sharper matching. Also lets the user add
-          <strong>supplementary experience/projects</strong> as structured
-          entries (title + description) for things a one-page resume omits,
-          merged into the JSON profile.</li>
+          languages), extracted via a Gemini <code>responseSchema</code>.
+          Cheaper signal per scan than re-sending resume prose, and sharper
+          matching. Also lets the user add <strong>supplementary
+          experience/projects</strong> as structured entries
+          (title + description) for things a one-page resume omits, merged into
+          the profile for scoring. Existing <code>cv_text</code> kept as a
+          fallback (no forced re-upload); storage + cutover in
+          <a href="decisions/0015-structured-json-profile.html">ADR 0015</a>.
+          See <code>docs/specs/v5.1.0-structured-profile.html</code>.</li>
         <li><strong>Scan-prompt rewrite + richer scoring output.</strong>
           Co-op framing, calibration anchors, few-shot examples from real
           v4.4 disagreements. Moves scoring to a <strong>1–100 scale</strong>

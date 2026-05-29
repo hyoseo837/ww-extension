@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v5.1.0" />
+    <meta name="status" content="planned" />
+    <meta name="last-updated" content="2026-05-29" />
+    <title>Spec v5.1.0 — Structured profile extraction</title>
+  </head>
+  <body>
+    <h1>Spec v5.1.0 — Structured profile extraction</h1>
+
+    <section id="goal">
+      <h2>Goal</h2>
+      <p>
+        Second v5 phase (thread #2 of the scoring-quality pass). Today the
+        candidate profile is a raw-text blob (<code>user_profile.cv_text</code>)
+        that <code>POST /profile/extract</code> fills from the uploaded PDF and
+        the scorer receives verbatim as "Candidate Profile". This phase switches
+        the profile to a <strong>structured JSON object</strong>
+        (summary / education / experience / skills / projects / languages),
+        extracted via a Gemini <code>responseSchema</code>, and adds
+        user-authored <strong>supplementary</strong> experience/project entries
+        for things a one-page resume omits. The structured profile is serialized
+        into the scan's Candidate Profile context, giving the model clean signal
+        and (expected) fewer input tokens than re-sending resume prose. Storage
+        shape and the cutover are fixed in
+        <a href="../decisions/0015-structured-json-profile.html">ADR 0015</a>.
+      </p>
+      <p>
+        Scope is the <strong>structured-profile foundation</strong>: extraction
+        to JSON, storage, the supplementary-entries form, and a faithful pass
+        into the <em>existing</em> prompt. This is <strong>not</strong> the
+        prompt rewrite (thread #3) — the serialized profile slots into the
+        current prompt structure unchanged; #3 later reworks framing,
+        calibration, and per-aspect output (and depends on this phase's fields).
+        Hard filters (#4) remain separate.
+      </p>
+
+      <h3>The profile_json object</h3>
+      <p>Stored as <code>user_profile.profile_json</code> (JSONB), owned and
+        validated by a backend Pydantic model. All fields optional/defaulted so
+        a partial object is valid; <code>{}</code> = not yet extracted.</p>
+      <pre><code>{
+  "summary":    "string",
+  "education":  [{ "institution", "credential", "field", "grade", "dates" }],
+  "experience": [{ "title", "org", "dates", "description" }],
+  "skills":     ["string"],
+  "projects":   [{ "title", "description" }],
+  "languages":  ["string"]    // spoken/working, not programming
+}</code></pre>
+
+      <h3>The profile_supplement array</h3>
+      <p>Stored as <code>user_profile.profile_supplement</code> (JSONB,
+        default <code>[]</code>), written only by the user via
+        <code>PUT /profile</code> — never by extraction (ADR 0015), so
+        re-uploading a PDF can't wipe hand-entered entries.</p>
+      <pre><code>[
+  { "kind": "experience" | "project", "title": "string", "description": "string" }
+]</code></pre>
+
+      <h3>Cutover (ADR 0015)</h3>
+      <p>The scan uses <code>profile_json</code> when non-empty, else falls back
+        to <code>cv_text</code>. No data migration; legacy users keep scoring on
+        their existing blob and upgrade to JSON the next time they extract.
+        <code>profile_supplement</code> is always serialized alongside whichever
+        profile source is used.</p>
+    </section>
+
+    <section id="files">
+      <h2>Files</h2>
+
+      <h3>Docs (v5.1.0)</h3>
+      <dl>
+        <dt><code>docs/specs/v5.1.0-structured-profile.html</code> (added)</dt>
+        <dd>This spec.</dd>
+        <dt><code>docs/decisions/0015-structured-json-profile.html</code> (added)</dt>
+        <dd>Storage-shape + cutover ADR.</dd>
+        <dt><code>docs/roadmap.html</code> (changed)</dt>
+        <dd>Mark #1 shipped, #2 active as v5.1.0.</dd>
+      </dl>
+
+      <h3>Backend phase</h3>
+      <dl>
+        <dt><code>server/migrations/0007_profile_json.sql</code> (added)</dt>
+        <dd>Idempotent: <code>add column if not exists profile_json jsonb not
+          null default '{}'</code> and <code>profile_supplement jsonb not null
+          default '[]'</code>. No change to <code>cv_text</code>.</dd>
+        <dt><code>server/app/scoring/gemini.py</code> (changed)</dt>
+        <dd>Add a <code>_PROFILE_SCHEMA</code> <code>responseSchema</code> and a
+          structured-extraction prompt; <code>extract_profile()</code> returns
+          <code>(profile_dict, usage)</code> (deterministic temperature, as the
+          text extract is today). Add <code>build_profile_context(profile_json,
+          supplement, cv_text)</code> → the "Candidate Profile" text: serialize
+          <code>profile_json</code> when non-empty (append supplement entries),
+          else fall back to <code>cv_text</code>. The existing
+          <code>extract_pdf()</code> is replaced by the structured path.</dd>
+        <dt><code>server/app/scoring/routes.py</code> (changed)</dt>
+        <dd><code>/profile/extract</code>: call structured extract, upsert
+          <code>profile_json</code> (leave <code>cv_text</code> and
+          <code>profile_supplement</code> untouched); response carries the
+          structured profile. <code>/scan</code>: build the profile context via
+          <code>build_profile_context</code>; the <code>profile_not_set</code>
+          guard passes when <em>either</em> <code>profile_json</code> or
+          <code>cv_text</code> is present.</dd>
+        <dt><code>server/app/profile/routes.py</code> (changed)</dt>
+        <dd><code>StructuredProfile</code> + <code>SupplementEntry</code>
+          Pydantic models; add <code>profile_json</code> and
+          <code>profile_supplement</code> to <code>Profile</code> /
+          <code>ProfileUpdate</code> (all optional/defaulted).</dd>
+        <dt><code>server/app/profile/db.py</code> (changed)</dt>
+        <dd>Select/upsert the two new JSONB columns (parse the JSONB strings;
+          default <code>{}</code> / <code>[]</code>). An in-tx upsert for
+          <code>profile_json</code> used by the extract transaction (parallel to
+          today's <code>upsert_cv_text_in_tx</code>).</dd>
+        <dt><code>server/pyproject.toml</code> (changed)</dt>
+        <dd>Bump to match the backend commit.</dd>
+      </dl>
+
+      <h3>Client phase</h3>
+      <dl>
+        <dt><code>options.html</code> / <code>src/options.js</code> (changed)</dt>
+        <dd>Extract now yields a structured profile: render it read-only by
+          section (summary / education / experience / skills / projects /
+          languages) in place of the raw <code>extractedText</code> textarea.
+          Add a <strong>supplementary entries</strong> form — add/remove
+          <code>{kind, title, description}</code> rows — sent via
+          <code>PUT /profile</code> as <code>profile_supplement</code> and kept
+          in the local cache. The legacy <code>cv_text</code> still displays for
+          users who haven't re-extracted. <code>manifest.json</code> bumped.
+          (May split into more than one sub-version — extract+display first,
+          then the supplement form.)</dd>
+      </dl>
+
+      <h3>Close-out phase</h3>
+      <dl>
+        <dt><code>docs/reference/api.html</code> (changed)</dt>
+        <dd><code>/profile</code> gains <code>profile_json</code> +
+          <code>profile_supplement</code>; <code>/profile/extract</code> returns
+          the structured profile instead of <code>text</code>.</dd>
+        <dt><code>docs/architecture.html</code>,
+          <code>docs/reference/data-model.html</code> (changed)</dt>
+        <dd>Document the new columns and the cv_text-fallback rule. Mark this
+          spec <code>done</code>. <code>manifest</code> bumped to match.</dd>
+      </dl>
+      <p>Version bumps follow ADR 0002: <code>manifest.json</code> matches the
+        commit-message version at each step; <code>pyproject.toml</code> bumps
+        only when backend code ships. Exact Z numbers assigned at build time.</p>
+    </section>
+
+    <section id="verify">
+      <h2>Verify</h2>
+      <ol>
+        <li>Apply <code>0007</code> → <code>user_profile</code> has
+          <code>profile_json</code> (default <code>{}</code>) and
+          <code>profile_supplement</code> (default <code>[]</code>);
+          <code>cv_text</code> untouched.</li>
+        <li><code>POST /profile/extract</code> on a real PDF returns a
+          structured profile; <code>profile_json</code> persists; a pre-existing
+          <code>profile_supplement</code> survives the extract;
+          <code>cv_text</code> is left as-is.</li>
+        <li><code>GET /profile</code> returns <code>profile_json</code> +
+          <code>profile_supplement</code>; <code>PUT /profile</code> with
+          supplement entries round-trips; a bad <code>kind</code> is rejected
+          (<code>422</code>).</li>
+        <li>Options page: after extract, the structured sections render; add a
+          supplementary entry, save, reload — it repopulates; re-extract keeps
+          the supplementary entry.</li>
+        <li>Scan with <code>profile_json</code> set uses the serialized
+          structured profile (verify via a logged prompt). <strong>Regression:</strong>
+          a user with only <code>cv_text</code> (no JSON) still scores via the
+          fallback, unchanged from v5.0.</li>
+        <li>Measure per-scan input tokens for a JSON profile vs the equivalent
+          raw <code>cv_text</code> — expect ≤.</li>
+      </ol>
+    </section>
+
+    <section id="notes">
+      <h2>Notes</h2>
+      <ul>
+        <li><strong>cv_text fallback, no migration</strong> (ADR 0015). Legacy
+          users keep working until they re-extract; a cleanup migration to drop
+          <code>cv_text</code> is deferred to a later phase once adoption is
+          complete.</li>
+        <li><strong>Supplement in its own column</strong> so extraction can't
+          clobber user-entered entries — a structural guarantee, not merge code
+          (ADR 0015).</li>
+        <li><strong>No prompt rewrite here.</strong> The profile is serialized
+          faithfully into the existing prompt; framing/calibration/per-aspect
+          output is thread #3, which depends on these structured fields.</li>
+        <li><strong>Extraction stays one multimodal call</strong> — now with a
+          <code>responseSchema</code>. A malformed/empty extraction must fail
+          without destroying the existing <code>profile_json</code>.</li>
+        <li><strong>Languages</strong> here = spoken/working (English, French),
+          matching the v5.0.0 criteria field — not programming languages, which
+          live under <code>skills</code>.</li>
+        <li><strong>Slicing.</strong> backend (migration + extract + contract +
+          scan serialization) → client (structured display + extract, then the
+          supplement form, possibly two sub-versions) → close-out. Z numbers
+          assigned at build time.</li>
+      </ul>
+    </section>
+  </body>
+</html>
