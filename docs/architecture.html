@@ -6,7 +6,7 @@
     <meta name="type" content="architecture" />
     <meta name="scope" content="current shipped system" />
     <meta name="baseline-version" content="v03.015" />
-    <meta name="last-updated" content="2026-05-28" />
+    <meta name="last-updated" content="2026-05-29" />
     <title>Architecture — ww-extension</title>
   </head>
   <body>
@@ -48,7 +48,10 @@
 
         <dt><code>src/content.js</code></dt>
         <dd>Content script. Owns the sidebar UI, scan flow, badge injection
-          via MutationObserver, theme listener, empty-state guide.</dd>
+          via MutationObserver, theme listener, empty-state guide, and the
+          out-of-credits "Buy credits" nudge (shown when a scan batch halts
+          on <code>NO_CREDITS</code>; opens the options Account/Buy section
+          via <code>openOptions</code>).</dd>
 
         <dt><code>src/background.js</code></dt>
         <dd>Service worker. Gemini API client, token-usage counter, message

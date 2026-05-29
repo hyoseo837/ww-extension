@@ -5,7 +5,7 @@
     <meta name="project" content="ww-extension" />
     <meta name="type" content="spec" />
     <meta name="version" content="v4.6.0" />
-    <meta name="status" content="planned" />
+    <meta name="status" content="done" />
     <meta name="last-updated" content="2026-05-29" />
     <meta name="credit-unit" content="1 credit = $0.01 CAD" />
     <title>Spec v4.6 — Free tier + paid tier UX</title>
@@ -79,14 +79,19 @@
       <dl>
         <dt><code>server/app/billing/pricing.py</code> (changed)</dt>
         <dd>
-          Recompute the six <code>_RATES</code> constants at margin
-          <code>5×</code> (2.5× their current values); update the inline
-          <code>… * 2 / …</code> derivation comments to <code>* 5</code>; and
-          update the calibration docstring (Margin <code>2.0×</code> →
-          <code>5.0×</code>, date, note the v4.6 rebalance to ~200 free
-          scans). No signature or logic change —
-          <code>estimate_scan_cost</code>, <code>actual_cost</code>, and
-          <code>estimate_extract_cost</code> all read <code>_RATES</code>.
+          As shipped, the margin became a single editable dial rather than
+          six recomputed constants: introduce a <code>MARGIN = 5.0</code>
+          constant (was <code>2.0</code>) alongside named
+          <code>USD_TO_CAD</code> and <code>CAD_PER_CREDIT</code> dials and
+          Google's raw <code>_USD_PER_MTOK</code> list prices, then
+          <em>derive</em> the six <code>_RATES</code> credit-per-token
+          values at import (<code>usd × FX × MARGIN / CAD_PER_CREDIT /
+          1e6</code>). Re-pricing is now editing one number. Calibration
+          docstring updated (Margin <code>2.0×</code> → <code>5.0×</code>,
+          date, v4.6 rebalance to ~200 free scans). No signature or logic
+          change — <code>estimate_scan_cost</code>, <code>actual_cost</code>,
+          and <code>estimate_extract_cost</code> all still read
+          <code>_RATES</code>.
         </dd>
         <dt><code>server/pyproject.toml</code> (changed)</dt>
         <dd>Bump version to <code>4.6.0</code>.</dd>

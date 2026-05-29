@@ -5,7 +5,7 @@
     <meta name="project" content="ww-extension" />
     <meta name="type" content="roadmap" />
     <meta name="active-major-version" content="v04" />
-    <meta name="last-updated" content="2026-05-28" />
+    <meta name="last-updated" content="2026-05-29" />
     <title>Roadmap — ww-extension</title>
   </head>
   <body>
@@ -125,8 +125,15 @@
           <a href="decisions/0012-stripe-checkout-webhook-grants.html">ADR 0012</a>.
         </li>
         <li>
-          <strong>v4.6 — Free tier + paid tier UX</strong> —
-          onboarding tweaks, welcome page updates, pricing display.
+          <strong>v4.6 — Free tier + paid tier UX</strong> (shipped) —
+          rebalanced the per-token margin <code>2×</code> → <code>5×</code>
+          so the 100-credit signup bonus is a ~200-scan trial rather than a
+          whole co-op term (margin is now a single <code>MARGIN</code> dial
+          in <code>pricing.py</code>; existing balances untouched); fixed the
+          wrong welcome/options copy to show approximate scan counts and a
+          pricing explainer; added a sidebar "Buy credits" nudge when a scan
+          batch halts out of credits. See
+          <code>docs/specs/v4.6.0-free-paid-tier-ux.html</code>.
         </li>
       </ol>
 
