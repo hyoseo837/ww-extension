@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v4.6.0" />
+    <meta name="status" content="planned" />
+    <meta name="last-updated" content="2026-05-29" />
+    <meta name="credit-unit" content="1 credit = $0.01 CAD" />
+    <title>Spec v4.6 — Free tier + paid tier UX</title>
+  </head>
+  <body>
+    <h1>Spec v4.6 — Free tier + paid tier UX</h1>
+
+    <section id="goal">
+      <h2>Goal</h2>
+      <p>
+        v4.5 shipped credit purchasing, so the free tier (100-credit signup
+        bonus) and paid tier (Buy buttons) both exist — but they are
+        <strong>miscommunicated and mispriced</strong>. v4.6 makes the
+        economics honest and visible, and nudges purchase when a user runs
+        out. Three changes:
+      </p>
+      <ol>
+        <li><strong>Re-price via margin.</strong> Raise the per-token margin
+          in <code>pricing.py</code> from <code>2×</code> to <code>5×</code>
+          so the free tier is a meaningful trial (~200 scans) rather than a
+          whole term, and a heavy term of scanning costs about $3 of paid
+          usage. The 100-credit ($1 CAD) signup bonus stays unchanged.</li>
+        <li><strong>Communicate value accurately.</strong> Fix the wrong copy
+          and show approximate scan counts on the welcome page and options
+          page, with the credit basis as a light footnote.</li>
+        <li><strong>Nudge purchase when out.</strong> When a scan batch halts
+          on <code>NO_CREDITS</code>, show a "Buy credits" prompt in the
+          sidebar that opens the options Account/Buy section.</li>
+      </ol>
+
+      <h3>Why re-price, and why via margin</h3>
+      <p>
+        Real data from the v4.4 <code>scan</code> table (14 successful Flash
+        scans) puts a typical Flash scan at <strong>0.18 credits</strong>
+        (range 0.07–0.23), and a profile extract at ~0.95 credits — both at
+        the original <code>2×</code> margin. At that rate 100 free credits is
+        ~550 scans, enough to cover an entire co-op term, so almost no user
+        would ever pay. The wrong welcome-page claim ("≈15 Flash scans") was
+        off by ~35×.
+      </p>
+      <p>
+        Rather than shrink the bonus (a 30–50¢ starter feels worthless), the
+        decision is to <strong>raise the margin</strong> so the same bonus
+        buys fewer scans. Per-scan credit cost scales linearly with margin
+        (<code>≈ 0.09 × margin</code> credits). At <code>5×</code>:
+      </p>
+      <dl>
+        <dt>Flash scan</dt><dd>~0.45 credits (~½¢) → 100 free credits ≈
+          <strong>~200 scans</strong>.</dd>
+        <dt>Profile extract</dt><dd>~2.4 credits.</dd>
+        <dt>Packages</dt><dd>$5 / 500cr ≈ ~1,100 scans · $10 / 1000cr ≈
+          ~2,200 · $20 / 2000cr ≈ ~4,400.</dd>
+        <dt>Heavy term</dt><dd>~700–1000 scans ≈ ~$3–4 total, i.e. roughly
+          $3 of paid usage after the free bonus.</dd>
+      </dl>
+      <p>
+        The change affects <strong>future scans only</strong> — existing
+        balances and ledger rows are untouched. Margin lives in code
+        (<code>pricing.py</code>) by design; updating it is a deliberate
+        code-review + redeploy (see spec
+        <a href="v4.4.0-server-side-scoring.html">v4.4.0</a> Notes). Like the
+        original <code>2×</code> choice, it is recorded here in Notes and in
+        the <code>pricing.py</code> docstring — <strong>not</strong> an ADR.
+      </p>
+    </section>
+
+    <section id="files">
+      <h2>Files</h2>
+
+      <h3>Backend (v4.6.0)</h3>
+      <dl>
+        <dt><code>server/app/billing/pricing.py</code> (changed)</dt>
+        <dd>
+          Recompute the six <code>_RATES</code> constants at margin
+          <code>5×</code> (2.5× their current values); update the inline
+          <code>… * 2 / …</code> derivation comments to <code>* 5</code>; and
+          update the calibration docstring (Margin <code>2.0×</code> →
+          <code>5.0×</code>, date, note the v4.6 rebalance to ~200 free
+          scans). No signature or logic change —
+          <code>estimate_scan_cost</code>, <code>actual_cost</code>, and
+          <code>estimate_extract_cost</code> all read <code>_RATES</code>.
+        </dd>
+        <dt><code>server/pyproject.toml</code> (changed)</dt>
+        <dd>Bump version to <code>4.6.0</code>.</dd>
+      </dl>
+      <p>No API, schema, or migration changes.</p>
+
+      <h3>Client (v4.6.1)</h3>
+      <p>All copy uses <strong>approximate scan counts</strong> ("about ~200
+        scans"), with <code>1 credit = $0.01 CAD</code> as a light footnote.
+        Figures track the approved margin (below are the 5× values).</p>
+      <dl>
+        <dt><code>welcome.html</code> (changed)</dt>
+        <dd>Step 1 (~lines 180-187): replace "roughly 15 Flash scans" with
+          "about ~200 job scans"; add one line that more credits can be
+          bought anytime once the free ones run low (no price detail here).</dd>
+        <dt><code>options.html</code> (changed)</dt>
+        <dd>How-to card (~line 548): fix "100 free credits ($1 CAD worth of
+          scans)" → "≈ ~200 scans". Account → Buy section (~lines 572-578):
+          add a one-line pricing explainer above the buttons and per-pack
+          scan hints, e.g. "1 credit = $0.01 CAD · a scan ≈ ½¢ · $5 ≈ ~1,100
+          scans · $10 ≈ ~2,200 · $20 ≈ ~4,400." Reuse the existing
+          <code>.buy-credits</code> buttons.</dd>
+        <dt><code>src/content.js</code> (changed)</dt>
+        <dd>Out-of-credits nudge. In the scan-batch halt path (lines
+          321-324), when <code>reply?.code === 'NO_CREDITS'</code>, render an
+          actionable prompt in the sidebar progress area: a short "You're out
+          of credits" message + a <strong>Buy credits</strong> button wired to
+          the existing <code>chrome.runtime.sendMessage({ type: 'openOptions'
+          })</code> (already used at content.js:389, 674; background opens the
+          options page). Other halt codes
+          (<code>NOT_SIGNED_IN</code>, <code>PROFILE_NOT_SET</code>) keep the
+          plain <code>setProgress</code> error. Small helper near
+          <code>setProgress</code> (line 214).</dd>
+        <dt><code>manifest.json</code> (changed)</dt>
+        <dd>Bump to <code>4.6.0</code> at backend land, <code>4.6.1</code> at
+          client wiring, <code>4.6.2</code> at close-out.</dd>
+      </dl>
+
+      <h3>Docs</h3>
+      <dl>
+        <dt><code>docs/roadmap.html</code> (changed at v4.6.2)</dt>
+        <dd>Mark v4.6 shipped; note the margin rebalance to 5×.</dd>
+        <dt><code>docs/architecture.html</code> (changed at v4.6.2)</dt>
+        <dd>No structural change; optionally note the sidebar out-of-credits
+          nudge in the client section.</dd>
+      </dl>
+    </section>
+
+    <section id="verify">
+      <h2>Verify</h2>
+      <ol>
+        <li><code>GET /health</code> → <code>4.6.0</code> after deploy.</li>
+        <li>Run a real Flash scan; its <code>scan.actual_cost</code> is ~2.5×
+          the old value (~0.45 vs ~0.18 credits). Check the most recent
+          <code>scan</code> row via <code>psql</code>, or the balance delta.</li>
+        <li><code>welcome.html</code> and <code>options.html</code> show the
+          corrected approximate scan counts; no "15 scans" remains.</li>
+        <li>Out-of-credits: drive a test account's balance near 0 (insert a
+          <code>scan_debit</code> ledger row via <code>psql</code>, or spend
+          down a low-balance account), run Scan All → the batch halts with the
+          "Buy credits" prompt → clicking it opens the options page
+          Account/Buy section. Revert the manual debit row afterward.</li>
+        <li>Regression: a normally-funded scan still scores and debits
+          correctly; the balance chip updates.</li>
+      </ol>
+    </section>
+
+    <section id="notes">
+      <h2>Notes</h2>
+      <ul>
+        <li><strong>Per-scan cost data source.</strong> The 0.18-credit Flash
+          average (range 0.07–0.23) comes from
+          <code>select avg(actual_cost) … from scan where status='success'
+          and model='gemini-2.5-flash' and kind='scan'</code> over 14 live
+          v4.4 scans on 2026-05-29. The copy's scan-count figures are derived
+          from this and rounded to "about" — they vary with posting length,
+          profile size, and model, so the UI never promises exact counts.</li>
+        <li><strong>Margin rebalance is not an ADR.</strong> The original
+          <code>2×</code> margin was recorded in spec v4.4.0 Notes and the
+          <code>pricing.py</code> docstring, not an ADR; the v4.6 bump to
+          <code>5×</code> follows the same convention. The dial is easy to
+          turn again later (one file, code-review + redeploy) as real cost and
+          willingness-to-pay data accrues.</li>
+        <li><strong>Existing balances unaffected.</strong> Re-pricing changes
+          only the credits charged on <em>future</em> scans. Users who signed
+          up under the 2× margin keep their balances and effectively got more
+          scans for their bonus — acceptable for a small early user base.</li>
+        <li><strong>Out of scope (deferred).</strong> Adjusting the signup
+          bonus amount, model-specific pricing UI, a dedicated pricing page on
+          the external website (whiteboard idea, separate track), and the v5
+          Account-section consolidation.</li>
+        <li><strong>Sub-version slicing.</strong>
+          <ul>
+            <li><code>v4.6.0</code> — spec first (this doc), then
+              <code>pricing.py</code> margin + <code>pyproject</code> 4.6.0
+              (backend redeploy).</li>
+            <li><code>v4.6.1</code> — client copy + pricing display +
+              out-of-credits nudge; <code>manifest</code> 4.6.1.</li>
+            <li><code>v4.6.2</code> — close-out: roadmap + architecture, spec
+              → done, <code>manifest</code> 4.6.2.</li>
+          </ul>
+        </li>
+      </ul>
+    </section>
+  </body>
+</html>
