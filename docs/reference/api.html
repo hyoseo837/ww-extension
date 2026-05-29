@@ -191,7 +191,10 @@
     "experience": [{ "title", "org", "dates", "description" }],
     "skills":     ["..."],
     "projects":   [{ "title", "description" }],
-    "languages":  ["..."]          // spoken/working
+    "languages":  ["..."],         // spoken/working
+    "grade_report": "...",         // raw text from the transcript (v5.1.6)
+    "coop_history": "...",         // raw text from the UW co-op work-history summary
+    "cover_letter": "..."          // raw text, if the package included one
   },
   "profile_supplement": [          // user-authored entries (v5.1.0); [] if none
     { "kind": "experience" | "project", "title": "...", "description": "..." }
@@ -234,7 +237,11 @@
           extraction (a profile <code>responseSchema</code>, v5.1.0); on
           success, upserts the result into <code>user_profile.profile_json</code>
           (leaving <code>cv_text</code> and <code>profile_supplement</code>
-          untouched, ADR 0015). Same estimate-debit-call-refund machinery as
+          untouched, ADR 0015). The package is multi-document: the CV fills the
+          structured fields, while the grade report, UW co-op work history, and
+          cover letter are copied verbatim into the <code>grade_report</code> /
+          <code>coop_history</code> / <code>cover_letter</code> raw fields
+          (v5.1.6). Same estimate-debit-call-refund machinery as
           <code>/scan</code> (same <code>scan_id</code> idempotency, same
           402 / 502 shapes).</p>
         <p><strong>Request:</strong></p>

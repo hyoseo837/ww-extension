@@ -40,8 +40,9 @@
       <dt><code>profileJson</code> (v5.1.0)</dt>
       <dd><strong>Type:</strong> structured profile object cached from
         <code>GET /profile</code> (summary / education / experience / skills /
-        projects / languages). Rendered read-only by section on the options
-        page. Mirrors the server <code>user_profile.profile_json</code> column
+        projects / languages, plus raw grade_report / coop_history /
+        cover_letter). Rendered read-only by section on the options page.
+        Mirrors the server <code>user_profile.profile_json</code> column
         below.</dd>
 
       <dt><code>profileSupplement</code> (v5.1.0)</dt>
@@ -271,7 +272,10 @@
         (institution/credential/field/grade/dates), <code>experience[]</code>
         (title/org/dates/description), <code>skills[]</code>,
         <code>projects[]</code> (title/description), <code>languages[]</code>
-        (spoken/working). Overwritten by <code>POST /profile/extract</code>;
+        (spoken/working), plus raw-text dumps of the package's other documents
+        (v5.1.6): <code>grade_report</code>, <code>coop_history</code>,
+        <code>cover_letter</code> (the CV is structured; these aren't).
+        Overwritten by <code>POST /profile/extract</code>;
         <code>PUT /profile</code> accepts it only for a full replace
         (<code>{}</code> clears). <code>build_profile_context()</code>
         serializes it into the Candidate Profile block, falling back to
