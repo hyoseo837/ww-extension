@@ -171,6 +171,14 @@ def _serialize_profile_json(p: dict) -> str:
             lines.append(line)
     if p.get("languages"):
         lines.append(f"Languages: {_join(p['languages'])}")
+    # Raw-text sections from the package's other documents (v5.1.6).
+    for key, label in (
+        ("grade_report", "Grade Report"),
+        ("coop_history", "Co-op Work History"),
+        ("cover_letter", "Cover Letter"),
+    ):
+        if p.get(key):
+            lines.append(f"{label}:\n{p[key]}")
     return "\n".join(lines)
 
 
@@ -296,13 +304,19 @@ async def score(
 
 
 _PROFILE_EXTRACT_PROMPT = (
-    "Extract the candidate's profile from this application package PDF into the "
-    "given JSON schema. summary: a 1–2 sentence overview. education, "
-    "experience, projects: one object per entry, most recent first. skills and "
-    "languages: arrays of short strings (languages = spoken/working languages "
-    "like English or French, not programming languages — those go in skills). "
-    "Use empty strings/arrays for anything the PDF doesn't state; do not invent "
-    "facts."
+    "This is a WaterlooWorks application package PDF that may bundle several "
+    "documents: a résumé/CV, a grade report (transcript), a University of "
+    "Waterloo co-op work-history summary, and sometimes a cover letter. Extract "
+    "into the given JSON schema.\n"
+    "From the résumé/CV, fill the structured fields: summary (a 1–2 sentence "
+    "overview), education, experience, projects (one object per entry, most "
+    "recent first), skills, and languages (spoken/working languages like "
+    "English or French — not programming languages, which go in skills).\n"
+    "Copy these other documents verbatim as raw text into their fields: the "
+    "grade report → grade_report, the co-op work-history summary → "
+    "coop_history, the cover letter → cover_letter.\n"
+    "Use empty strings/arrays for any document or field the package doesn't "
+    "contain; do not invent facts."
 )
 
 # Gemini structured-output schema. Optional fields throughout — the extractor
@@ -348,6 +362,10 @@ _PROFILE_SCHEMA = {
             },
         },
         "languages": {"type": "array", "items": {"type": "string"}},
+        # Raw-text dumps of the package's other documents (v5.1.6).
+        "grade_report": {"type": "string"},
+        "coop_history": {"type": "string"},
+        "cover_letter": {"type": "string"},
     },
 }
 

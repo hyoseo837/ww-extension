@@ -83,6 +83,11 @@ class StructuredProfile(BaseModel):
     skills: list[str] = []
     projects: list[ProjectEntry] = []
     languages: list[str] = []  # spoken/working, not programming
+    # Raw-text dumps of the package's other documents (v5.1.6) — the CV is
+    # structured above; these don't need structure.
+    grade_report: str = ""
+    coop_history: str = ""
+    cover_letter: str = ""
 
 
 class SupplementEntry(BaseModel):
