@@ -569,6 +569,13 @@
             <div style="font-size:13px; color:var(--on-surface-dim); margin-bottom:14px;">
               Balance: <span id="creditBalance" style="font-family:'JetBrains Mono',monospace; color:var(--primary-dim);">—</span>
             </div>
+            <div style="font-size:13px; color:var(--on-surface); margin-bottom:8px;">Buy credits</div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+              <button class="btn-secondary buy-credits" data-package="credits_500" style="margin-top:0; width:auto; padding:7px 16px;">$5 · 500</button>
+              <button class="btn-secondary buy-credits" data-package="credits_1000" style="margin-top:0; width:auto; padding:7px 16px;">$10 · 1,000</button>
+              <button class="btn-secondary buy-credits" data-package="credits_2000" style="margin-top:0; width:auto; padding:7px 16px;">$20 · 2,000</button>
+            </div>
+            <div id="buyStatus" class="status-line" style="margin-bottom:14px;"></div>
             <button class="btn-secondary" id="signOut" style="margin-top:0; width:auto; padding:7px 16px;">Sign out</button>
           </div>
           <div id="authStatus" class="status-line"></div>

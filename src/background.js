@@ -40,6 +40,10 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     refreshBalance().then(sendResponse);
     return true;
   }
+  if (msg.type === "createCheckout") {
+    createCheckout(msg.packageId).then(sendResponse);
+    return true;
+  }
 });
 
 // Auto-refresh balance on sign-in (auth set in storage) and clear it on
@@ -131,6 +135,20 @@ async function refreshBalance() {
     await chrome.storage.local.set({ creditBalance: res.data.balance });
   }
   return res;
+}
+
+// Create a Stripe Checkout session for a credit package and hand the URL
+// back to the options page, which opens it in a new tab. Credits are
+// granted server-side by the Stripe webhook, not here.
+async function createCheckout(packageId) {
+  const res = await backendFetch("/credits/checkout", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ package_id: packageId }),
+  });
+  if (res.ok && res.data?.url) return { ok: true, url: res.data.url };
+  if (res.status === 0) return { ok: false, error: "Sign in to buy credits." };
+  return { ok: false, error: res.data?.detail || "Couldn't start checkout." };
 }
 
 async function backendFetch(path, init = {}) {

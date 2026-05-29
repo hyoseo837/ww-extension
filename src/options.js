@@ -332,6 +332,52 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (changes.creditBalance) renderBalance(changes.creditBalance.newValue);
 });
 
+// ── Buy credits (Stripe Checkout) ─────────────────────────────────────────────
+
+function setBuyStatus(msg, type) {
+  const s = el('buyStatus');
+  if (!s) return;
+  s.textContent = msg;
+  s.className = 'status-line' + (type ? ' ' + type : '');
+}
+
+const buyButtons = () => document.querySelectorAll('.buy-credits');
+
+buyButtons().forEach(btn => {
+  btn.addEventListener('click', async () => {
+    buyButtons().forEach(b => (b.disabled = true));
+    setBuyStatus('Opening Stripe Checkout…');
+    try {
+      const res = await chrome.runtime.sendMessage({
+        type: 'createCheckout',
+        packageId: btn.dataset.package,
+      });
+      if (res?.ok && res.url) {
+        chrome.tabs.create({ url: res.url });
+        setBuyStatus('Complete payment in the new tab; your balance updates within a few seconds.', 'ok');
+      } else {
+        setBuyStatus(res?.error || "Couldn't start checkout.", 'err');
+      }
+    } catch (e) {
+      setBuyStatus(`Checkout failed: ${e.message || e}`, 'err');
+    } finally {
+      buyButtons().forEach(b => (b.disabled = false));
+    }
+  });
+});
+
+// Returning from the Stripe tab, the webhook may have just granted credits.
+// Refresh the balance on focus, plus one delayed retry for webhook lag. The
+// creditBalance storage listener above re-renders — no manual refresh control.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible') return;
+  chrome.storage.local.get('auth', d => {
+    if (!d.auth?.access_token) return;
+    chrome.runtime.sendMessage({ type: 'refreshBalance' });
+    setTimeout(() => chrome.runtime.sendMessage({ type: 'refreshBalance' }), 3000);
+  });
+});
+
 // ── Help popover toggle ───────────────────────────────────────────────────────
 
 const helpPopover = el('opts-help-popover');
