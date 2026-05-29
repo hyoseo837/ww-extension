@@ -218,6 +218,23 @@ function setProgress(text, isError = false) {
   el.classList.toggle('ww-ext-error', isError);
 }
 
+// Out-of-credits halt: show an actionable "Buy credits" prompt that opens
+// the options page Account/Buy section (same openOptions hop as the
+// empty-state guide and Settings button).
+function setOutOfCreditsPrompt() {
+  const el = document.getElementById('ww-ext-progress');
+  if (!el) return;
+  el.classList.add('ww-ext-error');
+  el.textContent = "You're out of credits. ";
+  const btn = document.createElement('button');
+  btn.className = 'ww-ext-inline-link';
+  btn.textContent = 'Buy credits';
+  btn.addEventListener('click', () => {
+    chrome.runtime.sendMessage({ type: 'openOptions' });
+  });
+  el.appendChild(btn);
+}
+
 async function scanAllJobs() {
   const scanBtn = document.getElementById('ww-ext-scan');
   const stopBtn = document.getElementById('ww-ext-stop');
@@ -304,7 +321,7 @@ async function scanAllJobs() {
       const halt = reply?.code === 'NO_CREDITS'
         || reply?.code === 'NOT_SIGNED_IN'
         || reply?.code === 'PROFILE_NOT_SET';
-      return { ok: false, error: reply?.error || 'unknown', halt };
+      return { ok: false, error: reply?.error || 'unknown', halt, code: reply?.code };
     }
 
     async function worker() {
@@ -320,11 +337,15 @@ async function scanAllJobs() {
           lastError = result.error;
           if (result.halt) {
             halted = true;
-            setProgress(result.error, true);
+            if (result.code === 'NO_CREDITS') {
+              setOutOfCreditsPrompt();
+            } else {
+              setProgress(result.error, true);
+            }
             return;
           }
         }
-        setProgress(`Scored ${done + failed} of ${total}…`);
+        if (!halted) setProgress(`Scored ${done + failed} of ${total}…`);
       }
     }
 
