@@ -156,7 +156,7 @@
       }
 
       /* ── Inputs ──────────────────────────────────────────────────────────── */
-      input[type="password"], select {
+      input[type="password"], input[type="text"], select {
         width: 100%;
         background: var(--bg-low);
         border: 1px solid var(--outline);
@@ -168,11 +168,32 @@
         outline: none;
         transition: border-color 0.15s, box-shadow 0.15s;
       }
-      input[type="password"]:focus, select:focus {
+      input[type="password"]:focus, input[type="text"]:focus, select:focus {
         border-color: var(--primary);
         box-shadow: 0 0 0 2px var(--primary-glow);
       }
       select { appearance: none; cursor: pointer; }
+
+      /* ── Structured match criteria (v5.0.5) ──────────────────────────────── */
+      .criterion { margin-bottom: 14px; }
+      .criterion > input[type="text"] { margin-top: 6px; }
+      .criterion details { margin-top: 6px; }
+      .criterion summary {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 10px;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: var(--on-surface-dim);
+        cursor: pointer;
+        padding: 4px 0;
+      }
+      .criterion summary:hover { color: var(--on-surface); }
+      .criterion .tier-label {
+        display: block;
+        font-size: 11px;
+        color: var(--on-surface-dim);
+        margin: 8px 0 3px;
+      }
 
       textarea {
         width: 100%;
@@ -529,6 +550,14 @@
                   <option value="international">International student (study permit)</option>
                   <option value="other">Other</option>
                 </select>
+              </div>
+              <div class="field">
+                <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
+                  <span class="field-label" style="margin-bottom:0;">Match Preferences</span>
+                  <button class="opts-help-btn" data-help="prefs">?</button>
+                </div>
+                <!-- Weighted/tiered preference blocks rendered by options.js -->
+                <div id="criteriaFields"></div>
               </div>
               <div class="field">
                 <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">

@@ -5,6 +5,7 @@ const el = id => document.getElementById(id);
 const HELP_CONTENT = {
   model:    'Flash: cheaper per scan (~$0.001 CAD). Pro: more accurate, ~10× the cost. Flash is recommended.',
   workAuth: 'Your work-authorization status in Canada. The AI uses this to judge eligibility — e.g. an international student is flagged on roles that require citizenship or a security clearance. Leave unset to skip eligibility checks.',
+  prefs:    'What you want in a role, as comma-separated values per tier. Preferred = ideal (full marks); under “More”, Acceptable = fine (no penalty), Avoid = allowed but penalized, Excluded = never. Weight sets how heavily a field counts. Leave a field blank for no preference.',
   criteria: 'Free-form notes the AI weighs alongside your structured criteria. Examples: "prioritize high salary", "ignore Web3 or crypto", "prefer early-stage startups". Leave empty to score purely on profile + criteria fit — no extra token cost.'
 };
 
@@ -75,18 +76,76 @@ chrome.storage.local.get(['model', 'cvText', 'preferences', 'matchCriteria', 'th
 });
 
 // ── Structured match criteria (form ⇄ object) ─────────────────────────────────
-// applyMatchCriteria populates form fields from a match_criteria object;
-// buildMatchCriteria reads them back into a full object for PUT /profile.
-// (v5.0.4 covers work_authorization; the weighted/tiered preferences are
-// added in a later slice.)
+// The five weighted/tiered preference fields share one shape, so they're
+// rendered from a config and read back by iterating the rendered blocks.
+// applyMatchCriteria populates the form from a match_criteria object;
+// buildMatchCriteria reads it back into a full object for PUT /profile.
+
+const CRITERIA_FIELDS = [
+  { key: 'preferred_locations', label: 'Locations',        placeholder: 'e.g. Toronto, Waterloo' },
+  { key: 'work_modes',          label: 'Work Mode',        placeholder: 'e.g. remote, hybrid' },
+  { key: 'target_term',         label: 'Target Term',      placeholder: 'e.g. Fall 2026, Winter 2027' },
+  { key: 'target_length',       label: 'Term Length',      placeholder: 'e.g. 4-month, 8-month' },
+  { key: 'languages',           label: 'Spoken Languages', placeholder: 'e.g. English, French' },
+];
+const TIERS = ['preferred', 'acceptable', 'avoid', 'excluded'];
+const TIER_HINTS = {
+  preferred:  'Preferred — ideal',
+  acceptable: 'Acceptable — no penalty',
+  avoid:      'Avoid — penalized',
+  excluded:   'Excluded — never',
+};
+const WEIGHTS = ['nice-to-have', 'strong', 'must'];
+
+const splitCsv = s => s.split(',').map(v => v.trim()).filter(Boolean);
+
+// Render the five preference blocks once. The common case (Preferred only)
+// stays visible; weight + the other tiers collapse into a <details>.
+function renderCriteriaFields() {
+  const root = el('criteriaFields');
+  if (!root) return;
+  root.innerHTML = CRITERIA_FIELDS.map(f => `
+    <div class="criterion" data-key="${f.key}">
+      <span class="field-label" style="margin-bottom:0;">${f.label}</span>
+      <input type="text" data-tier="preferred" placeholder="${f.placeholder} (comma-separated)" />
+      <details>
+        <summary>Weight &amp; more tiers</summary>
+        <label class="tier-label">Weight</label>
+        <select data-weight>
+          ${WEIGHTS.map(w => `<option value="${w}">${w}</option>`).join('')}
+        </select>
+        ${['acceptable', 'avoid', 'excluded'].map(t => `
+          <label class="tier-label">${TIER_HINTS[t]}</label>
+          <input type="text" data-tier="${t}" placeholder="comma-separated" />`).join('')}
+      </details>
+    </div>`).join('');
+}
 
 function applyMatchCriteria(mc) {
-  el('workAuth').value = (mc && mc.work_authorization) || '';
+  mc = mc || {};
+  el('workAuth').value = mc.work_authorization || '';
+  document.querySelectorAll('#criteriaFields .criterion').forEach(block => {
+    const c = mc[block.dataset.key] || {};
+    block.querySelector('[data-weight]').value = c.weight || 'nice-to-have';
+    TIERS.forEach(t => {
+      block.querySelector(`[data-tier="${t}"]`).value = (c[t] || []).join(', ');
+    });
+  });
 }
 
 function buildMatchCriteria() {
-  return { work_authorization: el('workAuth').value || null };
+  const out = { work_authorization: el('workAuth').value || null };
+  document.querySelectorAll('#criteriaFields .criterion').forEach(block => {
+    const c = { weight: block.querySelector('[data-weight]').value };
+    TIERS.forEach(t => {
+      c[t] = splitCsv(block.querySelector(`[data-tier="${t}"]`).value);
+    });
+    out[block.dataset.key] = c;
+  });
+  return out;
 }
+
+renderCriteriaFields();
 
 // ── Profile fetch (server is authoritative) ───────────────────────────────────
 
