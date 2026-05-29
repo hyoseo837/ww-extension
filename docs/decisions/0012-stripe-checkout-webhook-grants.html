@@ -23,7 +23,7 @@
         Constraints from the existing system: the client is a Chrome
         extension (no server-rendered checkout page of our own, no
         place to safely hold card data); the credit ledger
-        (<a href="../specs/v4.3.0-credit-ledger.html">v4.3</a>) is
+        (<a href="../archive/v04/v4.3.0-credit-ledger.html">v4.3</a>) is
         append-only with a <code>kind = 'purchase'</code> value already
         reserved; the backend is stateless on auth (verifies Supabase
         JWTs) and owns all ledger writes via a service-role connection.
@@ -57,7 +57,7 @@
           <code>kind = 'purchase'</code> (one grant row per Stripe
           event id). The latter reuses the exact pattern already used
           for the one-per-user signup bonus
-          (<a href="../specs/v4.3.0-credit-ledger.html">v4.3</a>,
+          (<a href="../archive/v04/v4.3.0-credit-ledger.html">v4.3</a>,
           migration 0001).
         </li>
       </ol>

@@ -24,20 +24,20 @@
         <code>package.sh</code> updated to exclude <code>server/</code>
         from the Web Store zip — this packaging boundary replaces the
         repo split as the visibility mechanism (see
-        <a href="../decisions/0010-monorepo-with-server-folder.html">ADR 0010</a>).
+        <a href="../../decisions/0010-monorepo-with-server-folder.html">ADR 0010</a>).
         No client-side code changes — extension wiring follows in v4.2.
       </p>
       <p>
         Stack and platform are fixed by ADRs:
-        <a href="../decisions/0007-deploy-on-digitalocean-app-platform.html">0007</a>
+        <a href="../../decisions/0007-deploy-on-digitalocean-app-platform.html">0007</a>
         (DO App Platform),
-        <a href="../decisions/0008-auth-and-db-via-supabase.html">0008</a>
+        <a href="../../decisions/0008-auth-and-db-via-supabase.html">0008</a>
         (Supabase auth + DB),
-        <a href="../decisions/0009-backend-stack-fastapi.html">0009</a>
+        <a href="../../decisions/0009-backend-stack-fastapi.html">0009</a>
         (FastAPI),
-        <a href="../decisions/0011-uv-as-dep-manager.html">0011</a>
+        <a href="../../decisions/0011-uv-as-dep-manager.html">0011</a>
         (uv). Repo layout fixed by
-        <a href="../decisions/0010-monorepo-with-server-folder.html">0010</a>
+        <a href="../../decisions/0010-monorepo-with-server-folder.html">0010</a>
         (monorepo).
       </p>
     </section>
@@ -51,7 +51,7 @@
         <dd>Project metadata, version <code>4.1.0</code> (syncs with
           root <code>manifest.json</code>), dependencies (fastapi,
           uvicorn[standard]). Uses uv per
-          <a href="../decisions/0011-uv-as-dep-manager.html">ADR 0011</a>;
+          <a href="../../decisions/0011-uv-as-dep-manager.html">ADR 0011</a>;
           hatchling build backend so the project is installable into
           the venv (required for <code>importlib.metadata.version</code>
           in <code>/health</code>).</dd>
@@ -147,7 +147,7 @@
           a manual sign-in via the Supabase dashboard's test flow
           returns a valid session JWT.</li>
         <li><code>server/app/</code> matches the feature-grouped layout
-          from <a href="../decisions/0009-backend-stack-fastapi.html">ADR 0009</a>.</li>
+          from <a href="../../decisions/0009-backend-stack-fastapi.html">ADR 0009</a>.</li>
         <li><code>server/pyproject.toml</code> version equals
           <code>4.1.0</code>; <code>manifest.json</code> version equals
           <code>4.1.0</code>; commit message starts with
@@ -170,7 +170,7 @@
           for cross-vendor latency — decide and document in
           <code>architecture.html</code> at phase start.</li>
         <li>Dependency manager: uv, locked in
-          <a href="../decisions/0011-uv-as-dep-manager.html">ADR 0011</a>.</li>
+          <a href="../../decisions/0011-uv-as-dep-manager.html">ADR 0011</a>.</li>
         <li>Region pair: DO <code>tor1</code> + Supabase
           <code>ca-central-1</code> (both in Canada; lowest latency for
           UWaterloo users). Decided at v4.1 phase start.</li>

@@ -28,7 +28,7 @@
       <p>
         Decision rationale (payments shape, webhook-driven idempotent
         grants, amount-from-<code>package_id</code>) is in
-        <a href="../decisions/0012-stripe-checkout-webhook-grants.html">ADR 0012</a>.
+        <a href="../../decisions/0012-stripe-checkout-webhook-grants.html">ADR 0012</a>.
       </p>
       <p>
         <strong>Packages (1:1).</strong> Three fixed bundles —
@@ -352,7 +352,7 @@
           <strong>Sub-version slicing.</strong>
           <ul>
             <li><code>v4.5.0</code> — docs first
-              (<a href="../decisions/0012-stripe-checkout-webhook-grants.html">ADR 0012</a>,
+              (<a href="../../decisions/0012-stripe-checkout-webhook-grants.html">ADR 0012</a>,
               this spec), then backend: migration 0004,
               <code>payments.py</code>, the three routes, config +
               <code>.env.example</code>, <code>pyproject.toml</code>
@@ -360,7 +360,7 @@
               <code>api.html</code> + <code>data-model.html</code>. No
               extension changes; manifest bumps to <code>4.5.0</code> to
               stay in lockstep with <code>pyproject.toml</code> per
-              <a href="../decisions/0002-versioning-vXYZ.html">ADR 0002</a>.</li>
+              <a href="../../decisions/0002-versioning-vXYZ.html">ADR 0002</a>.</li>
             <li><code>v4.5.1</code> — extension wiring: background
               <code>createCheckout</code>, options Buy-credits buttons,
               visibility-triggered refresh.</li>

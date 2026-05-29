@@ -48,8 +48,12 @@
         schemas, backend API contract. Read on demand, not by default.</dd>
 
       <dt><code>docs/archive/</code></dt>
-      <dd>Frozen old major versions. v01/v02/v03 used the older
-        plan/impl/history shape. Do not extend; reference only.</dd>
+      <dd>Frozen shipped major versions, one folder per major
+        (<code>v01</code>…). v01/v02/v03 use the older
+        <code>plan/impl/history</code> shape; <code>v04</code> onward keep
+        their per-phase spec files as-is, relocated here when the major ships
+        (<a href="decisions/0014-archive-shipped-major-version-specs.html">ADR 0014</a>).
+        Reference only — read-only history.</dd>
 
       <dt><code>docs/whiteboard.md</code></dt>
       <dd>User's personal scratchpad for raw ideas, possible changes,

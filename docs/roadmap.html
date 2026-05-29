@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="project" content="ww-extension" />
     <meta name="type" content="roadmap" />
-    <meta name="active-major-version" content="v04" />
+    <meta name="active-major-version" content="v05" />
     <meta name="last-updated" content="2026-05-29" />
     <title>Roadmap — ww-extension</title>
   </head>
@@ -13,8 +13,9 @@
 
     <p>
       Vision across major versions. Living document — updated in place
-      across version bumps, not archived. For shipped phase detail see
-      <code>docs/specs/</code>; for system architecture see
+      across version bumps, not archived. For active-version phase detail see
+      <code>docs/specs/</code>; shipped majors' specs are archived under
+      <code>docs/archive/vNN/</code> (ADR 0014); for system architecture see
       <code>docs/architecture.html</code>.
     </p>
 
@@ -38,8 +39,17 @@
       </dl>
     </section>
 
-    <section id="active" data-status="in-progress">
-      <h2>v4 — Monetization (active)</h2>
+    <section id="v4" data-status="done">
+      <h2>v4 — Monetization (shipped)</h2>
+
+      <p>
+        <strong>Shipped and frozen.</strong> All v4 phase specs are archived
+        under <code>docs/archive/v04/</code> (kept in spec format — see
+        <a href="decisions/0014-archive-shipped-major-version-specs.html">ADR 0014</a>);
+        the cross-cutting decisions remain in <code>docs/decisions/</code>.
+        This section is retained for the vision/rationale; per-phase detail
+        lives in the archived specs.
+      </p>
 
       <p>
         <strong>Goal:</strong> turn the extension into a monetizable service.
@@ -81,7 +91,7 @@
         <li>
           <strong>v4.0 — Doc restructure + v4 opening</strong> (shipped
           as v4.0.0 and v4.0.1). See
-          <code>docs/specs/v4.0.0-restructure.html</code>.
+          <code>docs/archive/v04/v4.0.0-restructure.html</code>.
         </li>
         <li>
           <strong>v4.1 — Backend bootstrap</strong> (shipped) —
@@ -92,7 +102,7 @@
           <code>api.html</code> + <code>architecture.html</code>
           updated; <code>package.sh</code> excludes <code>server/</code>
           from the Web Store zip. No extension code changes. See
-          <code>docs/specs/v4.1.0-backend-bootstrap.html</code>.
+          <code>docs/archive/v04/v4.1.0-backend-bootstrap.html</code>.
         </li>
         <li>
           <strong>v4.2 — Auth in the extension</strong> (shipped) —
@@ -121,7 +131,7 @@
           activation and swap the DigitalOcean env vars to live values
           (<code>sk_live_…</code> + a live-mode webhook secret); no code
           change. See
-          <code>docs/specs/v4.5.0-stripe-credit-purchase.html</code> and
+          <code>docs/archive/v04/v4.5.0-stripe-credit-purchase.html</code> and
           <a href="decisions/0012-stripe-checkout-webhook-grants.html">ADR 0012</a>.
         </li>
         <li>
@@ -133,7 +143,7 @@
           wrong welcome/options copy to show approximate scan counts and a
           pricing explainer; added a sidebar "Buy credits" nudge when a scan
           batch halts out of credits. See
-          <code>docs/specs/v4.6.0-free-paid-tier-ux.html</code>.
+          <code>docs/archive/v04/v4.6.0-free-paid-tier-ux.html</code>.
         </li>
         <li>
           <strong>v4.7 — Tunable constants consolidation</strong> (shipped) —
@@ -144,7 +154,7 @@
           cost estimate can't desync from the call); default model and scoring
           temperatures are named constants; the signup bonus is a named
           constant in the trigger. No behavior change. Client left as-is. See
-          <code>docs/specs/v4.7.0-tunable-constants.html</code>.
+          <code>docs/archive/v04/v4.7.0-tunable-constants.html</code>.
         </li>
       </ol>
 
@@ -162,8 +172,8 @@
       </p>
     </section>
 
-    <section id="future">
-      <h2>v5 — Profile structure + scoring quality (planned)</h2>
+    <section id="active" data-status="in-progress">
+      <h2>v5 — Profile structure + scoring quality (active)</h2>
       <p>
         <strong>Direction set 2026-05-28.</strong> v4 ships a
         functional monetized product but treats user preferences as

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-05-29" />
+    <meta name="amends" content="0005-doc-architecture-spec-adr.html" />
+    <title>ADR 0014 — Relocate shipped major-version specs to docs/archive/vNN/</title>
+  </head>
+  <body>
+    <h1>ADR 0014 — Relocate shipped major-version specs to docs/archive/vNN/</h1>
+
+    <section id="context">
+      <h2>Context</h2>
+      <p>
+        v4 (Monetization) shipped, and v5 has phase-started. Under
+        <a href="0005-doc-architecture-spec-adr.html">ADR 0005</a>, per-phase
+        specs live in <code>docs/specs/</code> and
+        <code>docs/archive/</code> held only the v01–v03
+        <code>plan/impl/history</code> triad, marked "do not extend." That left
+        no defined home for a shipped major version's specs: <code>docs/specs/</code>
+        accumulated all eight v4 spec files mixed in with the active v5 spec,
+        and the only "done" signal was each spec's <code>status</code> meta.
+      </p>
+      <p>
+        The question at major-version close: leave shipped specs in
+        <code>docs/specs/</code> (a flat, ever-growing pile), or relocate them
+        so <code>docs/specs/</code> shows only the active version. ADR 0005's
+        archive policy didn't cover this because v01–v03 predated the spec
+        shape entirely.
+      </p>
+    </section>
+
+    <section id="decision">
+      <h2>Decision</h2>
+      <p>
+        When a major version ships and the next opens, <strong>relocate its
+        per-phase spec files into <code>docs/archive/vNN/</code></strong>,
+        kept in their original spec format (<em>not</em> converted to the old
+        <code>plan/impl/history</code> triad). v04 is the first to follow this:
+        the eight <code>v4.*.html</code> specs now live in
+        <code>docs/archive/v04/</code>.
+      </p>
+      <p>This amends the archive policy of ADR 0005. Unchanged by it:</p>
+      <ul>
+        <li><strong>ADRs stay immutable in <code>docs/decisions/</code></strong>
+          — they are cross-cutting and subject-indexed, not version-scoped, so
+          they do not move.</li>
+        <li><strong>Living docs</strong> (<code>roadmap.html</code>,
+          <code>architecture.html</code>, <code>reference/</code>) stay in
+          place and keep spanning versions.</li>
+        <li><strong>Relative links are fixed on relocation.</strong> Moved
+          specs sit one level deeper, so their up-links
+          (<code>../decisions/</code> → <code>../../decisions/</code>) are
+          repointed, and inbound links from other docs are updated to
+          <code>../archive/vNN/…</code>. Where an inbound link lives in an
+          immutable ADR, repointing the path is treated as link maintenance
+          (the decision text is untouched), not a substantive edit.</li>
+      </ul>
+    </section>
+
+    <section id="consequences">
+      <h2>Consequences</h2>
+      <ul>
+        <li><strong>+</strong> <code>docs/specs/</code> shows only the active
+          major version — less noise when working a current phase.</li>
+        <li><strong>+</strong> <code>docs/archive/</code> becomes the uniform
+          home for every frozen major version, not just the pre-spec ones.</li>
+        <li><strong>+</strong> Specs keep their format, so an archived v04 spec
+          reads exactly as it did when shipped (unlike the v01–v03 triad).</li>
+        <li><strong>−</strong> Relocation breaks relative links until fixed;
+          closing a major version is now a deliberate move-and-repoint step,
+          not just a status flip. This ADR records the procedure so it's
+          mechanical next time.</li>
+        <li><strong>−</strong> <code>docs/archive/</code> now holds two doc
+          shapes: the v01–v03 triad and v04+ specs. <code>docs/README.html</code>
+          notes the split.</li>
+        <li><strong>−</strong> An immutable ADR (0012) carries a mechanically
+          repointed link to a relocated spec. Acceptable: the link target is
+          the same document, only its path changed.</li>
+      </ul>
+    </section>
+  </body>
+</html>
