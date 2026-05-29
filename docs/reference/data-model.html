@@ -154,7 +154,10 @@
       <strong>Indexes:</strong>
       <code>(user_id, created_at desc)</code> for balance/history reads;
       partial unique index on <code>(user_id) where kind =
-      'signup_bonus'</code> as defense-in-depth against double-grant.
+      'signup_bonus'</code> as defense-in-depth against double-grant;
+      partial unique index on <code>(ref) where kind = 'purchase'</code>
+      (migration 0004, v4.5) so a replayed Stripe webhook can't
+      double-grant — one purchase row per Stripe event id.
     </p>
     <p>
       <strong>RLS:</strong> enabled. SELECT policy
@@ -172,13 +175,21 @@
     </p>
 
     <p>
-      <strong>Anticipated (v4.4+):</strong>
+      <strong>Live (v4.4):</strong> <code>public.scan</code> — per-call
+      request/response + metering record backing the
+      estimate-debit-refund flow and <code>scan_id</code> idempotency on
+      <code>/scan</code> and <code>/profile/extract</code>. Full column
+      set in <code>server/migrations/0002_scan.sql</code>.
     </p>
-    <ul>
-      <li><code>scan</code> — request/response record for audit and
-        refund-on-failure (v4.4)</li>
-      <li><code>stripe_event</code> — idempotency keyed by Stripe event
-        ID (v4.5)</li>
-    </ul>
+    <p>
+      <strong>Credit purchases (v4.5).</strong> Stripe purchases add no
+      new table. A paid <code>checkout.session.completed</code> webhook
+      inserts one <code>kind='purchase'</code> row into
+      <code>credit_ledger_entry</code> with <code>ref =</code> the Stripe
+      event id; idempotency is the purchase-ref partial unique index
+      above. ADR 0012 chose this over a dedicated
+      <code>stripe_event</code> table (minimal-code; add one later if
+      full payment-funnel auditing is ever needed).
+    </p>
   </body>
 </html>

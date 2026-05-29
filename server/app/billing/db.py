@@ -63,6 +63,24 @@ async def balance_after_estimate(
     return row["remaining"]
 
 
+async def grant_purchase(user_id: str, credits: Decimal, event_id: str) -> None:
+    """Grant purchased credits, idempotent on the Stripe event id.
+
+    The partial unique index on (ref) WHERE kind='purchase' (migration
+    0004) makes a replayed webhook a no-op. Runs on its own connection —
+    the webhook is outside the scan transactions.
+    """
+    async with pool().acquire() as conn:
+        await conn.execute(
+            "insert into credit_ledger_entry (user_id, delta, kind, ref) "
+            "values ($1::uuid, $2, 'purchase', $3) "
+            "on conflict (ref) where kind = 'purchase' do nothing",
+            user_id,
+            credits,
+            event_id,
+        )
+
+
 async def insert_ledger_entry(
     conn: asyncpg.Connection,
     *,

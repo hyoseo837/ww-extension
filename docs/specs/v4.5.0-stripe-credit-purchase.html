@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v4.5.0" />
+    <meta name="status" content="planned" />
+    <meta name="last-updated" content="2026-05-28" />
+    <meta name="credit-unit" content="1 credit = $0.01 CAD" />
+    <title>Spec v4.5 — Stripe credit purchase</title>
+  </head>
+  <body>
+    <h1>Spec v4.5 — Stripe credit purchase</h1>
+
+    <section id="goal">
+      <h2>Goal</h2>
+      <p>
+        Let users buy credits. Until now the only way to gain credits is
+        the 100-credit signup bonus; once spent, a user is stuck. v4.5
+        adds <strong>Stripe Checkout</strong> purchasing with credits
+        granted by a signature-verified webhook, plus a Buy-credits UI in
+        the options-page Account section. The credit ledger already
+        reserves <code>kind = 'purchase'</code>
+        (<a href="v4.3.0-credit-ledger.html">v4.3</a>), so this phase is
+        additive — no existing endpoint or schema changes.
+      </p>
+      <p>
+        Decision rationale (payments shape, webhook-driven idempotent
+        grants, amount-from-<code>package_id</code>) is in
+        <a href="../decisions/0012-stripe-checkout-webhook-grants.html">ADR 0012</a>.
+      </p>
+      <p>
+        <strong>Packages (1:1).</strong> Three fixed bundles —
+        $5 / $10 / $20 CAD → 500 / 1000 / 2000 credits. Since
+        <code>1 credit = $0.01 CAD = 1 cent</code>, the Stripe
+        <code>unit_amount</code> (cents) equals the credit count for
+        every package. No markup at purchase time; margin is already
+        baked into per-scan pricing (v4.4). Amounts live as in-code
+        constants and are sent as dynamic <code>price_data</code> — no
+        Stripe Dashboard Products to manage.
+      </p>
+      <p>
+        <strong>Security invariant.</strong> The credit amount granted is
+        derived server-side from <code>package_id</code> and carried only
+        in Stripe-held <code>metadata</code>. The client never sends a
+        credit or dollar amount; the webhook trusts only metadata it set
+        at session creation. Idempotency is a partial unique index on the
+        ledger's <code>ref</code> (the Stripe event id), mirroring the
+        v4.3 signup-bonus index.
+      </p>
+      <p>
+        Auth carries over from v4.2: <code>POST /credits/checkout</code>
+        uses <code>Authorization: Bearer &lt;jwt&gt;</code> via the
+        existing <code>current_user</code> dependency.
+        <code>POST /webhooks/stripe</code> is the one unauthenticated
+        write path — gated instead by Stripe signature verification.
+      </p>
+    </section>
+
+    <section id="files">
+      <h2>Files</h2>
+
+      <h3>Backend</h3>
+      <dl>
+        <dt><code>server/migrations/0004_purchase_idempotency.sql</code> (added)</dt>
+        <dd>
+          Idempotent. Adds a partial unique index
+          <code>credit_ledger_entry_purchase_ref_unique</code> on
+          <code>(ref) WHERE kind = 'purchase'</code> so a replayed
+          Stripe event (same event id in <code>ref</code>) cannot
+          double-grant. Stripe event ids are globally unique, so a
+          purchase-scoped unique on <code>ref</code> is safe and never
+          collides with <code>scan_debit</code>/<code>scan_refund</code>
+          rows whose <code>ref</code> is a scan UUID. Same pattern as the
+          0001 signup-bonus index.
+        </dd>
+
+        <dt><code>server/app/billing/payments.py</code> (added)</dt>
+        <dd>
+          Named <code>payments.py</code>, not <code>stripe.py</code>, so
+          it doesn't shadow the <code>stripe</code> package.
+          <ul>
+            <li><code>CREDIT_PACKAGES</code> — dict keyed by
+              <code>package_id</code> →
+              <code>{cad_cents, credits}</code>:
+              <code>credits_500</code> / <code>credits_1000</code> /
+              <code>credits_2000</code>. <code>cad_cents == credits</code>
+              by the 1:1 rule.</li>
+            <li><code>create_checkout_session(user_id, package_id)
+              -&gt; str</code> — validates <code>package_id</code>;
+              builds a <code>mode="payment"</code> Checkout session with
+              dynamic <code>price_data</code> (currency <code>cad</code>,
+              <code>unit_amount = cad_cents</code>,
+              <code>product_data.name = "&lt;N&gt; credits"</code>, qty 1);
+              sets <code>client_reference_id = user_id</code> and
+              <code>metadata = {user_id, credits, package_id}</code>;
+              <code>success_url</code>/<code>cancel_url</code> point at
+              <code>{public_base_url}/credits/checkout/result?status=…</code>.
+              Returns <code>session.url</code>. The blocking Stripe SDK
+              call runs in
+              <code>fastapi.concurrency.run_in_threadpool</code>.</li>
+            <li><code>verify_event(payload, sig_header)</code> — wraps
+              <code>stripe.Webhook.construct_event(…,
+              settings.stripe_webhook_secret)</code> (local crypto, no
+              threadpool); raises on bad signature.</li>
+            <li>Stripe <code>api_key</code> set from
+              <code>settings.stripe_secret_key</code>.</li>
+          </ul>
+        </dd>
+
+        <dt><code>server/app/billing/db.py</code> (changed)</dt>
+        <dd>
+          Add <code>grant_purchase(user_id, credits, event_id)</code>:
+          inserts <code>kind='purchase'</code>,
+          <code>ref=event_id</code>, with
+          <code>ON CONFLICT (ref) WHERE kind = 'purchase' DO
+          NOTHING</code>. Acquires its own pool connection (the webhook
+          runs outside the scan transactions).
+        </dd>
+
+        <dt><code>server/app/billing/routes.py</code> (changed)</dt>
+        <dd>
+          <ul>
+            <li><code>POST /credits/checkout</code> — authenticated.
+              Body <code>{package_id}</code>; <code>400</code> on unknown
+              package. Returns <code>{url}</code>. No credit movement.</li>
+            <li><code>POST /webhooks/stripe</code> — unauthenticated
+              (Stripe-only). Takes <code>Request</code>; reads raw
+              <code>await request.body()</code> +
+              <code>stripe-signature</code> header →
+              <code>verify_event</code> (<code>400</code> on bad
+              signature). On
+              <code>checkout.session.completed</code> with
+              <code>payment_status == "paid"</code>: reads
+              <code>metadata.user_id</code> + <code>metadata.credits</code>,
+              calls <code>db.grant_purchase(…, event_id=event["id"])</code>.
+              Returns <code>{"received": true}</code> (200) for handled
+              and ignored event types so Stripe stops retrying; lets DB
+              errors surface as 500 so Stripe <em>does</em> retry.</li>
+            <li><code>GET /credits/checkout/result</code> —
+              unauthenticated <code>HTMLResponse</code>. Minimal landing
+              page Stripe redirects to ("Payment received — return to the
+              extension; your balance updates in a few seconds", and a
+              cancel variant via <code>?status=cancel</code>). Needed
+              because Stripe requires an http(s) <code>success_url</code>
+              and a <code>chrome-extension://</code> URL is not
+              allowed.</li>
+          </ul>
+        </dd>
+
+        <dt><code>server/app/core/config.py</code> + <code>server/.env.example</code> (changed)</dt>
+        <dd>
+          Add <code>stripe_secret_key</code>,
+          <code>stripe_webhook_secret</code>, <code>public_base_url</code>
+          to Pydantic Settings. <code>.env.example</code> documents all
+          three (test-mode <code>sk_test_…</code> /
+          <code>whsec_…</code> hints; DO app URL for
+          <code>PUBLIC_BASE_URL</code>).
+        </dd>
+
+        <dt><code>server/pyproject.toml</code> (changed)</dt>
+        <dd>Add <code>stripe&gt;=11</code>. Bump version to
+          <code>4.5.0</code>.</dd>
+      </dl>
+
+      <h3>Extension (v4.5.1)</h3>
+      <dl>
+        <dt><code>src/background.js</code> (changed)</dt>
+        <dd>
+          Add a <code>createCheckout</code> branch to the
+          <code>onMessage</code> router (alongside
+          <code>backendFetch</code> / <code>refreshBalance</code>):
+          calls <code>backendFetch("/credits/checkout", { method:"POST",
+          body: JSON.stringify({package_id}) })</code> and resolves
+          <code>{ ok, url }</code>. Reuses the existing
+          <code>backendFetch</code> (auth + token refresh handled
+          there).
+        </dd>
+
+        <dt><code>options.html</code> (changed)</dt>
+        <dd>
+          Inside the <code>#auth-in</code> block (shown only when signed
+          in), add a Buy-credits row: three buttons
+          (<code>$5 · 500</code> / <code>$10 · 1,000</code> /
+          <code>$20 · 2,000</code>) with <code>data-package</code>
+          attributes, plus a small status line. No new permissions — the
+          backend host permission already works for <code>/scan</code>,
+          and <code>chrome.tabs.create</code> needs none.
+        </dd>
+
+        <dt><code>src/options.js</code> (changed)</dt>
+        <dd>
+          Wire the three buttons →
+          <code>sendMessage({type:"createCheckout", package_id})</code> →
+          on <code>ok</code>, <code>chrome.tabs.create({ url })</code> to
+          open Stripe Checkout in a new tab. Add a
+          <code>visibilitychange</code> listener: when the options tab
+          becomes visible again and the user is signed in, send
+          <code>refreshBalance</code> to background, then once more after
+          ~3s (covers webhook lag). The existing <code>creditBalance</code>
+          storage listener re-renders the balance — no new render path,
+          honoring the v4.3 "no manual refresh control" ethos.
+        </dd>
+
+        <dt><code>manifest.json</code> (changed)</dt>
+        <dd>Bump to <code>4.5.0</code> at backend land, <code>4.5.1</code>
+          at extension wiring, <code>4.5.2</code> at close-out.</dd>
+      </dl>
+
+      <h3>Docs</h3>
+      <dl>
+        <dt><code>docs/decisions/0012-stripe-checkout-webhook-grants.html</code> (added)</dt>
+        <dd>ADR the roadmap deferred to v4.5 planning. Written first.</dd>
+
+        <dt><code>docs/reference/api.html</code> (changed)</dt>
+        <dd>Promote <code>POST /credits/checkout</code> and
+          <code>POST /webhooks/stripe</code> from "Planned" to "Live";
+          document the request/response shapes, the
+          <code>GET /credits/checkout/result</code> landing page, and the
+          400-on-bad-signature behavior. Bump <code>version-pin</code> to
+          <code>server v4.5.0</code>.</dd>
+
+        <dt><code>docs/reference/data-model.html</code> (changed)</dt>
+        <dd>Document the <code>purchase</code> ledger kind in use and the
+          new purchase-ref idempotency index. Drop the "Anticipated"
+          <code>stripe_event</code> table line — ADR 0012 chose the
+          ledger-ref index instead.</dd>
+
+        <dt><code>docs/architecture.html</code> (changed at v4.5.2)</dt>
+        <dd>Backend: list the three new endpoints, the
+          <code>payments.py</code> module, and the Stripe env vars
+          (<code>STRIPE_SECRET_KEY</code> +
+          <code>STRIPE_WEBHOOK_SECRET</code> encrypted,
+          <code>PUBLIC_BASE_URL</code> plain). Client: note the
+          Buy-credits buttons and visibility-triggered balance
+          refresh.</dd>
+
+        <dt><code>docs/roadmap.html</code> (changed at v4.5.2)</dt>
+        <dd>Mark v4.5 shipped; repoint the "ADR to be written at v4.5
+          planning" line at ADR 0012.</dd>
+      </dl>
+    </section>
+
+    <section id="verify">
+      <h2>Verify</h2>
+      <p>All Stripe checks run in <strong>test mode</strong> (see
+        Setup).</p>
+      <ol>
+        <li><code>GET /health</code> still returns 200 after the billing
+          router gains routes (regression).</li>
+        <li>Applying <code>0004_purchase_idempotency.sql</code> to
+          Supabase succeeds; rerunning it is a no-op.</li>
+        <li><code>POST /credits/checkout</code> with a valid JWT and
+          <code>{"package_id":"credits_500"}</code> returns
+          <code>200</code> with <code>{url}</code>; an unknown package
+          returns <code>400</code>; no Authorization header returns
+          <code>401</code>.</li>
+        <li>Completing a Stripe test payment (card
+          <code>4242 4242 4242 4242</code>) fires the webhook →
+          <code>credit_ledger_entry</code> gains exactly one
+          <code>kind='purchase'</code>, <code>delta=500</code>,
+          <code>ref=evt_…</code> row; <code>GET /credits/balance</code>
+          rises by 500.</li>
+        <li>Re-delivering the same event from the Stripe Dashboard adds
+          <strong>no</strong> second row (idempotent index holds).</li>
+        <li>A tampered or unsigned <code>POST /webhooks/stripe</code>
+          returns <code>400</code> and writes no row.</li>
+        <li>Extension: a signed-in Account section shows the three buy
+          buttons; clicking <code>$5</code> opens Stripe Checkout in a
+          new tab; after a test payment and returning to the options tab,
+          the balance re-renders (+500) within a few seconds. Buttons are
+          hidden when signed out.</li>
+        <li><code>package.sh</code> zip still excludes
+          <code>server/</code> — no Stripe keys leak into the Web Store
+          bundle.</li>
+      </ol>
+    </section>
+
+    <section id="setup">
+      <h2>Setup (external — user, not blocking the code)</h2>
+      <p>
+        No Stripe account exists yet, so code is written and merged
+        first; integration testing (Verify steps 3–7) waits on these:
+      </p>
+      <ol>
+        <li>Create a Stripe account; stay in <strong>test mode</strong>.</li>
+        <li>Copy the test Secret key (<code>sk_test_…</code>) →
+          <code>STRIPE_SECRET_KEY</code>.</li>
+        <li>Create a webhook for <code>checkout.session.completed</code>:
+          local via <code>stripe listen --forward-to
+          localhost:8000/webhooks/stripe</code>; deployed via Dashboard →
+          Webhooks → <code>{DO_URL}/webhooks/stripe</code>. Copy the
+          signing secret (<code>whsec_…</code>) →
+          <code>STRIPE_WEBHOOK_SECRET</code>.</li>
+        <li>Set <code>PUBLIC_BASE_URL</code> (DO app URL, or
+          <code>http://localhost:8000</code> locally).</li>
+        <li>Add the two secrets to <code>server/.env</code> (local) and
+          the DO App Platform env store (encrypted);
+          <code>PUBLIC_BASE_URL</code> stored plain.</li>
+      </ol>
+    </section>
+
+    <section id="notes">
+      <h2>Notes</h2>
+      <ul>
+        <li>
+          <strong>Why no <code>stripe_event</code> table.</strong> The
+          data-model previously anticipated one for idempotency. ADR 0012
+          chose the cheaper partial unique index on the ledger
+          <code>ref</code> instead — it reuses the existing append-only +
+          signup-bonus-index pattern and adds no new query surface. The
+          trade-off: we record only the granting event, not the full
+          payment funnel. Add the table later if audit needs grow.
+        </li>
+        <li>
+          <strong>Why the SDK call is wrapped in a threadpool.</strong>
+          The <code>stripe</code> Python SDK is synchronous;
+          <code>create_checkout_session</code> makes a blocking HTTP call
+          to Stripe. Running it in
+          <code>run_in_threadpool</code> keeps the event loop free.
+          Webhook signature verification is local crypto and does not
+          need it.
+        </li>
+        <li>
+          <strong>Why grant on webhook, not redirect.</strong> The user
+          can close the success tab or never reach it; the
+          <code>checkout.session.completed</code> webhook is the only
+          reliable signal of payment. The browser
+          <code>success_url</code> is purely a UX landing page.
+        </li>
+        <li>
+          <strong>Balance refresh on focus.</strong> The webhook grants
+          asynchronously, so the redirect can land before the credit
+          row exists. Refreshing on options-tab
+          <code>visibilitychange</code> (plus one delayed retry) avoids
+          trusting the redirect and avoids a polling loop. Usually the
+          grant is present within seconds.
+        </li>
+        <li>
+          <strong>Sub-version slicing.</strong>
+          <ul>
+            <li><code>v4.5.0</code> — docs first
+              (<a href="../decisions/0012-stripe-checkout-webhook-grants.html">ADR 0012</a>,
+              this spec), then backend: migration 0004,
+              <code>payments.py</code>, the three routes, config +
+              <code>.env.example</code>, <code>pyproject.toml</code>
+              (+ <code>stripe</code>, version 4.5.0),
+              <code>api.html</code> + <code>data-model.html</code>. No
+              extension changes; manifest bumps to <code>4.5.0</code> to
+              stay in lockstep with <code>pyproject.toml</code> per
+              <a href="../decisions/0002-versioning-vXYZ.html">ADR 0002</a>.</li>
+            <li><code>v4.5.1</code> — extension wiring: background
+              <code>createCheckout</code>, options Buy-credits buttons,
+              visibility-triggered refresh.</li>
+            <li><code>v4.5.2</code> — close-out: spec → done,
+              <code>architecture.html</code> + <code>roadmap.html</code>
+              updated, manifest bump.</li>
+          </ul>
+        </li>
+        <li>
+          <strong>Out of scope (deferred).</strong> Bonus-tier or
+          custom-amount packages, refunds/chargebacks handling, invoices
+          and receipts beyond Stripe's defaults, admin credit-grant
+          endpoint, balance display on the welcome page.
+        </li>
+      </ul>
+    </section>
+  </body>
+</html>

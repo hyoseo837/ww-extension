@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-05-28" />
+    <title>ADR 0012 — Stripe Checkout + webhook-driven credit grants</title>
+  </head>
+  <body>
+    <h1>ADR 0012 — Stripe Checkout + webhook-driven credit grants</h1>
+
+    <section id="context">
+      <h2>Context</h2>
+      <p>
+        v4.4 made scoring spend credits server-side, but the only way
+        to <em>gain</em> credits is the 100-credit signup bonus. v4.5
+        adds purchasing. The roadmap deferred the payments decision to
+        v4.5 planning; this ADR records it.
+      </p>
+      <p>
+        Constraints from the existing system: the client is a Chrome
+        extension (no server-rendered checkout page of our own, no
+        place to safely hold card data); the credit ledger
+        (<a href="../specs/v4.3.0-credit-ledger.html">v4.3</a>) is
+        append-only with a <code>kind = 'purchase'</code> value already
+        reserved; the backend is stateless on auth (verifies Supabase
+        JWTs) and owns all ledger writes via a service-role connection.
+      </p>
+      <p>
+        Two sub-decisions are in play, each with alternatives:
+      </p>
+      <ol>
+        <li>
+          <strong>How the user pays.</strong>
+          <em>Stripe Checkout</em> (Stripe-hosted payment page; we
+          create a session and redirect) handles PCI scope, card UI,
+          3DS, and receipts for us. <em>Stripe Payment Intents +
+          custom UI</em> would mean building card entry inside the
+          extension — more code, PCI exposure, no upside here.
+          <em>Stripe Payment Links</em> (static dashboard-created URLs)
+          can't carry the per-user <code>metadata</code> we need to
+          attribute a payment to a Supabase user.
+        </li>
+        <li>
+          <strong>How a paid purchase becomes credits.</strong> Stripe
+          confirms payment out-of-band, so the grant must be driven by
+          a <em>webhook</em> (<code>checkout.session.completed</code>),
+          not the browser redirect (which the user can close or never
+          reach). The webhook can fire more than once for the same
+          payment, so the grant must be idempotent. Options for the
+          idempotency key store: a dedicated
+          <code>stripe_event</code> table (records every event), or a
+          <strong>partial unique index on the existing ledger's
+          <code>ref</code> column</strong> scoped to
+          <code>kind = 'purchase'</code> (one grant row per Stripe
+          event id). The latter reuses the exact pattern already used
+          for the one-per-user signup bonus
+          (<a href="../specs/v4.3.0-credit-ledger.html">v4.3</a>,
+          migration 0001).
+        </li>
+      </ol>
+    </section>
+
+    <section id="decision">
+      <h2>Decision</h2>
+      <p>
+        Use <strong>Stripe Checkout in hosted mode</strong>.
+        <code>POST /credits/checkout</code> (authenticated) creates a
+        <code>mode=payment</code> session with dynamic
+        <code>price_data</code> (no Stripe Dashboard Products — amounts
+        live as in-code constants), stamps
+        <code>client_reference_id</code> and
+        <code>metadata = {user_id, credits, package_id}</code>, and
+        returns the session URL for the extension to open in a new tab.
+      </p>
+      <p>
+        Credits are granted only by
+        <strong><code>POST /webhooks/stripe</code></strong>, a
+        Stripe-only endpoint that verifies the
+        <code>Stripe-Signature</code> header against
+        <code>STRIPE_WEBHOOK_SECRET</code> before any logic. On
+        <code>checkout.session.completed</code> with
+        <code>payment_status = "paid"</code>, it inserts one
+        <code>kind = 'purchase'</code> ledger row with
+        <code>ref = &lt;Stripe event id&gt;</code>. Idempotency is a
+        <strong>partial unique index on
+        <code>(ref) WHERE kind = 'purchase'</code></strong> plus
+        <code>ON CONFLICT DO NOTHING</code> — no separate event table.
+      </p>
+      <p>
+        <strong>The granted credit amount is derived server-side</strong>
+        from <code>package_id</code> against the backend's package
+        table at session-creation time and carried only in the
+        Stripe-held <code>metadata</code>. The client never sends a
+        dollar or credit amount, and the webhook trusts only metadata
+        it set itself.
+      </p>
+    </section>
+
+    <section id="consequences">
+      <h2>Consequences</h2>
+      <ul>
+        <li><strong>+</strong> Zero PCI scope and no card UI to build —
+          Stripe hosts the payment page, 3DS, and receipts.</li>
+        <li><strong>+</strong> The grant is decoupled from the browser
+          redirect, so a user who closes the success tab still gets
+          credited when the webhook lands.</li>
+        <li><strong>+</strong> Idempotency reuses the ledger's existing
+          append-only + partial-unique-index pattern; no new table, no
+          new query surface. Replays and Stripe retries are safe.</li>
+        <li><strong>+</strong> Amount-from-<code>package_id</code> means
+          a tampered client request can't grant more credits than the
+          package is worth.</li>
+        <li><strong>−</strong> The ledger stores only the granting event
+          (no row for sessions that are created but never paid). If full
+          payment-funnel auditing is ever needed, add a
+          <code>stripe_event</code> table later — this ADR does not
+          preclude it.</li>
+        <li><strong>−</strong> Stripe's hosted page needs an http(s)
+          <code>success_url</code>; a <code>chrome-extension://</code>
+          URL is not allowed, so the backend must serve a small landing
+          page (<code>GET /credits/checkout/result</code>).</li>
+        <li><strong>−</strong> Balance updates lag the payment by the
+          webhook round-trip (usually seconds). The extension refreshes
+          the balance when the options tab regains focus rather than
+          trusting the redirect.</li>
+        <li><strong>−</strong> New vendor dependency (Stripe) and two
+          new secrets to manage (<code>STRIPE_SECRET_KEY</code>,
+          <code>STRIPE_WEBHOOK_SECRET</code>), in addition to Supabase
+          and DigitalOcean.</li>
+      </ul>
+    </section>
+  </body>
+</html>

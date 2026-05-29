@@ -1,9 +1,16 @@
-from fastapi import APIRouter
+import logging
+from decimal import Decimal
+
+import stripe
+from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import HTMLResponse
+from pydantic import BaseModel
 
 from app.auth.dependency import CurrentUser
-from app.billing import db
+from app.billing import db, payments
 
 router = APIRouter()
+log = logging.getLogger("ww.billing")
 
 
 @router.get("/credits/balance")
@@ -12,3 +19,60 @@ async def balance(user: CurrentUser) -> dict[str, float]:
     # Decimal → float for JSON transport. NUMERIC keeps exact value on the
     # DB side; transport precision is more than sufficient for display.
     return {"balance": float(bal)}
+
+
+# ── Stripe credit purchase (v4.5) ──────────────────────────────────────────────
+
+
+class CheckoutRequest(BaseModel):
+    package_id: str
+
+
+@router.post("/credits/checkout")
+async def checkout(req: CheckoutRequest, user: CurrentUser) -> dict[str, str]:
+    if req.package_id not in payments.CREDIT_PACKAGES:
+        raise HTTPException(status_code=400, detail=f"unknown package: {req.package_id}")
+    url = await payments.create_checkout_session(user["sub"], req.package_id)
+    return {"url": url}
+
+
+@router.post("/webhooks/stripe")
+async def stripe_webhook(request: Request) -> dict[str, bool]:
+    payload = await request.body()
+    sig = request.headers.get("stripe-signature", "")
+    try:
+        event = payments.verify_event(payload, sig)
+    except (ValueError, stripe.SignatureVerificationError) as exc:
+        raise HTTPException(status_code=400, detail="invalid_signature") from exc
+
+    if event["type"] == "checkout.session.completed":
+        session = event["data"]["object"]
+        if session.get("payment_status") == "paid":
+            meta = session.get("metadata") or {}
+            await db.grant_purchase(
+                user_id=meta["user_id"],
+                credits=Decimal(meta["credits"]),
+                event_id=event["id"],
+            )
+            log.info(
+                "purchase_granted user=%s credits=%s event=%s",
+                meta.get("user_id"), meta.get("credits"), event["id"],
+            )
+
+    # 200 for handled and ignored events so Stripe stops retrying. A raised
+    # DB error becomes a 500, which Stripe will retry — the grant is idempotent.
+    return {"received": True}
+
+
+@router.get("/credits/checkout/result", response_class=HTMLResponse)
+async def checkout_result(status: str = "success") -> str:
+    if status == "cancel":
+        msg = "Checkout cancelled. You can close this tab and return to the extension."
+    else:
+        msg = ("Payment received. You can close this tab and return to the extension — "
+               "your credit balance updates within a few seconds.")
+    return (
+        "<!doctype html><html lang=\"en\"><head><meta charset=\"UTF-8\">"
+        "<title>WW Extension — Checkout</title></head>"
+        f"<body><p>{msg}</p></body></html>"
+    )
