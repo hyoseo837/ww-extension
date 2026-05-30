@@ -223,6 +223,22 @@
         once the v5 quality pass ships.
       </p>
       <p>
+        <strong>Admin surface (added 2026-05-30).</strong> Alongside the
+        user-facing web app, an <em>operator-only</em> admin area on the same
+        backend to (a) <strong>manage users</strong> — list/inspect accounts
+        with their balance, credit-ledger history, and scan activity — and
+        (b) <strong>grant gift credits</strong> manually (goodwill, support
+        make-goods, promos). Gift grants ride the existing append-only ledger
+        as a new entry kind (e.g. <code>gift</code> / <code>admin_grant</code>),
+        so balance derivation is unchanged and every grant is auditable. Open
+        questions for phase-planning: how an admin is authenticated and
+        authorized (allowlist of admin <code>user_id</code>s vs a role/claim —
+        the credit-mutating endpoints must be locked to admins, not just
+        hidden in the UI), an audit trail (who granted what, when, why), and
+        whether the admin area is a section of the web app or a separate
+        surface.
+      </p>
+      <p>
         Further-out candidates still on the table (v6+): non-Gemini provider
         support, cover-letter generation, team / recruiter views, re-score on
         demand. No commitment yet — revisit at phase-planning time.
