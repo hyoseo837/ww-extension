@@ -139,7 +139,7 @@ async function loadScores() {
     // corrupted storage or future schema migrations.
     for (const [id, entry] of Object.entries(data.ww_scores)) {
       if (entry && typeof entry === 'object'
-          && Number.isInteger(entry.score)
+          && (Number.isInteger(entry.score) || (entry.score === null && entry.verdict === 'Excluded'))
           && VERDICT_ORDER[entry.verdict] !== undefined
           && typeof entry.reason === 'string') {
         if (!Array.isArray(entry.breakdown)) entry.breakdown = [];
@@ -193,7 +193,7 @@ function injectRowScores() {
     span.className = `ww-ext-badge ww-ext-badge--${verdictSlug(verdict)}`;
     span.style.marginLeft = '6px';
     span.style.cursor = 'pointer';
-    span.textContent = `${score} · ${verdict}`;
+    span.textContent = score != null ? `${score} · ${verdict}` : verdict;
     span.dataset.postingId = id;
     anchor.insertAdjacentElement('afterend', span);
   });
@@ -281,7 +281,18 @@ async function scanAllJobs() {
       return;
     }
 
-    const settings = await chrome.storage.local.get(['model']);
+    const settings = await chrome.storage.local.get(['model', 'hardFilterEnabled']);
+
+    // Hard-exclusion pre-filter (ADR 0018): default on. Fetch the user's
+    // "never"-tier locations once per batch so matching postings skip /scan
+    // entirely (no credit). Any failure → leave null and scan normally.
+    let excludedLocs = null;
+    if (settings.hardFilterEnabled !== false) {
+      try {
+        const pr = await chrome.runtime.sendMessage({ type: 'backendFetch', path: '/profile' });
+        if (pr?.ok) excludedLocs = excludedLocations(pr.data?.match_criteria);
+      } catch { /* leave null → scan normally */ }
+    }
 
     allPostingIds = postingIds.map(String);
     const toScore = allPostingIds.filter(id => !scores.has(id));
@@ -297,6 +308,25 @@ async function scanAllJobs() {
     let nextIdx = 0;
 
     async function scanOne(postingId) {
+      const rowInfo = rowMeta[postingId];
+
+      // Hard-exclusion pre-filter (ADR 0018): skip before fetch/score — no
+      // /scan call, no credit. Conservative: fires only on a confident City
+      // match; a missing City falls through to a normal scan.
+      if (excludedLocs?.length) {
+        const gate = hardExclusion(rowInfo, excludedLocs);
+        if (gate) {
+          scores.set(postingId, {
+            score: null, verdict: 'Excluded', reason: gate, breakdown: [],
+            excluded: true,
+            title: rowInfo?.title || `#${postingId}`, org: rowInfo?.org || ''
+          });
+          injectRowScores();
+          scheduleFlush();
+          return { ok: true };
+        }
+      }
+
       let descriptionText = '';
       let extractedTitle  = '';
       try {
@@ -313,7 +343,6 @@ async function scanAllJobs() {
         return { ok: false, error: `fetch: ${e.message}` };
       }
 
-      const rowInfo = rowMeta[postingId];
       const meta = {
         title: rowInfo?.title || extractedTitle || `#${postingId}`,
         org:   rowInfo?.org   || ''
@@ -396,9 +425,32 @@ function indexVisibleRows() {
     const cells = row.querySelectorAll('td.table__value');
     const title = cells[0]?.querySelector('a')?.textContent.trim() ?? '';
     const org   = cells[1]?.querySelector('span')?.textContent.trim() ?? '';
-    if (id) map[id] = { title: title || `#${id}`, org };
+    // City column (index 4: Title, Organization, Division, Openings, City …).
+    // Feeds the hard-exclusion pre-filter (ADR 0018); only present for rows on
+    // the currently-visible page — off-page postings fall through to a scan.
+    const city  = (cells[4]?.querySelector('span')?.textContent ?? cells[4]?.textContent ?? '').trim();
+    if (id) map[id] = { title: title || `#${id}`, org, city };
   });
   return map;
+}
+
+// ── Hard-exclusion pre-filter (ADR 0018) ──────────────────────────────────────
+
+// The candidate's "never"-tier locations from match_criteria, trimmed.
+function excludedLocations(matchCriteria) {
+  const arr = matchCriteria?.preferred_locations?.excluded;
+  return Array.isArray(arr) ? arr.map(s => String(s).trim()).filter(Boolean) : [];
+}
+
+// Returns a gate reason when the posting's City confidently matches a "never"
+// location, else null. Conservative normalized containment; never fires on a
+// missing City, so it can't wrongly hide a job.
+function hardExclusion(rowInfo, excludedLocs) {
+  const city = (rowInfo?.city || '').trim();
+  if (!city) return null;
+  const cityLc = city.toLowerCase();
+  const hit = excludedLocs.find(loc => cityLc.includes(loc.toLowerCase()));
+  return hit ? `Filtered: location “${city}” is on your never-list (“${hit}”)` : null;
 }
 
 // ── Sidebar list ──────────────────────────────────────────────────────────────
@@ -433,14 +485,14 @@ function renderSidebarList() {
   }
   // Sort: score desc → verdict ladder (Strong Apply → Skip) → title asc, for stable rendering.
   const sorted = [...scores.entries()].sort(([, a], [, b]) =>
-    (b.score - a.score) ||
+    ((b.score ?? -1) - (a.score ?? -1)) ||
     ((VERDICT_ORDER[a.verdict] ?? 9) - (VERDICT_ORDER[b.verdict] ?? 9)) ||
     String(a.title).localeCompare(String(b.title))
   );
   ul.innerHTML = sorted.map(([id, { score, verdict, reason, breakdown, title, org }]) => `
     <li class="ww-ext-card" data-posting-id="${esc(id)}">
       <div class="ww-ext-card-top">
-        <span class="ww-ext-badge ww-ext-badge--${esc(verdictSlug(verdict))}">${esc(score)} · ${esc(verdict)}</span>
+        <span class="ww-ext-badge ww-ext-badge--${esc(verdictSlug(verdict))}">${score != null ? esc(score) + ' · ' : ''}${esc(verdict)}</span>
         <span class="ww-ext-card-org">${esc(org)}</span>
         <button class="ww-ext-save-btn" title="Save to folder">&#128193;</button>
       </div>
@@ -739,7 +791,7 @@ function injectSidebar() {
       [...document.querySelectorAll('#ww-ext-verdict-row input:checked')].map(c => c.dataset.verdict)
     );
     const ids = [...scores.entries()]
-      .filter(([, { score, verdict }]) => score >= min && verdicts.has(verdict))
+      .filter(([, { score, verdict }]) => (verdict === 'Excluded' || score >= min) && verdicts.has(verdict))
       .map(([id]) => id);
     if (!ids.length) { setProgress('No jobs match the filter.', true); return; }
     sendBridge('openFolderSidebarBulk', { postingIds: ids });

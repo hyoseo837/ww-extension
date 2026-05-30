@@ -72,6 +72,25 @@ el('themeToggle').addEventListener('click', () => {
   chrome.storage.local.set({ theme });
 });
 
+// ── Hard-exclusion pre-filter toggle (ADR 0018) ───────────────────────────────
+
+function applyHardFilter(enabled) {
+  const pill = el('hardFilterToggle');
+  if (pill) {
+    pill.classList.toggle('on', enabled);
+    pill.setAttribute('aria-checked', String(enabled));
+  }
+}
+
+el('hardFilterToggle').addEventListener('click', () => {
+  const enabled = !el('hardFilterToggle').classList.contains('on');
+  applyHardFilter(enabled);
+  chrome.storage.local.set({ hardFilterEnabled: enabled });
+});
+
+// Default on when unset.
+chrome.storage.local.get('hardFilterEnabled', d => applyHardFilter(d.hardFilterEnabled !== false));
+
 // ── Load saved settings (local cache) ─────────────────────────────────────────
 
 chrome.storage.local.get(['model', 'cvText', 'profileJson', 'profileSupplement', 'preferences', 'matchCriteria', 'theme'], data => {
