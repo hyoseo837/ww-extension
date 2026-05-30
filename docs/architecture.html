@@ -6,7 +6,7 @@
     <meta name="type" content="architecture" />
     <meta name="scope" content="current shipped system" />
     <meta name="baseline-version" content="v03.015" />
-    <meta name="last-updated" content="2026-05-29" />
+    <meta name="last-updated" content="2026-05-30" />
     <title>Architecture — ww-extension</title>
   </head>
   <body>
@@ -284,10 +284,15 @@
     </ol>
 
     <p>
-      <strong>v4 will reshape this:</strong> step 4's Gemini call moves
-      to the backend; the extension sends the posting payload to the
-      backend (debiting credits) and receives the score. The extension
-      no longer holds the Gemini API key.
+      <strong>v4–v5 reshaped this.</strong> Step 4's Gemini call now runs in
+      the backend: the extension sends the posting payload to
+      <code>POST /scan</code> (debiting credits) and receives the scored
+      result. The extension no longer holds the Gemini API key. As of v5.2
+      the result is <code>{ score (1–20), verdict, reason, breakdown[] }</code>
+      — <code>verdict</code> server-derived from the score and a hidden
+      <code>excluded</code> flag into one of <em>Strong Apply · Apply ·
+      Consider · Unlikely · Skip · Excluded</em> (ADR 0017; authoritative
+      contract in <a href="reference/api.html">reference/api.html</a>).
     </p>
 
     <h2>Security boundaries</h2>

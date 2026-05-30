@@ -5,7 +5,7 @@
     <meta name="project" content="ww-extension" />
     <meta name="type" content="reference" />
     <meta name="subject" content="data-model" />
-    <meta name="last-updated" content="2026-05-28" />
+    <meta name="last-updated" content="2026-05-30" />
     <title>Data Model — ww-extension</title>
   </head>
   <body>
@@ -78,15 +78,27 @@
 
       <dt><code>ww_scores</code></dt>
       <dd><strong>Type:</strong> <code>Record&lt;postingId, { score:
-        number, verdict: string, reason: string, title: string,
-        org: string }&gt;</code>. Score map keyed by WW posting ID.
-        Drives badge rendering and sidebar list.</dd>
+        number, verdict: string, reason: string,
+        breakdown: { point: string, effect: "plus" | "minus" }[],
+        title: string, org: string }&gt;</code>. Score map keyed by WW
+        posting ID. <code>score</code> is <code>1–20</code> and
+        <code>verdict</code> is one of <em>Strong Apply · Apply · Consider ·
+        Unlikely · Skip · Excluded</em> (ADR 0017); <code>breakdown</code> is
+        the gain/loss points rendered in the sidebar card. Drives badge
+        rendering and sidebar list.</dd>
 
       <dt><code>ww_posting_ids</code></dt>
       <dd><strong>Type:</strong> <code>string[]</code>. Ordered array
         from the last <code>selectAll</code>. Used for cross-page row
         navigation when the user clicks a sidebar entry on a different
         results page than where it was scored.</dd>
+
+      <dt><code>ww_scoring_schema</code></dt>
+      <dd><strong>Type:</strong> <code>number</code>. The scoring-output
+        schema version the cached <code>ww_scores</code> were written under
+        (ADR 0017). On load, a mismatch with the client's current version
+        clears <code>ww_scores</code> / <code>ww_posting_ids</code> wholesale
+        so badges never mix scales (e.g. old 1–10 with new 1–20).</dd>
 
       <dt><code>welcomeShown</code></dt>
       <dd><strong>Type:</strong> <code>boolean</code>. Set after the
@@ -260,9 +272,10 @@
         <code>build_job_part()</code> serializes populated criteria into a
         short labelled block ahead of the notes; empty criteria emit nothing,
         so an empty-criteria scan is byte-identical to the pre-v5 prompt.
-        Credit-free hard-Skip on an <code>excluded</code> match or work-auth
-        ineligibility is a later v5 thread (#4) — v5.0.0 only makes the model
-        aware of the criteria.</dd>
+        As of v5.2 (ADR 0017) the scorer flags an <code>excluded</code>-tier
+        match or work-auth ineligibility as the <strong>Excluded</strong>
+        verdict during scoring. A <em>credit-free</em> pre-scan hard-Skip (never
+        calling Gemini) is still a later v5 thread (#4).</dd>
 
       <dt><code>profile_json jsonb not null default '{}'</code>
         (v5.1.0, migration 0007)</dt>

@@ -6,8 +6,8 @@
     <meta name="type" content="reference" />
     <meta name="subject" content="backend-api-contract" />
     <meta name="status" content="live" />
-    <meta name="last-updated" content="2026-05-28" />
-    <meta name="version-pin" content="server v4.5.0" />
+    <meta name="last-updated" content="2026-05-30" />
+    <meta name="version-pin" content="server v5.2" />
     <title>Backend API Contract — ww-extension</title>
   </head>
   <body>
@@ -118,11 +118,40 @@
         </p>
         <p><strong>Response:</strong> <code>200 OK</code></p>
         <pre><code>{
-  "result": { "score": 8, "verdict": "Apply", "reason": "..." },
+  "result": {
+    "score": 16,
+    "verdict": "Apply",
+    "reason": "...",
+    "breakdown": [
+      { "point": "Python + AWS match the stack", "effect": "plus" },
+      { "point": "prefers Toronto, posting in Montréal", "effect": "minus" }
+    ]
+  },
   "cost": 0.074,
   "balance": 99.926
 }</code></pre>
         <p>
+          <strong>Scoring output (v5.2, ADR 0017).</strong>
+          <code>score</code> is an integer <code>1–20</code> (model-produced).
+          <code>breakdown</code> is the decisive gain/loss points, each
+          <code>{ point, effect }</code> with <code>effect</code> ∈
+          <code>"plus" | "minus"</code> (may be empty). <code>verdict</code> is
+          <strong>server-derived</strong> — never sent by the model — from a
+          model-emitted <code>excluded</code> flag, then the score band:
+        </p>
+        <ul>
+          <li><code>excluded == true</code> (a hard
+            work-auth/citizenship/clearance gate, or a criterion in the
+            candidate's "excluded" tier) → <strong>Excluded</strong>; the model
+            also scores it 1–5.</li>
+          <li>else by band: <strong>Strong Apply</strong> 17–20 ·
+            <strong>Apply</strong> 14–16 · <strong>Consider</strong> 10–13 ·
+            <strong>Unlikely</strong> 6–9 · <strong>Skip</strong> 1–5.</li>
+        </ul>
+        <p>
+          <code>excluded</code> stays server-side (it shapes the verdict and is
+          kept on the stored <code>scan.response</code> for faithful replay); the
+          client receives only the resulting <code>verdict</code> string.
           <code>cost</code> is the net debit (estimate minus the
           partial refund). <code>balance</code> is the user's
           balance after this scan, so the extension doesn't need a
