@@ -4,12 +4,22 @@
     <meta charset="UTF-8" />
     <meta name="project" content="ww-extension" />
     <meta name="type" content="adr" />
-    <meta name="status" content="accepted" />
+    <meta name="status" content="superseded" />
     <meta name="date" content="2026-05-29" />
+    <meta name="superseded-by" content="0017" />
     <title>ADR 0016 — Scoring output v2: 1–100 score, server-derived 5-tier verdict, structured breakdown</title>
   </head>
   <body>
     <h1>ADR 0016 — Scoring output v2: 1–100 score, server-derived 5-tier verdict, structured breakdown</h1>
+
+    <p>
+      <strong>Superseded by <a href="0017-scoring-scale-1-20.html">ADR 0017</a></strong>,
+      which keeps this contract but changes the score scale from 1–100 to 1–20
+      (rescaling the band boundaries, same percentage cutoffs) and adds a sixth
+      <em>Excluded</em> verdict for hard-criteria/eligibility gates. The
+      breakdown, server-owned verdict, and clear-on-upgrade decisions below
+      still hold.
+    </p>
 
     <section id="context">
       <h2>Context</h2>

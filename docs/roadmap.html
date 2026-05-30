@@ -5,7 +5,7 @@
     <meta name="project" content="ww-extension" />
     <meta name="type" content="roadmap" />
     <meta name="active-major-version" content="v05" />
-    <meta name="last-updated" content="2026-05-29" />
+    <meta name="last-updated" content="2026-05-30" />
     <title>Roadmap — ww-extension</title>
   </head>
   <body>
@@ -86,85 +86,47 @@
           (<a href="decisions/0012-stripe-checkout-webhook-grants.html">ADR 0012</a>).</li>
       </ul>
 
-      <p><strong>Phase arcs:</strong></p>
-      <ol>
-        <li>
-          <strong>v4.0 — Doc restructure + v4 opening</strong> (shipped
-          as v4.0.0 and v4.0.1). See
-          <code>docs/archive/v04/v4.0.0-restructure.html</code>.
-        </li>
-        <li>
-          <strong>v4.1 — Backend bootstrap</strong> (shipped) —
-          <code>server/</code> folder created with FastAPI skeleton
-          (auth/, scoring/, billing/, core/) + Dockerfile +
-          pyproject.toml; <code>/health</code> live on DO App Platform;
-          Supabase project configured with Google OAuth;
-          <code>api.html</code> + <code>architecture.html</code>
-          updated; <code>package.sh</code> excludes <code>server/</code>
-          from the Web Store zip. No extension code changes. See
-          <code>docs/archive/v04/v4.1.0-backend-bootstrap.html</code>.
-        </li>
-        <li>
-          <strong>v4.2 — Auth in the extension</strong> (shipped) —
-          sign-in via <code>chrome.identity.launchWebAuthFlow</code>,
-          Supabase session JWT stored, sign-out. Extension can
-          authenticate against the backend.
-        </li>
-        <li>
-          <strong>v4.3 — Credit ledger</strong> (shipped) —
-          server-side balance, append-only ledger, signup-bonus
-          trigger, extension shows balance.
-        </li>
-        <li>
-          <strong>v4.4 — Server-side scoring</strong> (shipped) —
-          Gemini calls (scoring + PDF extract) and the scoring prompt
-          itself moved to the backend; estimate-debit-refund flow on
-          <code>POST /scan</code>; profile lives server-side. Extension
-          no longer holds a Gemini key.
-        </li>
-        <li>
-          <strong>v4.5 — Stripe credit purchase</strong> (shipped;
-          verified end-to-end in Stripe <em>test</em> mode, including the
-          live extension Buy flow) — Stripe Checkout integration,
-          webhook-driven credit grants, purchase UI in options page.
-          Remaining for real payments: complete Stripe account
-          activation and swap the DigitalOcean env vars to live values
-          (<code>sk_live_…</code> + a live-mode webhook secret); no code
-          change. See
-          <code>docs/archive/v04/v4.5.0-stripe-credit-purchase.html</code> and
-          <a href="decisions/0012-stripe-checkout-webhook-grants.html">ADR 0012</a>.
-        </li>
-        <li>
-          <strong>v4.6 — Free tier + paid tier UX</strong> (shipped) —
-          rebalanced the per-token margin <code>2×</code> → <code>5×</code>
-          so the 100-credit signup bonus is a ~200-scan trial rather than a
-          whole co-op term (margin is now a single <code>MARGIN</code> dial
-          in <code>pricing.py</code>; existing balances untouched); fixed the
-          wrong welcome/options copy to show approximate scan counts and a
-          pricing explainer; added a sidebar "Buy credits" nudge when a scan
-          batch halts out of credits. See
-          <code>docs/archive/v04/v4.6.0-free-paid-tier-ux.html</code>.
-        </li>
-        <li>
-          <strong>v4.7 — Tunable constants consolidation</strong> (shipped) —
-          follow-up to the v4.6 <code>MARGIN</code> dial: pull the duplicated
-          server-side knobs into single named constants so they're safe to
-          adjust. Output-token caps now have one source in
-          <code>pricing.py</code> (imported by <code>gemini.py</code>, so the
-          cost estimate can't desync from the call); default model and scoring
-          temperatures are named constants; the signup bonus is a named
-          constant in the trigger. No behavior change. Client left as-is. See
-          <code>docs/archive/v04/v4.7.0-tunable-constants.html</code>.
-        </li>
-      </ol>
-
       <p>
-        Phase numbering above is the plan of record; sub-commits within
-        a phase use the <code>Z</code> digit per
-        <a href="decisions/0002-versioning-vXYZ.html">ADR 0002</a>.
-        Slicing may still shift if a phase grows too large — promote
-        to a new <code>Y</code> bump rather than overloading one phase.
+        <strong>Phases</strong> (all shipped; one line each — full detail in
+        the archived specs under <code>docs/archive/v04/</code>):
       </p>
+      <dl>
+        <dt><a href="archive/v04/v4.0.0-restructure.html">v4.0</a> — doc restructure + v4 opening</dt>
+        <dd>Spec+ADR doc architecture stood up; v4 planning.</dd>
+
+        <dt><a href="archive/v04/v4.1.0-backend-bootstrap.html">v4.1</a> — backend bootstrap</dt>
+        <dd>FastAPI skeleton in <code>server/</code>, <code>/health</code> live
+          on DO, Supabase + Google OAuth, <code>package.sh</code> excludes
+          <code>server/</code>. No client change.</dd>
+
+        <dt><a href="archive/v04/v4.2.0-auth.html">v4.2</a> — auth in the extension</dt>
+        <dd>Sign-in via <code>launchWebAuthFlow</code>; Supabase session JWT
+          stored.</dd>
+
+        <dt><a href="archive/v04/v4.3.0-credit-ledger.html">v4.3</a> — credit ledger</dt>
+        <dd>Server-side balance, append-only ledger, signup bonus; extension
+          shows balance.</dd>
+
+        <dt><a href="archive/v04/v4.4.0-server-side-scoring.html">v4.4</a> — server-side scoring</dt>
+        <dd>Gemini calls + scoring prompt + profile moved to the backend;
+          estimate-debit-refund on <code>POST /scan</code>. Extension no longer
+          holds a Gemini key.</dd>
+
+        <dt><a href="archive/v04/v4.5.0-stripe-credit-purchase.html">v4.5</a> — Stripe credit purchase</dt>
+        <dd>Stripe Checkout + webhook-driven grants + options-page purchase UI
+          (<a href="decisions/0012-stripe-checkout-webhook-grants.html">ADR 0012</a>).
+          Verified end-to-end in test mode; going live needs only the
+          <code>sk_live_…</code> env swap on DO — no code change.</dd>
+
+        <dt><a href="archive/v04/v4.6.0-free-paid-tier-ux.html">v4.6</a> — free + paid tier UX</dt>
+        <dd>Per-token margin <code>2×→5×</code> (single <code>MARGIN</code> dial
+          in <code>pricing.py</code>); approximate-scan-count copy; out-of-credits
+          sidebar nudge.</dd>
+
+        <dt><a href="archive/v04/v4.7.0-tunable-constants.html">v4.7</a> — tunable constants</dt>
+        <dd>Server knobs (output-token caps, default model/temperatures, signup
+          bonus) consolidated into named constants. No behavior change.</dd>
+      </dl>
 
       <p>
         <strong>Out of scope for v4 (deferred):</strong> auto-apply,
@@ -221,14 +183,20 @@
           See <code>docs/specs/v5.1.0-structured-profile.html</code>.</li>
         <li><strong>Scan-prompt rewrite + richer scoring output.</strong>
           <em>(v5.2.0 — active.)</em> Co-op framing and calibration anchors in
-          the prompt. Moves scoring to a <strong>1–100 scale</strong>
-          with a <strong>5-tier verdict ladder</strong> (Strong Apply 85–100 /
-          Apply 70–84 / Consider 50–69 / Unlikely 30–49 / Skip 1–29) derived
-          server-side from the score, and returns a <strong>structured
-          per-aspect breakdown</strong> — the specific criteria/profile points
-          that gained or lost points (e.g. "prefers Toronto, job in Québec";
-          "AWS preferred, not in profile"), surfaced in the sidebar. Contract in
-          <a href="decisions/0016-scoring-output-v2.html">ADR 0016</a>.
+          the prompt. Moves scoring to a <strong>1–20 scale</strong>
+          with a verdict ladder of <strong>five score bands</strong>
+          (Strong Apply 17–20 / Apply 14–16 / Consider 10–13 / Unlikely 6–9 /
+          Skip 1–5) plus an <strong>Excluded</strong> verdict for
+          hard-criteria/eligibility gates (work-auth/citizenship, or a criterion
+          in the candidate's "excluded" tier) — all derived server-side — and
+          returns a <strong>structured per-aspect breakdown</strong> — the
+          specific criteria/profile points that gained or lost points (e.g.
+          "prefers Toronto, job in Québec"; "AWS preferred, not in profile"),
+          surfaced in the sidebar. The Excluded verdict is a down-payment on
+          thread #4 (its cheaper pre-scan filter stays separate). Contract in
+          <a href="decisions/0016-scoring-output-v2.html">ADR 0016</a>, scale +
+          Excluded verdict revised in
+          <a href="decisions/0017-scoring-scale-1-20.html">ADR 0017</a>.
           Calibration is <strong>anchored only</strong> this phase; few-shot
           from real disagreements is a later tuning pass once enough live v5
           scans accumulate. See

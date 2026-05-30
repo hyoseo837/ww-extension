@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-05-30" />
+    <meta name="supersedes" content="0016" />
+    <title>ADR 0017 — Scoring output v2.1: 1–20 score scale + Excluded verdict</title>
+  </head>
+  <body>
+    <h1>ADR 0017 — Scoring output v2.1: 1–20 score scale + Excluded verdict</h1>
+
+    <p>
+      Supersedes <a href="0016-scoring-output-v2.html">ADR 0016</a>. Two
+      revisions to ADR 0016's output contract, both decided during v5.2.0
+      implementation (<a href="../specs/v5.2.0-scan-prompt-rewrite.html">spec
+      v5.2.0</a>) before any client release shipped on the 0016 shape: the
+      <strong>score scale</strong> drops from 1–100 to 1–20, and a sixth
+      verdict <strong>Excluded</strong> is added for hard-criteria/eligibility
+      gates. Everything else from ADR 0016 carries over unchanged —
+      model-produced <code>reason</code>, the structured <code>breakdown</code>
+      of <code>{ point, effect }</code>, the server-owned verdict, and
+      clear-on-upgrade.
+    </p>
+
+    <section id="context">
+      <h2>Context</h2>
+      <h3>Scale (1–100 → 1–20)</h3>
+      <p>
+        ADR 0016 set a 1–100 <code>score</code>. In practice 1–100 implies a
+        precision the model can't deliver: the gap between a 73 and a 76 is
+        noise, not signal, and a finer number invites the user to read meaning
+        into gradations that aren't real. The signal that carries is the verdict
+        tier; the number only needs enough resolution to rank and to place a
+        posting within its tier. A 1–20 scale is honest about that while still
+        giving ~4 gradations inside each tier.
+      </p>
+      <h3>The Excluded verdict</h3>
+      <p>
+        Under ADR 0016 a citizenship-blocked posting and a wrong-field posting
+        both collapse into <strong>Skip</strong> at the bottom of the ladder,
+        though they are qualitatively different: one is <em>"cannot apply at
+        all"</em>, the other is <em>"could apply, weak fit."</em> The prompt
+        already tells the model to score eligibility-gate failures at the
+        bottom, but nothing labels <em>why</em> a posting is there. A distinct
+        verdict for hard-gate failures lets the user tell "ruled out" from
+        "poor fit" at a glance, and is a cheap down-payment on the v5 hard-filter
+        thread (#4) — though #4's pre-scan, credit-saving filter remains separate
+        future work.
+      </p>
+    </section>
+
+    <section id="decision">
+      <h2>Decision</h2>
+      <p>The score scale becomes <strong>1–20</strong> (model-produced). The
+        verdict is <strong>server-derived</strong> from two inputs — the score
+        and a model-emitted <code>excluded</code> boolean:</p>
+      <ul>
+        <li>If <code>excluded</code> is true → verdict <strong>Excluded</strong>
+          (regardless of score).</li>
+        <li>Otherwise, by fixed score band — same percentage cutoffs as ADR
+          0016, rescaled:
+          <dl>
+            <dt>Strong Apply</dt><dd>17–20 (≥85%)</dd>
+            <dt>Apply</dt><dd>14–16 (≥70%)</dd>
+            <dt>Consider</dt><dd>10–13 (≥50%)</dd>
+            <dt>Unlikely</dt><dd>6–9 (≥30%)</dd>
+            <dt>Skip</dt><dd>1–5 (&lt;30%)</dd>
+          </dl>
+        </li>
+      </ul>
+      <p>
+        <strong><code>excluded</code> = true</strong> when the posting hits a
+        hard no-go the candidate declared or legally fails: a work-authorization
+        / citizenship / security-clearance requirement the candidate lacks, or
+        any match-criterion value the candidate placed in their
+        <code>excluded</code> tier (e.g. a location in their "never" tier, an
+        excluded language). The model is instructed to set <code>excluded</code>
+        and also score such a posting in the <strong>1–5</strong> range, so the
+        low score and the Excluded label stay consistent — the model still owns
+        a <em>cause</em> signal, never the verdict label itself.
+      </p>
+      <p>The output shape:</p>
+      <pre><code>{
+  "score": 1–20,                   // model-produced (was 1–100)
+  "reason": "2–3 sentence summary", // model-produced
+  "breakdown": [                   // model-produced; may be empty
+    { "point": "requires Canadian citizenship", "effect": "minus" },
+    { "point": "Python + AWS match", "effect": "plus" }
+  ],
+  "excluded": false,               // model-produced; true on a hard gate
+  "verdict": "Skip"                // SERVER-DERIVED from score + excluded
+}</code></pre>
+      <p>
+        <code>excluded</code> stays server-side (it shapes the verdict and is
+        stored on <code>scan.response</code> for faithful replay); the client
+        receives only the resulting <code>verdict</code> string, so "Excluded"
+        needs no extra client field. Sorting places <strong>Excluded</strong>
+        below Skip. Cached scores are cleared on upgrade via the client's
+        scoring-schema version, as in ADR 0016. Calibration stays
+        <strong>anchored only</strong> this phase.
+      </p>
+    </section>
+
+    <section id="consequences">
+      <h2>Consequences</h2>
+      <ul>
+        <li><strong>+</strong> The scale matches the model's real resolution;
+          the number stops implying false precision.</li>
+        <li><strong>+</strong> "Ruled out" reads distinctly from "poor fit," the
+          core ask — and the same percentage cutoffs mean ADR 0016's calibration
+          intent and worked anchors carry straight over.</li>
+        <li><strong>+</strong> The verdict is still server-owned and can't
+          disagree with the score: the model emits a cause boolean, not the
+          label, and excluded postings are pinned to the 1–5 range.</li>
+        <li><strong>−</strong> The verdict is no longer a pure function of the
+          score — it now also depends on <code>excluded</code> — so the
+          "one greppable band function" from ADR 0016 grows one branch.</li>
+        <li><strong>−</strong> Another breaking output change on top of ADR
+          0016, but absorbed by the same clear-on-upgrade mechanism (the
+          scoring-schema version is already bumping this phase), and no client
+          release shipped on 1–100, so there is no released scale to migrate.</li>
+        <li><strong>−</strong> Any 1–100 rows the live backend (v5.2.1) already
+          stored replay on that old scale, with no <code>excluded</code> field
+          (→ defaults false). Harmless — new scans use fresh
+          <code>scan_id</code>s — the same caveat ADR 0016 noted for pre-v5.2
+          replays.</li>
+      </ul>
+    </section>
+  </body>
+</html>

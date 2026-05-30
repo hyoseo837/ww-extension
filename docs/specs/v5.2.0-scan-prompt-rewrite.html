@@ -5,8 +5,8 @@
     <meta name="project" content="ww-extension" />
     <meta name="type" content="spec" />
     <meta name="version" content="v5.2.0" />
-    <meta name="status" content="planned" />
-    <meta name="last-updated" content="2026-05-29" />
+    <meta name="status" content="in-progress" />
+    <meta name="last-updated" content="2026-05-30" />
     <title>Spec v5.2.0 — Scan-prompt rewrite + richer scoring output</title>
   </head>
   <body>
@@ -17,20 +17,27 @@
       <p>
         Third v5 phase (thread #3) — the scoring-quality payoff. With criteria
         (#1) and the profile (#2) now structured, rewrite the scan prompt and
-        the output. The prompt gains <strong>co-op framing</strong> (this is a
-        student work-term, not a full-time hire), explicit <strong>1–100 band
-        definitions</strong>, and <strong>worked verdict anchors</strong>. The
-        output moves to a <strong>1–100 score</strong>, a <strong>5-tier
-        verdict ladder</strong> derived server-side from the score, and a
-        <strong>structured per-aspect breakdown</strong> — the specific
+        the output. The prompt gains <strong>work-term framing</strong>
+        (early-career WaterlooWorks roles of varying duration — 4/8/12-month or
+        multi-term co-ops, and full-time/new-grad postings — judged at the
+        posting's actual level and against the candidate's target-term/length
+        criteria, not a fixed 4-month assumption), explicit <strong>1–20 band
+        definitions</strong>, and a <strong>reason-before-score (chain-of-thought)
+        output ordering</strong> for sharper calibration. The
+        output moves to a <strong>1–20 score</strong>, a <strong>verdict
+        ladder</strong> derived server-side (five score bands plus an
+        <strong>Excluded</strong> verdict for hard-criteria/eligibility gates),
+        and a <strong>structured per-aspect breakdown</strong> — the specific
         criteria/profile points that gained or lost points — surfaced in the
         sidebar. The output contract is fixed in
-        <a href="../decisions/0016-scoring-output-v2.html">ADR 0016</a>.
+        <a href="../decisions/0016-scoring-output-v2.html">ADR 0016</a>, with
+        the 1–20 scale and the Excluded verdict revised in
+        <a href="../decisions/0017-scoring-scale-1-20.html">ADR 0017</a>.
       </p>
       <p>
         Scope: the prompt rewrite + the new output, end to end (backend
         contract through badges/sidebar). Calibration is <strong>anchored
-        only</strong> — band/co-op framing and worked anchors in the system
+        only</strong> — band definitions and work-term framing in the system
         prompt; <strong>no real few-shot</strong> yet (a later tuning pass adds
         few-shot from accumulated live disagreements, ADR 0016). Hard filters
         (#4) stay separate. The options-page profile/criteria UI is untouched
@@ -39,18 +46,23 @@
         new scale, tiers, and breakdown, not a visual overhaul.
       </p>
 
-      <h3>Output contract (ADR 0016)</h3>
-      <p>Model returns <code>score</code> (1–100), <code>reason</code> (2–3
-        sentence summary), and <code>breakdown</code> (array of
+      <h3>Output contract (ADR 0016, scale + Excluded per ADR 0017)</h3>
+      <p>Model returns <code>score</code> (1–20), <code>reason</code> (2–3
+        sentence summary), <code>breakdown</code> (array of
         <code>{ point, effect }</code>, <code>effect</code> ∈ <code>plus</code>
-        | <code>minus</code>, may be empty). The server derives
-        <code>verdict</code> from the score:</p>
+        | <code>minus</code>, may be empty), and <code>excluded</code> (boolean
+        — true on a hard-criteria/eligibility gate). The server derives
+        <code>verdict</code> from <code>excluded</code> then the score:
+        <code>excluded</code> → <strong>Excluded</strong>; otherwise by band:</p>
       <dl>
-        <dt>Strong Apply</dt><dd>85–100</dd>
-        <dt>Apply</dt><dd>70–84</dd>
-        <dt>Consider</dt><dd>50–69</dd>
-        <dt>Unlikely</dt><dd>30–49</dd>
-        <dt>Skip</dt><dd>1–29</dd>
+        <dt>Strong Apply</dt><dd>17–20</dd>
+        <dt>Apply</dt><dd>14–16</dd>
+        <dt>Consider</dt><dd>10–13</dd>
+        <dt>Unlikely</dt><dd>6–9</dd>
+        <dt>Skip</dt><dd>1–5</dd>
+        <dt>Excluded</dt><dd>hard gate fails (work-auth/citizenship/clearance,
+          or a criterion in the candidate's "excluded" tier); model also scores
+          it 1–5</dd>
       </dl>
       <p><code>ScanResult</code> returned to the client is
         <code>{ score, verdict, reason, breakdown }</code>.</p>
@@ -64,7 +76,9 @@
         <dt><code>docs/specs/v5.2.0-scan-prompt-rewrite.html</code> (added)</dt>
         <dd>This spec.</dd>
         <dt><code>docs/decisions/0016-scoring-output-v2.html</code> (added)</dt>
-        <dd>Output-contract ADR.</dd>
+        <dd>Output-contract ADR (superseded by 0017).</dd>
+        <dt><code>docs/decisions/0017-scoring-scale-1-20.html</code> (added)</dt>
+        <dd>Revises the scale to 1–20 and adds the Excluded verdict.</dd>
         <dt><code>docs/roadmap.html</code> (changed)</dt>
         <dd>#1/#2 shipped; #3 active as v5.2.0.</dd>
       </dl>
@@ -72,20 +86,31 @@
       <h3>Backend phase</h3>
       <dl>
         <dt><code>server/app/scoring/gemini.py</code> (changed)</dt>
-        <dd>Rewrite <code>SYSTEM_TEXT</code> (co-op framing, 1–100 band
-          definitions, worked anchors, how to weigh must/strong/nice criteria +
-          work-auth eligibility + profile fit, instruction to emit a concise
-          gain/loss <code>breakdown</code> — no verdict). Replace
-          <code>_RESPONSE_SCHEMA</code> with <code>{ score, reason, breakdown[] }</code>.
-          Update <code>_valid_result</code> (score 1–100; reason non-empty;
+        <dd>Rewrite <code>SYSTEM_TEXT</code> (work-term framing — varying
+          duration + full-time/new-grad, judged at the posting's level and
+          against target-term/length criteria, not a fixed 4-month assumption;
+          1–20 band definitions; how to weigh must/strong/nice criteria +
+          profile fit; treat a work-auth/citizenship/clearance gate the
+          candidate fails — or any criterion in their "excluded" tier — as a
+          hard no-go: set <code>excluded</code> and score 1–5; emit a concise
+          gain/loss <code>breakdown</code> — no verdict label). The fields are
+          ordered <strong>breakdown → excluded → reason → score</strong> (reason
+          before score; <code>propertyOrdering</code> + field <code>description</code>s
+          on <code>_RESPONSE_SCHEMA</code> pin this generation order).
+          <code>_RESPONSE_SCHEMA</code> becomes
+          <code>{ breakdown[], excluded, reason, score }</code>.
+          Update <code>_valid_result</code> (score 1–20; reason non-empty;
           breakdown a list of <code>{point, effect∈plus|minus}</code>, tolerate
-          missing → <code>[]</code>). Add <code>verdict_for_score(score)</code>
-          implementing the band ladder.</dd>
+          missing → <code>[]</code>; <code>excluded</code> bool, missing →
+          <code>false</code>). Add <code>verdict_for(score, excluded)</code>
+          implementing the band ladder + the Excluded override.</dd>
         <dt><code>server/app/scoring/routes.py</code> (changed)</dt>
-        <dd><code>ScanResult</code> gains <code>breakdown</code>; build it from
-          the parsed result + <code>verdict_for_score</code>. The stored
-          <code>scan.response</code> carries the full new shape (so replays are
-          faithful).</dd>
+        <dd><code>ScanResult</code> gains <code>breakdown</code>; build the
+          verdict from the parsed result via <code>verdict_for</code>. The
+          stored <code>scan.response</code> carries the full new shape including
+          <code>excluded</code> (so replays are faithful); the returned
+          <code>ScanResult</code> drops <code>excluded</code> (the verdict
+          carries it).</dd>
         <dt><code>server/app/billing/pricing.py</code> (verify)</dt>
         <dd><code>DEFAULT_MAX_OUTPUT_TOKENS</code> (1024) should comfortably fit
           reason + a ~6-item breakdown; confirm and only raise if truncation is
@@ -97,21 +122,24 @@
       <h3>Client phase</h3>
       <dl>
         <dt><code>src/content.js</code> (changed)</dt>
-        <dd><code>VERDICT_ORDER</code> → 5 tiers (Strong Apply · Apply ·
-          Consider · Unlikely · Skip). Badge class uses a slug
-          (<code>strong-apply</code>, <code>unlikely</code>). The
+        <dd><code>VERDICT_ORDER</code> → 6 verdicts (Strong Apply · Apply ·
+          Consider · Unlikely · Skip · Excluded). Badge class uses a slug
+          (<code>strong-apply</code>, <code>unlikely</code>,
+          <code>excluded</code>). The
           <code>scores</code> map entry + <code>ww_scores</code> gain
           <code>breakdown</code>; load-validation accepts the new shape.
           <strong>Clear-on-upgrade</strong>: a stored scoring-schema version;
           when it changes, drop <code>ww_scores</code> /
           <code>ww_posting_ids</code> (ADR 0016). Sidebar card renders the
           breakdown as a compact gain/loss list under the reason. Save-to-folder
-          filter: score input <code>1–100</code> (sensible default, e.g. 70) and
-          5 verdict toggles; help copy updated. Sort order uses the new ladder.</dd>
+          filter: score input <code>1–20</code> (sensible default, e.g. 14) and
+          verdict toggles (Excluded off by default); help copy updated. Sort
+          order uses the new ladder (Excluded last).</dd>
         <dt><code>src/sidebar.css</code> (changed)</dt>
         <dd>Add badge + verdict-toggle classes and color vars (both themes) for
-          <code>strong-apply</code> and <code>unlikely</code>; minimal styling
-          for the breakdown list. No redesign (deferred to v6).</dd>
+          <code>strong-apply</code>, <code>unlikely</code>, and
+          <code>excluded</code>; minimal styling for the breakdown list. No
+          redesign (deferred to v6).</dd>
         <dt><code>manifest.json</code> (changed)</dt>
         <dd>Bump. (May split: scale/verdict/badge + clear-on-upgrade first, then
           breakdown render + folder filter.)</dd>
@@ -120,12 +148,13 @@
       <h3>Close-out phase</h3>
       <dl>
         <dt><code>docs/reference/api.html</code> (changed)</dt>
-        <dd><code>/scan</code> result → <code>{score (1–100), verdict (5-tier),
+        <dd><code>/scan</code> result → <code>{score (1–20), verdict,
           reason, breakdown[]}</code>; document the band ladder.</dd>
         <dt><code>docs/architecture.html</code>,
           <code>docs/reference/data-model.html</code> (changed)</dt>
         <dd>Update the scoring-output description and the <code>ww_scores</code>
-          schema (new verdict set + breakdown). Mark this spec <code>done</code>.</dd>
+          schema (new verdict set incl. Excluded + breakdown +
+          <code>ww_scoring_schema</code> key). Mark this spec <code>done</code>.</dd>
       </dl>
       <p>Version bumps follow ADR 0002. Exact Z numbers assigned at build time.</p>
     </section>
@@ -133,23 +162,25 @@
     <section id="verify">
       <h2>Verify</h2>
       <ol>
-        <li>A real scan returns a 1–100 <code>score</code>, a non-empty
+        <li>A real scan returns a 1–20 <code>score</code>, a non-empty
           <code>reason</code>, and a <code>breakdown</code> of gain/loss points;
           the server-derived <code>verdict</code> matches the score's band at
-          each boundary (e.g. 84→Apply, 85→Strong Apply).</li>
+          each boundary (e.g. 16→Apply, 17→Strong Apply).</li>
         <li>A bad model output (score out of range, bad <code>effect</code>) is
           rejected → 502 + full refund, as today.</li>
         <li>After upgrading the extension, previously cached scores are gone
-          (no mixed 1–10 / 1–100 badges); re-scanning a posting produces the
+          (no mixed 1–10 / 1–20 badges); re-scanning a posting produces the
           new shape.</li>
-        <li>Badges show <code>score · verdict</code> across all five tiers with
+        <li>Badges show <code>score · verdict</code> across all six verdicts with
           distinct colors (light + dark). The sidebar card shows the breakdown
           list; the badge tooltip still shows the reason.</li>
-        <li>Save-to-folder: the score threshold works on the 1–100 scale and the
-          5 verdict toggles filter correctly.</li>
-        <li>Calibration sanity: a clearly-ineligible posting (e.g. work-auth
-          mismatch via #1 criteria) lands in Unlikely/Skip with the mismatch
-          named in the breakdown; a strong match lands in Apply/Strong Apply.</li>
+        <li>Save-to-folder: the score threshold works on the 1–20 scale and the
+          6 verdict toggles filter correctly.</li>
+        <li>Calibration sanity: a hard-gate posting (work-auth/citizenship
+          mismatch, or a job in an "excluded" location) lands in
+          <strong>Excluded</strong> with the gate named in the breakdown and a
+          1–5 score; a poor-fit-only posting lands in Skip/Unlikely; a strong
+          match lands in Apply/Strong Apply.</li>
       </ol>
     </section>
 
