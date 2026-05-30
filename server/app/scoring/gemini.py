@@ -26,28 +26,36 @@ _GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta"
 _SCORE_TEMPERATURE = 0.2
 _EXTRACT_TEMPERATURE = 0.0
 
-SYSTEM_TEXT = """You score how well a University of Waterloo co-op student fits a job posting — for a student deciding whether to apply this work term.
+SYSTEM_TEXT = """You score how well a University of Waterloo student fits a job posting on WaterlooWorks, to help the student decide whether to apply.
 
-This is a CO-OP TERM, not a full-time hire. Judge fit for a ~4-month student internship: the candidate need not meet every "nice to have"; strong fundamentals plus a few relevant skills already make a good fit. Weigh the candidate's match criteria by their stated importance — "must" criteria dominate, "strong" matter a lot, "nice-to-have" are minor nudges. Treat work-authorization eligibility as a gate: if the posting clearly requires a status the candidate lacks (e.g. citizenship or a security clearance for an international student), the fit is poor regardless of skills.
+These are early-career candidates — co-op/internship students and graduating students seeking new-grad roles. Postings vary widely: a co-op work term may run ~4, 8, or 12 months or span multiple terms, and some postings are full-time or new-grad roles. Judge fit for the role as actually described — its field, seniority, and duration — never a fixed assumption about length. For co-op and new-grad roles, calibrate to an early-career applicant: the candidate need not meet every "nice to have"; strong fundamentals plus a few relevant skills already make a good fit. Hold the bar higher only for a clearly senior or specialized role.
 
-Return a score from 1 to 100:
-- 85–100: excellent fit — skills/experience and the candidate's criteria line up strongly; the student should prioritize applying.
-- 70–84: good fit — clearly worth applying; most key signals align.
-- 50–69: marginal — some alignment but notable gaps or mismatches; apply only if interested.
-- 30–49: weak — significant mismatch on skills, level, or stated preferences.
-- 1–29: poor — wrong field/level, or an eligibility gate fails.
+Weigh the candidate's match criteria by their stated importance — "must" criteria dominate, "strong" matter a lot, "nice-to-have" are minor nudges. The candidate's target term and term length are criteria too: a posting whose duration conflicts with what the candidate wants (e.g. a 4-month term when they asked for 8) is a real negative, weighted like any other stated preference.
 
-Also return:
-- reason: 2–3 sentences explaining the score in co-op terms.
-- breakdown: the few specific points (match criteria or profile facts) that most moved the score, each as {point, effect} where effect is "plus" if it raised the score or "minus" if it lowered it. Be concrete and contrastive, e.g. {"point": "prefers Toronto, posting in Québec", "effect": "minus"} or {"point": "Python + AWS match the stack", "effect": "plus"}. Keep it to the ~6 most decisive points. Do NOT output a verdict label — the score alone determines it."""
+Work through the output in this order — analyze first, score last:
+1. breakdown: the few specific points (match criteria or profile facts) that most move the score, each as {point, effect} where effect is "plus" if it raises the score or "minus" if it lowers it. Be concrete and contrastive, e.g. {"point": "requires Canadian citizenship", "effect": "minus"} or {"point": "Python + AWS match the stack", "effect": "plus"}. Keep it to the ~6 most decisive points.
+2. excluded: true only when the posting is a hard no-go for this candidate — set it and name the gate as a "minus" point above. A hard no-go is either (a) a work-authorization, citizenship, or security-clearance requirement the candidate does not satisfy (e.g. a US-citizen-only or clearance-required posting for an international student), or (b) something the posting matches that the candidate placed in their "excluded"/"never" criteria tier (a location, language, or term they ruled out). Otherwise false.
+3. reason: 2–3 sentences explaining the decision from the applicant's perspective.
+4. score: an integer from 1 to 20, consistent with the breakdown above:
+- 17–20: excellent fit — skills/experience and criteria line up strongly; prioritize applying.
+- 14–16: good fit — clearly worth applying; most key signals align.
+- 10–13: marginal — some alignment but notable gaps; apply only if interested.
+- 6–9: weak — significant mismatch on skills, level, or stated preferences.
+- 1–5: poor — wrong field/level, or a hard exclusion applies (when excluded is true, score here).
 
+Do NOT output a verdict label — the score and the exclusion flag determine it."""
+
+# Key order = generation order: the model lays out its analysis (breakdown,
+# excluded flag, reason) before committing to the score — a chain-of-thought
+# ordering that improves scoring accuracy. propertyOrdering pins this for
+# Gemini, and the prompt's field list above is in the same order (a mismatch
+# confuses the model). See ADR 0017 + spec v5.2.0.
 _RESPONSE_SCHEMA = {
     "type": "object",
     "properties": {
-        "score":  {"type": "integer"},
-        "reason": {"type": "string"},
         "breakdown": {
             "type": "array",
+            "description": "Up to ~6 decisive points that raised or lowered the score.",
             "items": {
                 "type": "object",
                 "properties": {
@@ -57,23 +65,40 @@ _RESPONSE_SCHEMA = {
                 "required": ["point", "effect"],
             },
         },
+        "excluded": {
+            "type": "boolean",
+            "description": "True only if a hard eligibility/criteria gate rules the candidate out.",
+        },
+        "reason": {
+            "type": "string",
+            "description": "2–3 sentence explanation of the decision.",
+        },
+        "score": {
+            "type": "integer",
+            "description": "Fit rating from 1 (poor) to 20 (excellent).",
+        },
     },
-    "required": ["score", "reason"],
+    "propertyOrdering": ["breakdown", "excluded", "reason", "score"],
+    "required": ["score", "reason", "excluded"],
 }
 
-# 5-tier verdict ladder derived from the 1–100 score (ADR 0016). The model
-# returns the score, not the verdict — this is the single source of truth, so
-# score and verdict can never disagree.
+# Verdict ladder over the 1–20 score (ADR 0017). The model returns the score
+# and an `excluded` flag, not the verdict — the server owns the verdict so it
+# can never disagree with the score.
 _VERDICT_BANDS = (
-    (85, "Strong Apply"),
-    (70, "Apply"),
-    (50, "Consider"),
-    (30, "Unlikely"),
+    (17, "Strong Apply"),
+    (14, "Apply"),
+    (10, "Consider"),
+    (6,  "Unlikely"),
     (0,  "Skip"),
 )
 
 
-def verdict_for_score(score: int) -> str:
+def verdict_for(score: int, excluded: bool = False) -> str:
+    """Server-owned verdict (ADR 0017). A hard exclusion overrides the score
+    bands; otherwise the score's band applies."""
+    if excluded:
+        return "Excluded"
     for floor, verdict in _VERDICT_BANDS:
         if score >= floor:
             return verdict
@@ -271,8 +296,9 @@ async def score(
 ) -> tuple[dict, dict]:
     """Score one job. Returns (parsed_result, usage_metadata).
 
-    parsed_result is {"score", "verdict", "reason"}; usage_metadata is
-    Gemini's raw usageMetadata dict so the caller can compute actual cost.
+    parsed_result is {"score", "reason", "breakdown", "excluded"} (the caller
+    derives "verdict"); usage_metadata is Gemini's raw usageMetadata dict so the
+    caller can compute actual cost.
     """
     client = _require_client()
     url = f"{_GEMINI_BASE}/models/{model}:generateContent"
@@ -337,7 +363,8 @@ async def score(
     if not _valid_result(parsed):
         raise GeminiError(f"invalid result shape: {str(parsed)[:120]}")
 
-    parsed.setdefault("breakdown", [])  # always present for the caller
+    parsed.setdefault("breakdown", [])   # always present for the caller
+    parsed.setdefault("excluded", False)
     return parsed, usage
 
 
@@ -472,9 +499,11 @@ def _valid_result(p: object) -> bool:
         return False
     score = p.get("score")
     reason = p.get("reason")
-    if not isinstance(score, int) or not 1 <= score <= 100:
+    if not isinstance(score, int) or not 1 <= score <= 20:
         return False
     if not isinstance(reason, str) or not reason.strip():
+        return False
+    if not isinstance(p.get("excluded", False), bool):
         return False
     breakdown = p.get("breakdown", [])
     if not isinstance(breakdown, list):
