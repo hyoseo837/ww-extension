@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-05-30" />
+    <title>ADR 0018 — Client-side deterministic hard-exclusion pre-filter</title>
+  </head>
+  <body>
+    <h1>ADR 0018 — Client-side deterministic hard-exclusion pre-filter</h1>
+
+    <section id="context">
+      <h2>Context</h2>
+      <p>
+        v5.2 (<a href="0017-scoring-scale-1-20.html">ADR 0017</a>) added the
+        <strong>Excluded</strong> verdict, but the model produces it
+        <em>during</em> a scan — so the user spends a credit to learn a posting
+        was a hard no-go. v5 thread #4 (hard filters) wants to skip clearly
+        excluded postings <strong>without spending a credit</strong>. Since the
+        credit debit lives inside <code>POST /scan</code>, a credit-free skip
+        must be decided <em>before</em> that call. Two questions follow: where
+        the decision runs, and what is allowed to trigger it.
+      </p>
+      <p>
+        The candidate's structured match criteria
+        (<a href="0013-structured-match-criteria-jsonb.html">ADR 0013</a>)
+        include an <code>excluded</code> tier per criterion (locations, work
+        modes, target term, term length, languages) — the candidate's own
+        declared no-gos. WaterlooWorks exposes some posting facts as structured
+        fields cheaply (e.g. the <strong>City</strong> column on the results
+        table, and <code>getPostingData</code> JSON) without any Gemini call.
+      </p>
+    </section>
+
+    <section id="decision">
+      <h2>Decision</h2>
+      <ul>
+        <li><strong>Runs client-side, before <code>/scan</code>.</strong> The
+          extension checks each posting in the scan loop against the
+          candidate's <code>excluded</code>-tier criteria; on a match it marks
+          the posting <strong>Excluded</strong> locally and <em>does not</em>
+          call <code>/scan</code> — no Gemini call, no credit. To know the
+          criteria, the client fetches the profile once per scan batch via the
+          existing <code>GET /profile</code> (no new endpoint).</li>
+        <li><strong>Scope: the candidate's own <code>excluded</code>
+          preferences only</strong> — matched against <em>structured</em>
+          posting fields. Free-text work-authorization / citizenship / clearance
+          detection is <strong>not</strong> pre-filtered here; it stays with the
+          scan-time Excluded verdict (ADR 0017), which reads the full posting
+          and is accurate.</li>
+        <li><strong>Conservative matching — zero false-positive skips.</strong>
+          Normalized (lower/trim), confident structured matches only (the
+          posting's field equals or clearly contains an excluded token). Missing
+          or ambiguous fields <strong>never</strong> trigger a skip — the
+          posting falls through to a normal scan.</li>
+        <li><strong>Reuses the Excluded verdict</strong> for display (ADR 0017).
+          A pre-filtered Excluded carries <em>no numeric score</em>; the badge
+          shows the verdict alone and the reason names the gate.</li>
+        <li><strong>User-toggleable, default on.</strong> An options-page
+          setting (<code>hardFilterEnabled</code>, default <code>true</code>)
+          lets a user opt out — when off, no pre-filter runs and every posting
+          scans normally (the candidate's <code>excluded</code> criteria are
+          still weighed by the scan-time Excluded verdict).</li>
+      </ul>
+    </section>
+
+    <section id="consequences">
+      <h2>Consequences</h2>
+      <ul>
+        <li><strong>+</strong> Saves a credit on every posting the user already
+          declared a no-go, with no model latency — the decision is instant and
+          deterministic.</li>
+        <li><strong>+</strong> Reuses the Excluded verdict and its existing
+          badge / sort / save-filter handling (v5.2.4) — minimal new UI.</li>
+        <li><strong>−</strong> <strong>Excluded now has two producers</strong>
+          (server scan + client pre-filter); the verdict is no longer solely
+          server-derived. The client must tolerate a <code>null</code>-score
+          Excluded entry (badge without a number; validation/sort updated).</li>
+        <li><strong>−</strong> The client now holds eligibility-filtering logic
+          and fetches <code>match_criteria</code> — a small duplication of "what
+          the user excluded" on the client. Acceptable: deterministic,
+          non-proprietary eligibility is unlike the scoring logic kept
+          server-side.</li>
+        <li><strong>−</strong> Conservative matching <em>under</em>-filters:
+          region/province/country-level location exclusions and any free-text
+          gate won't pre-filter, so they still cost a scan (and are caught by
+          the scan-time Excluded verdict). Accepted — zero false positives is
+          worth more than maximal coverage.</li>
+        <li>Work-auth/citizenship pre-filtering (e.g. from
+          <code>getPostingPreScreening</code>) remains possible future work if
+          that data proves reliably parseable.</li>
+      </ul>
+    </section>
+  </body>
+</html>

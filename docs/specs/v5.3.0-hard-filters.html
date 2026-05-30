@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v5.3.0" />
+    <meta name="status" content="planned" />
+    <meta name="last-updated" content="2026-05-30" />
+    <title>Spec v5.3.0 — Hard filters (credit-free pre-scan exclusion)</title>
+  </head>
+  <body>
+    <h1>Spec v5.3.0 — Hard filters (credit-free pre-scan exclusion)</h1>
+
+    <section id="goal">
+      <h2>Goal</h2>
+      <p>
+        Fourth and final v5 thread (#4). Skip postings that match the
+        candidate's own <strong>excluded</strong>-tier match criteria
+        <strong>before</strong> calling <code>POST /scan</code> — so no credit
+        is spent and no Gemini call is made. The skipped posting is surfaced
+        with the existing <strong>Excluded</strong> verdict (v5.2,
+        <a href="../decisions/0017-scoring-scale-1-20.html">ADR 0017</a>): no
+        score number, a reason naming the gate. The check is deterministic and
+        <strong>conservative</strong> — it skips only on a confident structured
+        match and never on missing/ambiguous data, so it can never wrongly hide
+        a viable job. Work-auth/citizenship gates are <em>not</em> pre-filtered
+        (free-text, unreliable); they remain caught by the scan-time Excluded
+        verdict. Architecture in
+        <a href="../decisions/0018-client-hard-exclusion-prefilter.html">ADR 0018</a>.
+      </p>
+      <p>
+        Scope: <strong>client-only</strong>. The extension fetches the user's
+        <code>match_criteria</code> via the existing <code>GET /profile</code>
+        at scan-batch start, extracts the <code>excluded</code> tiers, and
+        matches them against each posting's structured fields in the scan loop.
+        Backend unchanged. The sidebar/badge/save-filter already render and
+        filter Excluded (v5.2.4), so UI work is minimal. The pre-filter is
+        <strong>user-toggleable</strong> via an options-page setting
+        (<code>hardFilterEnabled</code>, default on) — when off, every posting
+        scans normally (ADR 0018).
+      </p>
+    </section>
+
+    <section id="files">
+      <h2>Files</h2>
+
+      <h3>Docs (v5.3.0)</h3>
+      <dl>
+        <dt><code>docs/specs/v5.3.0-hard-filters.html</code> (added)</dt>
+        <dd>This spec.</dd>
+        <dt><code>docs/decisions/0018-client-hard-exclusion-prefilter.html</code> (added)</dt>
+        <dd>Architecture ADR.</dd>
+        <dt><code>docs/roadmap.html</code> (changed)</dt>
+        <dd>#4 active as v5.3.0.</dd>
+      </dl>
+
+      <h3>Client phase</h3>
+      <dl>
+        <dt><code>src/content.js</code> (changed)</dt>
+        <dd>At scan start, fetch the profile once (via the existing
+          <code>backendFetch</code> → <code>GET /profile</code>) and keep the
+          <code>excluded</code> tiers for the batch. Capture the row's
+          <strong>City</strong> (and any other matchable column) into the
+          per-posting metadata. Add <code>hardExclusion(posting, criteria)</code>
+          — returns a gate string (e.g. "location Calgary is in your ‘never’
+          list") or null. In <code>scanOne</code>, run it <em>before</em> the
+          <code>scoreJob</code> message; on a hit, write a local Excluded entry
+          (<code>{ score: null, verdict: "Excluded", reason, breakdown: [],
+          excluded: true }</code>) and return without calling <code>/scan</code>
+          (no credit). Tolerate <code>score === null</code> in load-validation,
+          sort (Excluded sorts last regardless), and the badge (show the verdict
+          alone, no "N · "). Gate the whole pre-filter behind the
+          <code>hardFilterEnabled</code> flag (read from <code>chrome.storage</code>
+          at scan start; default <code>true</code> when unset) — when off, skip
+          the check entirely and scan every posting.</dd>
+        <dt><code>options.html</code> + <code>src/options.js</code> (changed)</dt>
+        <dd>A toggle in the <strong>Settings</strong> tab —
+          "Skip jobs that match your excluded criteria (saves credits)" —
+          bound to <code>hardFilterEnabled</code> in <code>chrome.storage.local</code>
+          (default on), following the existing settings-toggle pattern, with a
+          help note that excluded jobs are skipped without scoring/charging and
+          shown as Excluded.</dd>
+        <dt><code>src/sidebar.css</code> (maybe changed)</dt>
+        <dd>Only if a no-score Excluded badge needs a tweak; reuse the existing
+          <code>excluded</code> colors.</dd>
+        <dt><code>manifest.json</code> (changed)</dt>
+        <dd>Bump.</dd>
+      </dl>
+
+      <h3>Close-out phase</h3>
+      <dl>
+        <dt><code>docs/architecture.html</code> (changed)</dt>
+        <dd>Note the client-side pre-filter and that Excluded now has two
+          producers (server scan + client pre-filter).</dd>
+        <dt><code>docs/reference/data-model.html</code> (changed)</dt>
+        <dd>The "credit-free pre-scan skip" note (currently future) ships;
+          <code>ww_scores</code> score may be <code>null</code> for a
+          pre-filtered Excluded; add the <code>hardFilterEnabled</code> settings
+          key. Mark this spec <code>done</code>.</dd>
+      </dl>
+      <p>Version bumps follow ADR 0002. Exact Z numbers assigned at build time.</p>
+    </section>
+
+    <section id="matching">
+      <h2>Matching rule</h2>
+      <p>The <code>excluded</code>-tier values are free strings the user typed;
+        posting fields are also strings. To guarantee no false-positive skips:</p>
+      <ul>
+        <li><strong>Source.</strong> Use structured fields only — the results
+          table's <strong>City</strong> column (available with no fetch) is the
+          reliable starting field. Term length / work mode / language are
+          included <em>only</em> where a clean structured field exists (confirm
+          against a live posting / <code>getPostingData</code> during build);
+          otherwise they are left to the scan-time Excluded verdict.</li>
+        <li><strong>Match.</strong> Normalize (lowercase, trim); skip only when
+          the posting's structured value equals or clearly contains an excluded
+          token. Substring containment is intentionally conservative — it
+          catches exact city-name exclusions ("Calgary" → "Calgary, AB") and
+          <em>misses</em> region/province/country exclusions ("Quebec" vs
+          "Montréal, QC"), which is acceptable: those fall through to a normal
+          scan and the Excluded verdict still catches them.</li>
+        <li><strong>Never skip on missing data.</strong> If the relevant field
+          is absent/empty, do not pre-filter — scan normally.</li>
+      </ul>
+    </section>
+
+    <section id="verify">
+      <h2>Verify</h2>
+      <ol>
+        <li>A posting whose City matches an <code>excluded</code> location is
+          shown <strong>Excluded</strong> with no score and <strong>no credit
+          charged</strong> — balance unchanged, no <code>/scan</code> call (no
+          <code>scan_ok</code> log line for it).</li>
+        <li>A posting with no excluded match scans normally and is scored as
+          before.</li>
+        <li>A posting with a missing/ambiguous City is never pre-filtered.</li>
+        <li>Pre-filtered Excluded entries render, sort (last), and filter via
+          the save-to-folder Excluded toggle alongside server-produced Excluded
+          ones; the no-score badge shows just "Excluded".</li>
+        <li>With no <code>excluded</code> criteria set, every posting scans as
+          before (the filter is a no-op).</li>
+        <li>Turning off the <code>hardFilterEnabled</code> toggle in Settings
+          makes the pre-filter a no-op — a posting that would have been
+          pre-filtered instead scans normally (and may still land in Excluded
+          via the scan-time verdict).</li>
+      </ol>
+    </section>
+
+    <section id="notes">
+      <h2>Notes</h2>
+      <ul>
+        <li><strong>Client needs the criteria.</strong> One <code>GET
+          /profile</code> per scan batch (cheap, no credit) supplies the
+          <code>excluded</code> tiers; cache for the batch.</li>
+        <li><strong>Null score.</strong> A pre-filtered Excluded has no fit
+          score — the genuinely new client wrinkle (v5.2 assumed an integer
+          score). Load-validation, sort, and badge must accept
+          <code>score === null</code> when <code>verdict === "Excluded"</code>.</li>
+        <li><strong>Field confirmation.</strong> City is confirmed (results-table
+          column, ADR-referenced WW DOM cheatsheet). Confirm term length / work
+          mode availability empirically before extending the match beyond
+          location; ship location first if others aren't cleanly structured.</li>
+        <li><strong>Toggle.</strong> <code>hardFilterEnabled</code>
+          (<code>chrome.storage.local</code>, boolean, default <code>true</code>
+          when unset) gates the pre-filter; surfaced as a Settings-tab toggle so
+          users can opt out (ADR 0018).</li>
+        <li><strong>Out of scope.</strong> Work-auth/citizenship pre-filtering
+          (free-text / pre-screening) — future work per ADR 0018.</li>
+      </ul>
+    </section>
+  </body>
+</html>

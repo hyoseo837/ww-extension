@@ -201,10 +201,17 @@
           from real disagreements is a later tuning pass once enough live v5
           scans accumulate. See
           <code>docs/specs/v5.2.0-scan-prompt-rewrite.html</code>.</li>
-        <li><strong>Hard filters.</strong> Once preferences are
-          structured, auto-Skip postings that explicitly exclude the
-          user (e.g. US-citizen-only) without spending a credit.
-          Catches the worst false-Apply class cheaply.</li>
+        <li><strong>Hard filters.</strong> <em>(v5.3.0 — active.)</em>
+          Credit-free pre-scan skip: client-side, before <code>/scan</code>,
+          auto-Skip postings that match the candidate's own
+          <code>excluded</code>-tier criteria on a structured field (e.g. a City
+          in their "never" list), shown via the existing <strong>Excluded</strong>
+          verdict with no credit spent. Conservative — confident structured
+          matches only, never on missing data, so it can't wrongly hide a job.
+          Free-text work-auth/citizenship gates stay with the scan-time Excluded
+          verdict (not pre-filtered). Architecture in
+          <a href="decisions/0018-client-hard-exclusion-prefilter.html">ADR 0018</a>;
+          see <code>docs/specs/v5.3.0-hard-filters.html</code>.</li>
       </ul>
     </section>
 
