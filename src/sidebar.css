@@ -3,22 +3,34 @@
 /* ── Global vars: badges + row highlight (cascade everywhere via :root) ──────── */
 
 :root {
+  --ww-strong-apply-c:  #2dd4bf;
+  --ww-strong-apply-bg: rgba(45,212,191,0.14);
   --ww-apply-c:     #6ee7b7;
   --ww-apply-bg:    rgba(110,231,183,0.12);
   --ww-consider-c:  #eec200;
   --ww-consider-bg: rgba(238,194,0,0.12);
+  --ww-unlikely-c:  #fb923c;
+  --ww-unlikely-bg: rgba(251,146,60,0.12);
   --ww-skip-c:      #ffb4ab;
   --ww-skip-bg:     rgba(255,180,171,0.12);
+  --ww-excluded-c:  #94a3b8;
+  --ww-excluded-bg: rgba(148,163,184,0.14);
   --ww-highlight:   rgba(160,120,255,0.08);
 }
 
 :root.ww-light {
+  --ww-strong-apply-c:  #0f766e;
+  --ww-strong-apply-bg: rgba(15,118,110,0.1);
   --ww-apply-c:     #15803d;
   --ww-apply-bg:    rgba(22,163,74,0.1);
   --ww-consider-c:  #92400e;
   --ww-consider-bg: rgba(146,64,14,0.1);
+  --ww-unlikely-c:  #c2410c;
+  --ww-unlikely-bg: rgba(194,65,12,0.1);
   --ww-skip-c:      #991b1b;
   --ww-skip-bg:     rgba(153,27,27,0.1);
+  --ww-excluded-c:  #475569;
+  --ww-excluded-bg: rgba(71,85,105,0.1);
   --ww-highlight:   rgba(107,56,212,0.06);
 }
 
@@ -37,15 +49,24 @@
   --s-primary-dim: #d0bcff;
   --s-on-primary:  #1a0050;
   --s-error:       #ffb4ab;
+  --s-strong-apply-c:  #2dd4bf;
+  --s-strong-apply-bg: rgba(45,212,191,0.14);
+  --s-strong-apply-bdr: rgba(45,212,191,0.3);
   --s-apply-c:     #6ee7b7;
   --s-apply-bg:    rgba(110,231,183,0.12);
   --s-apply-bdr:   rgba(110,231,183,0.3);
   --s-consider-c:  #eec200;
   --s-consider-bg: rgba(238,194,0,0.12);
   --s-consider-bdr: rgba(238,194,0,0.3);
+  --s-unlikely-c:  #fb923c;
+  --s-unlikely-bg: rgba(251,146,60,0.12);
+  --s-unlikely-bdr: rgba(251,146,60,0.3);
   --s-skip-c:      #ffb4ab;
   --s-skip-bg:     rgba(255,180,171,0.12);
   --s-skip-bdr:    rgba(255,180,171,0.3);
+  --s-excluded-c:  #94a3b8;
+  --s-excluded-bg: rgba(148,163,184,0.14);
+  --s-excluded-bdr: rgba(148,163,184,0.3);
   --s-shadow:      rgba(0,0,0,0.55);
 }
 
@@ -62,15 +83,24 @@
   --s-primary-dim: #8455ef;
   --s-on-primary:  #ffffff;
   --s-error:       #ba1a1a;
+  --s-strong-apply-c:  #0f766e;
+  --s-strong-apply-bg: rgba(15,118,110,0.1);
+  --s-strong-apply-bdr: rgba(15,118,110,0.3);
   --s-apply-c:     #15803d;
   --s-apply-bg:    rgba(22,163,74,0.1);
   --s-apply-bdr:   rgba(22,163,74,0.3);
   --s-consider-c:  #92400e;
   --s-consider-bg: rgba(146,64,14,0.1);
   --s-consider-bdr: rgba(146,64,14,0.3);
+  --s-unlikely-c:  #c2410c;
+  --s-unlikely-bg: rgba(194,65,12,0.1);
+  --s-unlikely-bdr: rgba(194,65,12,0.3);
   --s-skip-c:      #991b1b;
   --s-skip-bg:     rgba(153,27,27,0.1);
   --s-skip-bdr:    rgba(153,27,27,0.3);
+  --s-excluded-c:  #475569;
+  --s-excluded-bg: rgba(71,85,105,0.1);
+  --s-excluded-bdr: rgba(71,85,105,0.3);
   --s-shadow:      rgba(0,0,0,0.1);
 }
 
@@ -296,9 +326,12 @@
   transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 .ww-ext-verdict-toggle input { display: none; }
+.ww-ext-verdict-toggle[data-v="strong-apply"]:has(input:checked) { background: var(--s-strong-apply-bg); color: var(--s-strong-apply-c); border-color: var(--s-strong-apply-bdr); }
 .ww-ext-verdict-toggle[data-v="apply"]:has(input:checked)    { background: var(--s-apply-bg);    color: var(--s-apply-c);    border-color: var(--s-apply-bdr); }
 .ww-ext-verdict-toggle[data-v="consider"]:has(input:checked) { background: var(--s-consider-bg); color: var(--s-consider-c); border-color: var(--s-consider-bdr); }
+.ww-ext-verdict-toggle[data-v="unlikely"]:has(input:checked) { background: var(--s-unlikely-bg); color: var(--s-unlikely-c); border-color: var(--s-unlikely-bdr); }
 .ww-ext-verdict-toggle[data-v="skip"]:has(input:checked)     { background: var(--s-skip-bg);     color: var(--s-skip-c);     border-color: var(--s-skip-bdr); }
+.ww-ext-verdict-toggle[data-v="excluded"]:has(input:checked) { background: var(--s-excluded-bg); color: var(--s-excluded-c); border-color: var(--s-excluded-bdr); }
 
 #ww-ext-action-row { display: flex; gap: 8px; }
 
@@ -469,6 +502,27 @@
 .ww-ext-card-reason:hover { color: var(--s-on); }
 .ww-ext-card-reason.ww-ext-expanded { display: block; overflow: visible; }
 
+/* Per-aspect gain/loss breakdown (ADR 0016). Marker + colour both carry the
+   plus/minus signal so it reads in either theme and without colour. */
+.ww-ext-card-breakdown {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ww-ext-card-breakdown li {
+  font-size: 11px;
+  line-height: 1.4;
+  padding-left: 14px;
+  text-indent: -14px;
+}
+.ww-ext-bd-plus::before  { content: '+ '; font-weight: 700; color: var(--s-apply-c); }
+.ww-ext-bd-minus::before { content: '\2212 '; font-weight: 700; color: var(--s-skip-c); }
+.ww-ext-bd-plus  { color: var(--s-apply-c); }
+.ww-ext-bd-minus { color: var(--s-skip-c); }
+
 /* ── Row highlight ───────────────────────────────────────────────────────────── */
 
 tr.ww-ext-highlight td,
@@ -486,9 +540,12 @@ tr.ww-ext-highlight th {
   font: 600 11px system-ui, sans-serif;
   white-space: nowrap;
 }
+.ww-ext-badge--strong-apply { background: var(--ww-strong-apply-bg); color: var(--ww-strong-apply-c); }
 .ww-ext-badge--apply    { background: var(--ww-apply-bg);    color: var(--ww-apply-c); }
 .ww-ext-badge--consider { background: var(--ww-consider-bg); color: var(--ww-consider-c); }
+.ww-ext-badge--unlikely { background: var(--ww-unlikely-bg); color: var(--ww-unlikely-c); }
 .ww-ext-badge--skip     { background: var(--ww-skip-bg);     color: var(--ww-skip-c); }
+.ww-ext-badge--excluded { background: var(--ww-excluded-bg); color: var(--ww-excluded-c); }
 
 /* ── Badge reason tooltip ────────────────────────────────────────────────────── */
 

@@ -3,9 +3,17 @@ const ROW_SEL        = `${TABLE_SEL} tbody tr.table__row--body`;
 const DESC_CHAR_CAP   = 6000;
 const FETCH_TIMEOUT   = 15000;
 const SCAN_CONCURRENCY = 5;
-const VERDICT_ORDER  = { Apply: 0, Consider: 1, Skip: 2 };
+// Verdict ladder (ADR 0017), best → worst; index drives sort order. Excluded
+// (a hard-criteria gate) sorts last, below Skip.
+const VERDICT_ORDER  = { 'Strong Apply': 0, Apply: 1, Consider: 2, Unlikely: 3, Skip: 4, Excluded: 5 };
+// Bump when the cached score/verdict shape changes; a mismatch clears the
+// score cache on load so badges never mix scales (ADR 0016).
+const SCORING_SCHEMA_VERSION = 2;
 
-const scores = new Map(); // postingId → {score, verdict, reason, title, org}
+// Verdict → badge/toggle class slug ('Strong Apply' → 'strong-apply').
+const verdictSlug = v => String(v ?? '').toLowerCase().replace(/\s+/g, '-');
+
+const scores = new Map(); // postingId → {score, verdict, reason, breakdown, title, org}
 let allPostingIds = [];   // ordered list from selectAll — used for page navigation
 let aborted = false;
 let detectedPageSize = 50; // refined upward from observed row counts
@@ -117,7 +125,15 @@ function saveScores() {
 }
 
 async function loadScores() {
-  const data = await chrome.storage.local.get(['ww_scores', 'ww_posting_ids']);
+  const data = await chrome.storage.local.get(['ww_scores', 'ww_posting_ids', 'ww_scoring_schema']);
+  // Clear-on-upgrade: scores cached under an older scoring shape (e.g. the
+  // 1–10 scale) are dropped wholesale so badges never mix scales (ADR 0016).
+  if (data.ww_scoring_schema !== SCORING_SCHEMA_VERSION) {
+    chrome.storage.local.set({ ww_scoring_schema: SCORING_SCHEMA_VERSION });
+    chrome.storage.local.remove(['ww_scores', 'ww_posting_ids']);
+    renderSidebarList();
+    return;
+  }
   if (data.ww_scores) {
     // Drop entries that don't match the current shape — guards against
     // corrupted storage or future schema migrations.
@@ -126,6 +142,7 @@ async function loadScores() {
           && Number.isInteger(entry.score)
           && VERDICT_ORDER[entry.verdict] !== undefined
           && typeof entry.reason === 'string') {
+        if (!Array.isArray(entry.breakdown)) entry.breakdown = [];
         scores.set(id, entry);
       }
     }
@@ -173,7 +190,7 @@ function injectRowScores() {
     if (!anchor) return;
     const { score, verdict } = scores.get(id);
     const span = document.createElement('span');
-    span.className = `ww-ext-badge ww-ext-badge--${verdict.toLowerCase()}`;
+    span.className = `ww-ext-badge ww-ext-badge--${verdictSlug(verdict)}`;
     span.style.marginLeft = '6px';
     span.style.cursor = 'pointer';
     span.textContent = `${score} · ${verdict}`;
@@ -414,23 +431,34 @@ function renderSidebarList() {
     });
     return;
   }
-  // Sort: score desc → verdict (Apply > Consider > Skip) → title asc, for stable rendering.
+  // Sort: score desc → verdict ladder (Strong Apply → Skip) → title asc, for stable rendering.
   const sorted = [...scores.entries()].sort(([, a], [, b]) =>
     (b.score - a.score) ||
     ((VERDICT_ORDER[a.verdict] ?? 9) - (VERDICT_ORDER[b.verdict] ?? 9)) ||
     String(a.title).localeCompare(String(b.title))
   );
-  ul.innerHTML = sorted.map(([id, { score, verdict, reason, title, org }]) => `
+  ul.innerHTML = sorted.map(([id, { score, verdict, reason, breakdown, title, org }]) => `
     <li class="ww-ext-card" data-posting-id="${esc(id)}">
       <div class="ww-ext-card-top">
-        <span class="ww-ext-badge ww-ext-badge--${esc((verdict ?? '').toLowerCase())}">${esc(score)} · ${esc(verdict)}</span>
+        <span class="ww-ext-badge ww-ext-badge--${esc(verdictSlug(verdict))}">${esc(score)} · ${esc(verdict)}</span>
         <span class="ww-ext-card-org">${esc(org)}</span>
         <button class="ww-ext-save-btn" title="Save to folder">&#128193;</button>
       </div>
       <button class="ww-ext-card-title ww-ext-card-link">${esc(title)}</button>
       <div class="ww-ext-card-reason">${esc(reason)}</div>
+      ${renderBreakdown(breakdown)}
     </li>
   `).join('');
+}
+
+// Compact gain/loss list under the reason. Each point is prefixed by a
+// signed marker so plus/minus reads without relying on colour alone.
+function renderBreakdown(breakdown) {
+  if (!Array.isArray(breakdown) || !breakdown.length) return '';
+  const items = breakdown.map(({ point, effect }) =>
+    `<li class="ww-ext-bd-${effect === 'minus' ? 'minus' : 'plus'}">${esc(point)}</li>`
+  ).join('');
+  return `<ul class="ww-ext-card-breakdown">${items}</ul>`;
 }
 
 // WW pagination puts `active` / `disabled` / aria-label on the inner
@@ -572,7 +600,7 @@ function esc(value) {
 // ── Sidebar help text ─────────────────────────────────────────────────────────
 
 const HELP_TEXTS = {
-  folder: 'Set filters for which scored jobs get saved to your WaterlooWorks shortlist. Score ≥ sets the minimum score (1–10). Verdict toggles further filter by AI rating — Apply = strong fit, Consider = marginal, Skip = poor fit.'
+  folder: 'Set filters for which scored jobs get saved to your WaterlooWorks shortlist. Score ≥ sets the minimum score (1–20). Verdict toggles further filter by AI rating — Strong Apply = prioritize, Apply = worth applying, Consider = marginal, Unlikely = weak, Skip = poor fit, Excluded = a hard requirement rules you out (e.g. citizenship, or a location you ruled out).'
 };
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
@@ -610,17 +638,26 @@ function injectSidebar() {
         </div>
         <div id="ww-ext-save-row">
           <label for="ww-ext-min-score">Score &ge;</label>
-          <input id="ww-ext-min-score" type="number" min="1" max="10" value="7">
+          <input id="ww-ext-min-score" type="number" min="1" max="20" value="14">
         </div>
         <div id="ww-ext-verdict-row">
+          <label class="ww-ext-verdict-toggle" data-v="strong-apply">
+            <input type="checkbox" data-verdict="Strong Apply" checked>Strong Apply
+          </label>
           <label class="ww-ext-verdict-toggle" data-v="apply">
             <input type="checkbox" data-verdict="Apply" checked>Apply
           </label>
           <label class="ww-ext-verdict-toggle" data-v="consider">
-            <input type="checkbox" data-verdict="Consider" checked>Consider
+            <input type="checkbox" data-verdict="Consider">Consider
+          </label>
+          <label class="ww-ext-verdict-toggle" data-v="unlikely">
+            <input type="checkbox" data-verdict="Unlikely">Unlikely
           </label>
           <label class="ww-ext-verdict-toggle" data-v="skip">
             <input type="checkbox" data-verdict="Skip">Skip
+          </label>
+          <label class="ww-ext-verdict-toggle" data-v="excluded">
+            <input type="checkbox" data-verdict="Excluded">Excluded
           </label>
         </div>
         <div id="ww-ext-action-row">
