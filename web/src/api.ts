@@ -18,14 +18,14 @@ export async function apiGet<T>(path: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-// Authenticated POST with a JSON body.
-export async function apiPost<T>(path: string, body: unknown): Promise<T> {
+// Authenticated POST/PUT with a JSON body.
+async function apiSend<T>(method: "POST" | "PUT", path: string, body: unknown): Promise<T> {
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
   if (!token) throw new Error("Not signed in");
 
   const res = await fetch(`${BASE}${path}`, {
-    method: "POST",
+    method,
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
@@ -35,3 +35,6 @@ export async function apiPost<T>(path: string, body: unknown): Promise<T> {
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
   return res.json() as Promise<T>;
 }
+
+export const apiPost = <T>(path: string, body: unknown) => apiSend<T>("POST", path, body);
+export const apiPut = <T>(path: string, body: unknown) => apiSend<T>("PUT", path, body);
