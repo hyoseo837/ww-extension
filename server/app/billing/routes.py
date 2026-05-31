@@ -1,5 +1,6 @@
 import logging
 from decimal import Decimal
+from typing import Any, Literal
 
 import stripe
 from fastapi import APIRouter, HTTPException, Request
@@ -21,18 +22,40 @@ async def balance(user: CurrentUser) -> dict[str, float]:
     return {"balance": float(bal)}
 
 
+@router.get("/credits/history")
+async def history(user: CurrentUser, limit: int = 50, offset: int = 0) -> dict[str, Any]:
+    """Paginated credit-ledger history, newest-first (v6.2)."""
+    limit = max(1, min(limit, 100))
+    offset = max(0, offset)
+    rows = await db.get_history(user["sub"], limit, offset)
+    entries = [
+        {
+            "id": str(r["id"]),
+            "created_at": r["created_at"].isoformat(),
+            "kind": r["kind"],
+            "delta": float(r["delta"]),
+            "ref": r["ref"],
+        }
+        for r in rows
+    ]
+    return {"entries": entries, "limit": limit, "offset": offset}
+
+
 # ── Stripe credit purchase (v4.5) ──────────────────────────────────────────────
 
 
 class CheckoutRequest(BaseModel):
     package_id: str
+    # Selects the post-checkout return (v6.2): "web" returns to the web app,
+    # "extension" (default) uses the chrome-extension result shim.
+    client: Literal["web", "extension"] = "extension"
 
 
 @router.post("/credits/checkout")
 async def checkout(req: CheckoutRequest, user: CurrentUser) -> dict[str, str]:
     if req.package_id not in payments.CREDIT_PACKAGES:
         raise HTTPException(status_code=400, detail=f"unknown package: {req.package_id}")
-    url = await payments.create_checkout_session(user["sub"], req.package_id)
+    url = await payments.create_checkout_session(user["sub"], req.package_id, req.client)
     return {"url": url}
 
 

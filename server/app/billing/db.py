@@ -47,6 +47,23 @@ async def get_balance(user_id: str) -> Decimal:
         return row["balance"]
 
 
+async def get_history(user_id: str, limit: int, offset: int) -> list[dict]:
+    """Ledger entries newest-first, for the credit-history view (v6.2).
+    Uses the (user_id, created_at desc) index; id is the stable tiebreaker.
+    """
+    async with pool().acquire() as conn:
+        rows = await conn.fetch(
+            "select id, created_at, kind, delta, ref "
+            "from credit_ledger_entry where user_id = $1::uuid "
+            "order by created_at desc, id desc "
+            "limit $2 offset $3",
+            user_id,
+            limit,
+            offset,
+        )
+        return [dict(r) for r in rows]
+
+
 async def balance_after_estimate(
     conn: asyncpg.Connection, user_id: str, estimate: Decimal
 ) -> Decimal:

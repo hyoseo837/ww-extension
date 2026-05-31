@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     public_base_url: str
     # Comma-separated browser origins allowed by CORS (web app, v6.1).
     cors_origins: str = "http://localhost:5173,https://ww-extension.hyoseo.dev"
+    # Web app base URL — Stripe success/cancel return for web checkout (v6.2).
+    web_app_url: str = "https://ww-extension.hyoseo.dev"
 
     @property
     def cors_origin_list(self) -> list[str]:

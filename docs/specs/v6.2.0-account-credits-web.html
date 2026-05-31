@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v6.2.0" />
+    <meta name="status" content="planned" />
+    <meta name="last-updated" content="2026-05-31" />
+    <title>v6.2.0 — Account + credits on web</title>
+  </head>
+  <body>
+    <h1>v6.2.0 — Account + credits on web</h1>
+
+    <h2>Goal</h2>
+    <p>
+      Turn the v6.1 bootstrap shell into a real, routed account surface: view
+      balance, browse full credit history, and buy credits via Stripe Checkout
+      that returns to the web app (not the <code>chrome-extension</code> result
+      shim). The extension's existing checkout path is left untouched — it keeps
+      using the shim until the v6.4 slim-down. Backend gains one read endpoint
+      (<code>GET /credits/history</code>) and a web-aware
+      <code>success_url</code> on checkout; the rest is the React app.
+    </p>
+
+    <h2>Files</h2>
+
+    <h3>Changed — <code>server/</code> (triggers a DO redeploy)</h3>
+    <ul>
+      <li><code>app/billing/db.py</code> — add <code>get_history(user_id,
+        limit, offset)</code>: ledger rows ordered <code>created_at desc</code>
+        (uses the existing <code>(user_id, created_at desc)</code> index).</li>
+      <li><code>app/billing/routes.py</code> — add
+        <code>GET /credits/history?limit=&amp;offset=</code> (authenticated,
+        returns the user's ledger entries); extend
+        <code>CheckoutRequest</code> with <code>client: "web" | "extension"</code>
+        (default <code>"extension"</code> — back-compatible).</li>
+      <li><code>app/billing/payments.py</code> —
+        <code>create_checkout_session</code> takes the <code>client</code> and
+        branches <code>success_url</code>/<code>cancel_url</code>: web →
+        <code>{WEB_APP_URL}/billing?checkout=success|cancel</code>; extension →
+        the existing <code>/credits/checkout/result</code> shim (unchanged).</li>
+      <li><code>app/core/config.py</code> — add <code>web_app_url</code>
+        (default <code>https://ww-extension.hyoseo.dev</code>).</li>
+      <li><code>.env.example</code> — add <code>WEB_APP_URL</code>.</li>
+      <li><code>pyproject.toml</code> — version bump (server changed — ADR 0010).</li>
+    </ul>
+
+    <h3>Changed / added — <code>web/</code></h3>
+    <ul>
+      <li><code>package.json</code> — add <code>react-router-dom</code>.</li>
+      <li><code>src/main.tsx</code> — wrap in <code>BrowserRouter</code>; import
+        <code>index.css</code>.</li>
+      <li><code>src/index.css</code> <em>(added)</em> — warm light-theme tokens
+        (the DESIGN.md palette) as CSS variables + base styles. A presentable
+        baseline; the full Stitch-derived design lands in a later styling pass
+        and will reuse these tokens (and seed the extension/options restyle).</li>
+      <li><code>src/useSession.ts</code> <em>(added)</em> — session hook
+        (extracted from the v6.1 <code>App.tsx</code>).</li>
+      <li><code>src/api.ts</code> — add <code>apiPost</code> (bearer + JSON body).</li>
+      <li><code>src/App.tsx</code> — router: logged-out → <code>Landing</code>;
+        logged-in → <code>Layout</code> with routes <code>/account</code>,
+        <code>/billing</code>, <code>/buy</code>, and <code>*</code> →
+        <code>/account</code>.</li>
+      <li><code>src/Layout.tsx</code> <em>(added)</em> — top bar (wordmark,
+        live credit pill, email, sign out) + nav; owns the balance and exposes
+        <code>{balance, refetchBalance}</code> via <code>Outlet</code> context so
+        the pill stays in sync after a purchase.</li>
+      <li><code>src/pages/Landing.tsx</code> <em>(added)</em> — logged-out
+        sign-in view (moved from the v6.1 shell).</li>
+      <li><code>src/pages/Account.tsx</code> <em>(added)</em> — balance card +
+        recent activity (last ~5 of <code>/credits/history</code>) + "Buy
+        credits" link.</li>
+      <li><code>src/pages/Billing.tsx</code> <em>(added)</em> — full credit
+        history table, paginated ("Load more" via <code>offset</code>); on
+        <code>?checkout=success</code> shows a confirmation banner and refetches
+        balance/history (webhook grant is a few seconds behind).</li>
+      <li><code>src/pages/Buy.tsx</code> <em>(added)</em> — three package cards;
+        a click <code>POST /credits/checkout {package_id, client:"web"}</code>
+        then redirects to the returned Stripe URL.</li>
+    </ul>
+
+    <h3>Changed — docs</h3>
+    <ul>
+      <li><code>docs/reference/api.html</code> — document
+        <code>GET /credits/history</code> and the checkout <code>client</code>
+        field.</li>
+      <li><code>docs/architecture.html</code> — web app routes,
+        <code>WEB_APP_URL</code> in the backend env list.</li>
+      <li><code>manifest.json</code> — version bumps per slice.</li>
+    </ul>
+
+    <h2>Verify</h2>
+    <ol>
+      <li><code>GET /credits/history</code> (authed) returns the user's ledger
+        rows newest-first; <code>limit</code>/<code>offset</code> paginate;
+        <code>401</code> without a token.</li>
+      <li><code>cd web &amp;&amp; npm run build</code> is clean.</li>
+      <li>On the deployed app: <code>/account</code> shows balance + recent
+        activity; <code>/billing</code> shows the full history and "Load more"
+        pages; nav + the top-bar credit pill render on every route.</li>
+      <li><code>/buy</code> → click a package → lands on Stripe Checkout with the
+        right CAD amount → pay (test mode) → returns to
+        <code>/billing?checkout=success</code> → balance increases within a few
+        seconds (webhook grant), pill updates.</li>
+      <li>The extension's own "Buy credits" still works unchanged (checkout
+        without <code>client</code> defaults to the shim).</li>
+      <li><code>GET /health</code> reports the new version after redeploy.</li>
+    </ol>
+
+    <h2>Notes</h2>
+    <p>
+      <strong>Why no ADR.</strong> The web <code>success_url</code> is an
+      additive, back-compatible extension of the Stripe flow
+      (<a href="../decisions/0012-stripe-checkout-webhook-grants.html">ADR 0012</a>) —
+      the <code>client</code> field defaults to the existing extension
+      behavior. Recorded here, not as a new decision.
+    </p>
+    <p>
+      <strong>History detail is intentionally shallow.</strong> Each row shows
+      date, a humanized <code>kind</code> (Purchase / Signup bonus / Scan / Scan
+      refund / Admin grant), and the signed credit amount. Joining
+      <code>scan</code> for per-posting labels (e.g. the job title) is deferred —
+      <code>posting_id</code> is available but the title isn't stored, and it
+      isn't worth a join for v6.2.
+    </p>
+    <p>
+      <strong>Routing anticipates v6.3.</strong> Per the user's call, the
+      profile editor splits into <strong>separate pages</strong>:
+      <code>/profile</code> (CV upload + experiences/projects) and
+      <code>/preferences</code> (match criteria), rather than one screen. v6.2
+      builds only <code>/account</code>, <code>/billing</code>, <code>/buy</code>;
+      the nav gains <code>/profile</code> + <code>/preferences</code> when v6.3
+      builds them.
+    </p>
+    <p>
+      <strong>Packages unchanged.</strong> The live three (500/$5, 1000/$10,
+      2000/$20, strictly 1:1) are surfaced as-is; any repricing or bulk-discount
+      tier is a separate pricing decision (would touch
+      <code>payments.py</code> and the 1¢=1-credit invariant).
+    </p>
+    <p>
+      <strong>Styling is a baseline, not the final design.</strong> The Stitch
+      design pass (warm, cozy, Claude-like light theme) lands later and will be
+      reconciled into <code>index.css</code> tokens, then propagated to the
+      extension sidebar and options page.
+    </p>
+  </body>
+</html>
