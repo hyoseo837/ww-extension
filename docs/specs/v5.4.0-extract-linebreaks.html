@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v5.4.0" />
+    <meta name="status" content="done" />
+    <meta name="last-updated" content="2026-05-30" />
+    <title>Spec v5.4.0 — Preserve line breaks in extracted raw documents</title>
+  </head>
+  <body>
+    <h1>Spec v5.4.0 — Preserve line breaks in extracted raw documents</h1>
+
+    <section id="goal">
+      <h2>Goal</h2>
+      <p>
+        Fix to the v5.1 PDF extraction. The extract prompt copies the grade
+        report, co-op work-history, and cover letter into raw-text fields
+        (<code>grade_report</code> / <code>coop_history</code> /
+        <code>cover_letter</code>) but never tells Gemini to keep the line
+        breaks, so the model flattens them into a single line. That degrades
+        both the options-page display (rendered in a <code>&lt;pre&gt;</code>)
+        and — more importantly — the scan input: a transcript or work-history
+        is far easier for the scorer to read with one course/term per line than
+        as a run-on blob. Make line-break preservation explicit in the extract
+        prompt.
+      </p>
+    </section>
+
+    <section id="files">
+      <h2>Files</h2>
+      <dl>
+        <dt><code>server/app/scoring/gemini.py</code> (changed)</dt>
+        <dd><code>_PROFILE_EXTRACT_PROMPT</code> — instruct Gemini to preserve
+          the original line breaks (newline-separate each transcript/course
+          row, work-term entry, and paragraph; do not flatten). Schema/transport
+          unchanged — JSON strings carry <code>\n</code> natively.</dd>
+        <dt><code>server/pyproject.toml</code>, <code>manifest.json</code> (changed)</dt>
+        <dd>Version bump.</dd>
+      </dl>
+    </section>
+
+    <section id="verify">
+      <h2>Verify</h2>
+      <ol>
+        <li>Re-extract a package PDF; the stored <code>grade_report</code> /
+          <code>coop_history</code> contain <code>\n</code> — the options
+          profile view shows line-structured text, not one blob.</li>
+        <li>A scan's profile context renders those rows on separate lines.</li>
+      </ol>
+    </section>
+
+    <section id="notes">
+      <h2>Notes</h2>
+      <ul>
+        <li><strong>Extraction-only.</strong> Existing stored profiles need a
+          <strong>re-upload</strong> to pick up the line breaks; the scan
+          serialization already passes through whatever is stored.</li>
+        <li>Model adherence to "preserve line breaks" in a structured string
+          field is reliable but not guaranteed; confirm with a direct extract
+          if in doubt.</li>
+      </ul>
+    </section>
+  </body>
+</html>
