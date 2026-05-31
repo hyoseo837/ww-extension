@@ -38,8 +38,13 @@
           Content script matches <code>jobs.htm*</code> on WaterlooWorks.</dd>
 
         <dt><code>options.html</code> + <code>src/options.js</code></dt>
-        <dd>Three-tab settings UI: API Configuration, Profile &amp; Context,
-          Settings.</dd>
+        <dd>Thin settings UI (slimmed at v6.4): a <strong>Model</strong> tab and
+          a <strong>Settings</strong> tab (Google sign-in / email / live balance
+          / sign-out, theme toggle, hard-filter toggle, About). Account, profile,
+          preferences, and credit purchase moved to the web app — the page deep-
+          links there (<code>.open-web</code> → <code>chrome.tabs.create</code> at
+          <code>ww-extension.hyoseo.dev/account</code> · <code>/profile</code>).
+          No profile/criteria editing or in-extension checkout remains.</dd>
 
         <dt><code>welcome.html</code></dt>
         <dd>First-run welcome page. Opens on install via
@@ -50,8 +55,10 @@
         <dd>Content script. Owns the sidebar UI, scan flow, badge injection
           via MutationObserver, theme listener, empty-state guide, and the
           out-of-credits "Buy credits" nudge (shown when a scan batch halts
-          on <code>NO_CREDITS</code>; opens the options Account/Buy section
-          via <code>openOptions</code>). Also runs the client hard-exclusion
+          on <code>NO_CREDITS</code>; opens the web app's <code>/buy</code> via
+          <code>openWebApp</code>, v6.4) — and a matching profile-not-set prompt
+          (<code>PROFILE_NOT_SET</code> → web <code>/profile</code>). Also runs
+          the client hard-exclusion
           pre-filter (ADR 0018): before <code>/scan</code>, a posting whose
           results-table City matches a <code>excluded</code>-tier location is
           marked <em>Excluded</em> with no Gemini call and no credit — so
@@ -61,6 +68,7 @@
         <dt><code>src/background.js</code></dt>
         <dd>Service worker. Gemini API client, token-usage counter, message
           router. Handles <code>openWelcome</code>, <code>openOptions</code>,
+          <code>openWebApp {path}</code> (v6.4, deep-links to the web app),
           scan requests from content script.</dd>
 
         <dt><code>src/page-bridge.js</code></dt>

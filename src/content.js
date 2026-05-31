@@ -235,19 +235,18 @@ function setProgress(text, isError = false) {
   el.classList.toggle('ww-ext-error', isError);
 }
 
-// Out-of-credits halt: show an actionable "Buy credits" prompt that opens
-// the options page Account/Buy section (same openOptions hop as the
-// empty-state guide and Settings button).
-function setOutOfCreditsPrompt() {
+// Halt prompt: a message plus an inline link that opens the web app at
+// `path` (account/profile/buy now live there, v6.4).
+function setActionPrompt(text, linkLabel, path) {
   const el = document.getElementById('ww-ext-progress');
   if (!el) return;
   el.classList.add('ww-ext-error');
-  el.textContent = "You're out of credits. ";
+  el.textContent = text + ' ';
   const btn = document.createElement('button');
   btn.className = 'ww-ext-inline-link';
-  btn.textContent = 'Buy credits';
+  btn.textContent = linkLabel;
   btn.addEventListener('click', () => {
-    chrome.runtime.sendMessage({ type: 'openOptions' });
+    chrome.runtime.sendMessage({ type: 'openWebApp', path });
   });
   el.appendChild(btn);
 }
@@ -389,7 +388,9 @@ async function scanAllJobs() {
           if (result.halt) {
             halted = true;
             if (result.code === 'NO_CREDITS') {
-              setOutOfCreditsPrompt();
+              setActionPrompt("You're out of credits.", 'Buy credits', '/buy');
+            } else if (result.code === 'PROFILE_NOT_SET') {
+              setActionPrompt('Set up your profile to start scoring.', 'Set up profile', '/profile');
             } else {
               setProgress(result.error, true);
             }
@@ -469,19 +470,22 @@ function renderSidebarList() {
         <div class="ww-ext-guide-title">Get started</div>
         <div class="ww-ext-guide-step" id="ww-ext-step-auth">
           <span class="ww-ext-step-num">1</span>
-          <div>Sign in with Google in <button class="ww-ext-inline-link">Settings</button></div>
+          <div>Sign in with Google in <button class="ww-ext-inline-link" id="ww-ext-guide-signin">Settings</button></div>
         </div>
         <div class="ww-ext-guide-step" id="ww-ext-step-cv">
           <span class="ww-ext-step-num">2</span>
-          <div>Upload your application package in Profile &amp; Context</div>
+          <div>Set up your <button class="ww-ext-inline-link" id="ww-ext-guide-profile">profile</button> on the web app</div>
         </div>
         <div class="ww-ext-guide-step">
           <span class="ww-ext-step-num">3</span>
           <div>Click <b>Scan All Jobs</b> above</div>
         </div>
       </li>`;
-    ul.querySelector('.ww-ext-inline-link')?.addEventListener('click', () => {
+    ul.querySelector('#ww-ext-guide-signin')?.addEventListener('click', () => {
       chrome.runtime.sendMessage({ type: 'openOptions' });
+    });
+    ul.querySelector('#ww-ext-guide-profile')?.addEventListener('click', () => {
+      chrome.runtime.sendMessage({ type: 'openWebApp', path: '/profile' });
     });
     chrome.storage.local.get(['auth', 'cvText'], data => {
       updateGuideSteps(!!data.auth?.access_token, !!(data.cvText && data.cvText.trim()));

@@ -3,6 +3,7 @@ const SUPABASE_URL = "https://bumrzedwwfhbxlttwboh.supabase.co";
 // the sb_publishable_... value from server/.env before loading the extension.
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_bQlHXw98CvV4gZ6Z_5ExLg_u2Td-M5Q";
 const BACKEND_URL = "https://ww-extension-backend-x5h6h.ondigitalocean.app";
+const WEB_APP_URL = "https://ww-extension.hyoseo.dev";
 
 chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === "install") {
@@ -26,6 +27,10 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   }
   if (msg.type === "openWelcome") {
     chrome.tabs.create({ url: chrome.runtime.getURL("welcome.html") });
+    return;
+  }
+  if (msg.type === "openWebApp") {
+    chrome.tabs.create({ url: WEB_APP_URL + (msg.path || "/") });
     return;
   }
   if (msg.type === "scoreJob") {
@@ -100,7 +105,7 @@ async function scoreJob({ meta, descriptionText, model, postingId, batchId }) {
     return {
       ok: false,
       code: "PROFILE_NOT_SET",
-      error: "Set up your Profile (⚙) before scanning.",
+      error: "Set up your profile on the web app before scanning.",
     };
   }
   if (res.status === 402) {
