@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "WW Extension",
-  "version": "6.3.2",
+  "version": "6.3.3",
   "description": "AI job scorer for WaterlooWorks",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyeCM6vVTZLpnNPPTitVx8HlxTsyHslhKxjHA0+hdfrmyYdUEwFTRoy2XGY/TRzg828duOhxZ1tbYxK4UbpHr1IBifi9CVwGYR0jCWGBuEoVhQNcNYhykBVvR+MV5nkt49qBVCqzk9HiZZ5laVTIznYgVR6EX6iCd9LN1afKFkEhgoUcyOyEPs6UESaoeYs/bxMoAX2zfSu9Nx0tCz5WUkH/v3hZLscOonCVb47RcrIF9UdRl7BijgjaODTspG3Ku4IefaUuf95wFKBYbLf3oMDNZy5MlXYPFC36mKApUeqfG6aTEAl5X2WlpExGlIjPIUsT6MxLaVV6JhwdARxXchQIDAQAB",
   "permissions": ["storage", "identity"],

@@ -43,6 +43,7 @@ export default function Layout({ email }: { email: string }) {
             <div className="flex items-center gap-md">
               <NavLink to="/account" className={navLink} end>Dashboard</NavLink>
               <NavLink to="/profile" className={navLink}>Profile</NavLink>
+              <NavLink to="/preferences" className={navLink}>Preferences</NavLink>
               <NavLink to="/billing" className={navLink}>History</NavLink>
               <NavLink to="/buy" className={navLink}>Buy credits</NavLink>
             </div>

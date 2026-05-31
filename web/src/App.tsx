@@ -6,6 +6,7 @@ import Account from "./pages/Account";
 import Billing from "./pages/Billing";
 import Buy from "./pages/Buy";
 import Profile from "./pages/Profile";
+import Preferences from "./pages/Preferences";
 
 export default function App() {
   const { session, loading } = useSession();
@@ -26,7 +27,7 @@ export default function App() {
         <Route path="/billing" element={<Billing />} />
         <Route path="/buy" element={<Buy />} />
         <Route path="/profile" element={<Profile />} />
-        {/* /preferences arrives in v6.3.3 */}
+        <Route path="/preferences" element={<Preferences />} />
         <Route path="*" element={<Navigate to="/account" replace />} />
       </Route>
     </Routes>
