@@ -78,14 +78,16 @@
 
       <dt><code>ww_scores</code></dt>
       <dd><strong>Type:</strong> <code>Record&lt;postingId, { score:
-        number, verdict: string, reason: string,
+        number | null, verdict: string, reason: string,
         breakdown: { point: string, effect: "plus" | "minus" }[],
         title: string, org: string }&gt;</code>. Score map keyed by WW
         posting ID. <code>score</code> is <code>1–20</code> and
         <code>verdict</code> is one of <em>Strong Apply · Apply · Consider ·
         Unlikely · Skip · Excluded</em> (ADR 0017); <code>breakdown</code> is
-        the gain/loss points rendered in the sidebar card. Drives badge
-        rendering and sidebar list.</dd>
+        the gain/loss points rendered in the sidebar card. <code>score</code>
+        is <code>null</code> for a client hard-filtered <em>Excluded</em> entry
+        (ADR 0018) — no fit score was computed; the badge shows the verdict
+        alone. Drives badge rendering and sidebar list.</dd>
 
       <dt><code>ww_posting_ids</code></dt>
       <dd><strong>Type:</strong> <code>string[]</code>. Ordered array
@@ -99,6 +101,14 @@
         (ADR 0017). On load, a mismatch with the client's current version
         clears <code>ww_scores</code> / <code>ww_posting_ids</code> wholesale
         so badges never mix scales (e.g. old 1–10 with new 1–20).</dd>
+
+      <dt><code>hardFilterEnabled</code></dt>
+      <dd><strong>Type:</strong> <code>boolean</code> (default <code>true</code>
+        when unset). Settings-tab toggle for the client hard-exclusion
+        pre-filter (ADR 0018). When on, a scan skips postings whose results-table
+        City matches a <code>excluded</code>-tier location — marking them
+        Excluded without calling <code>/scan</code> (no credit). When off, every
+        posting scans normally.</dd>
 
       <dt><code>welcomeShown</code></dt>
       <dd><strong>Type:</strong> <code>boolean</code>. Set after the
@@ -274,8 +284,12 @@
         so an empty-criteria scan is byte-identical to the pre-v5 prompt.
         As of v5.2 (ADR 0017) the scorer flags an <code>excluded</code>-tier
         match or work-auth ineligibility as the <strong>Excluded</strong>
-        verdict during scoring. A <em>credit-free</em> pre-scan hard-Skip (never
-        calling Gemini) is still a later v5 thread (#4).</dd>
+        verdict during scoring. As of v5.3 (ADR 0018) the client also runs a
+        <em>credit-free</em> pre-scan skip: postings whose results-table City
+        matches an <code>excluded</code>-tier location are marked Excluded
+        before any Gemini call. Coverage is conservative — structured City only
+        (free-text work-auth/location-region gates still go through the
+        scan-time verdict).</dd>
 
       <dt><code>profile_json jsonb not null default '{}'</code>
         (v5.1.0, migration 0007)</dt>

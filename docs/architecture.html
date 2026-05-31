@@ -51,7 +51,12 @@
           via MutationObserver, theme listener, empty-state guide, and the
           out-of-credits "Buy credits" nudge (shown when a scan batch halts
           on <code>NO_CREDITS</code>; opens the options Account/Buy section
-          via <code>openOptions</code>).</dd>
+          via <code>openOptions</code>). Also runs the client hard-exclusion
+          pre-filter (ADR 0018): before <code>/scan</code>, a posting whose
+          results-table City matches a <code>excluded</code>-tier location is
+          marked <em>Excluded</em> with no Gemini call and no credit — so
+          Excluded has two producers (this pre-filter and the scan-time
+          verdict). Gated by the <code>hardFilterEnabled</code> setting.</dd>
 
         <dt><code>src/background.js</code></dt>
         <dd>Service worker. Gemini API client, token-usage counter, message
@@ -74,7 +79,9 @@
         with schemas. Summary: settings (apiKey, model, cvText fallback +
         structured profileJson/profileSupplement, preferences/notes +
         structured matchCriteria), theme, cumulative
-        token usage, score map per posting,
+        token usage, score map per posting (with a scoring-schema version for
+        clear-on-upgrade), <code>hardFilterEnabled</code> (hard-exclusion
+        pre-filter toggle, v5.3),
         ordered posting-id list for cross-page navigation,
         <code>auth</code> (Supabase session, v4.2.1+) and
         <code>creditBalance</code> (last-known balance from
