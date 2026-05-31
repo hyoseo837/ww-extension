@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-05-31" />
+    <title>ADR 0023 — Tailwind CSS for the web app</title>
+  </head>
+  <body>
+    <h1>ADR 0023 — Tailwind CSS for the web app</h1>
+
+    <section id="context">
+      <h2>Context</h2>
+      <p>
+        v6.1/v6.2 shipped the web app with a hand-rolled <code>index.css</code>
+        baseline (warm tokens as CSS variables), explicitly deferred as
+        placeholder styling until a real design pass. The user then designed the
+        full v6 surface (account, billing, buy, profile, preferences, landing,
+        sidebar, admin) in Google Stitch and exported it. The export is
+        <strong>Tailwind</strong>: a custom theme config (the "Warm Editorial"
+        palette — primary <code>#8f4830</code> terracotta, Source Serif 4 +
+        Inter, a 4px spacing scale, soft shadows) plus utility-class markup per
+        screen.
+      </p>
+      <p>
+        Applying a Tailwind design to a hand-rolled-CSS app means translating
+        every screen's utilities into semantic classes by hand — slow across
+        eight screens and prone to drifting from the design. The project's
+        minimal-code rule (<a href="0003-minimal-code.html">ADR 0003</a>) biases
+        against a framework, but the same reasoning as the web-stack choice
+        (<a href="0019-web-app-stack-vite-react-ts.html">ADR 0019</a>) applies:
+        the goal is a high-quality UI delivered fast, and the design source is
+        already Tailwind.
+      </p>
+    </section>
+
+    <section id="decision">
+      <h2>Decision</h2>
+      <ul>
+        <li>Adopt <strong>Tailwind CSS (v3)</strong> in <code>web/</code>, with
+          the Stitch theme config ported into <code>tailwind.config.js</code>
+          (colors / fontFamily / fontSize / spacing / borderRadius) as the single
+          token source. Plugins: <code>@tailwindcss/forms</code> and
+          <code>@tailwindcss/container-queries</code> (as the export used).</li>
+        <li>JSX uses Tailwind utility classes, ported from the Stitch export per
+          screen. This <strong>supersedes the hand-rolled <code>index.css</code>
+          baseline</strong> from v6.1/v6.2 (which was always placeholder).</li>
+        <li>Fonts (Inter, Source Serif 4, Material Symbols) load via Google Fonts
+          <code>&lt;link&gt;</code> in <code>index.html</code>, matching the
+          export. Light mode only.</li>
+        <li>Tailwind v3 (JS config) over v4 (CSS <code>@theme</code>) specifically
+          so the Stitch JS theme config ports near-verbatim.</li>
+        <li><strong>Scope: the web app only.</strong> The extension keeps its
+          hand-rolled <code>sidebar.css</code>; its later restyle will reuse the
+          <em>token values</em> (palette/type) from this config, not necessarily
+          Tailwind itself.</li>
+      </ul>
+    </section>
+
+    <section id="consequences">
+      <h2>Consequences</h2>
+      <ul>
+        <li><strong>+</strong> Each Stitch screen is a near-paste of its
+          utilities — faithful to the design and fast to apply across all eight
+          screens, with no per-screen translation drift.</li>
+        <li><strong>+</strong> One authoritative token set
+          (<code>tailwind.config.js</code>) for the whole web app; the extension
+          sidebar can mirror the same values later.</li>
+        <li><strong>−</strong> New build tooling (Tailwind + PostCSS) and a dep,
+          a step away from <a href="0003-minimal-code.html">ADR 0003</a> within
+          the web app — judged worth it for the UI-quality goal, same trade as
+          ADR 0019. Minimal-code still governs the React logic.</li>
+        <li><strong>−</strong> Utility-class verbosity in JSX (long
+          <code>className</code> strings). Accepted as the cost of design
+          fidelity; shared patterns can be factored into small components.</li>
+        <li><strong>−</strong> Two styling systems in the repo (Tailwind web,
+          hand-rolled extension CSS) until/unless the extension is revisited.</li>
+        <li>The exported design's <em>copy</em> is not authoritative where it
+          conflicts with the backend — e.g. the Buy screen's 1,500/5,000 "Save
+          %" tiers are illustrative; the real packages (500/$5, 1000/$10,
+          2000/$20, strictly 1:1) stand. Apply the visual style, keep real data.</li>
+      </ul>
+    </section>
+  </body>
+</html>

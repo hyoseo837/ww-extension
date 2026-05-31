@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>WW Scorer - Buy Credits</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Source+Serif+4:wght@500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-fixed-dim": "#79d7c8",
+                        "inverse-surface": "#333029",
+                        "surface-container-highest": "#e9e2d7",
+                        "secondary-fixed-dim": "#cfc4be",
+                        "surface-container-lowest": "#ffffff",
+                        "primary-container": "#ad5f46",
+                        "on-primary": "#ffffff",
+                        "border": "#E8E5DC",
+                        "on-error-container": "#93000a",
+                        "surface-container-high": "#efe7dc",
+                        "error-container": "#ffdad6",
+                        "surface-container-low": "#faf3e7",
+                        "on-background": "#1e1b15",
+                        "tertiary-container": "#138376",
+                        "secondary-fixed": "#ece0d9",
+                        "on-tertiary-container": "#f4fffb",
+                        "outline-variant": "#d9c1ba",
+                        "page-bg": "#FAF9F5",
+                        "on-error": "#ffffff",
+                        "primary": "#8f4830",
+                        "primary-fixed-dim": "#ffb59e",
+                        "positive": "#5E7C5A",
+                        "on-secondary-fixed-variant": "#4d4540",
+                        "surface-alt": "#FBFAF6",
+                        "on-secondary-container": "#6b635d",
+                        "on-tertiary-fixed-variant": "#005048",
+                        "on-surface": "#1e1b15",
+                        "surface-container": "#f4ede2",
+                        "surface": "#FFFFFF",
+                        "tertiary-fixed": "#95f3e4",
+                        "negative": "#B5544A",
+                        "primary-fixed": "#ffdbd0",
+                        "inverse-on-surface": "#f7f0e5",
+                        "on-primary-fixed-variant": "#75331d",
+                        "on-secondary": "#ffffff",
+                        "text-muted": "#9A958A",
+                        "secondary-container": "#ece0d9",
+                        "tertiary": "#00685d",
+                        "secondary": "#655d58",
+                        "on-primary-container": "#fffbff",
+                        "on-secondary-fixed": "#201a16",
+                        "on-tertiary": "#ffffff",
+                        "outline": "#87736d",
+                        "accent-hover": "#B5644B",
+                        "error": "#ba1a1a",
+                        "surface-dim": "#e0d9ce",
+                        "inverse-primary": "#ffb59e",
+                        "background": "#fff8f0",
+                        "on-tertiary-fixed": "#00201c",
+                        "surface-variant": "#e9e2d7",
+                        "surface-bright": "#fff8f0",
+                        "text-secondary": "#6E6A5F",
+                        "on-surface-variant": "#54433e",
+                        "on-primary-fixed": "#390b00",
+                        "surface-tint": "#924a32"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "max-width": "960px",
+                        "lg": "24px",
+                        "xxl": "48px",
+                        "sm": "12px",
+                        "md": "16px",
+                        "xs": "8px",
+                        "xl": "32px",
+                        "gutter": "24px",
+                        "base": "4px"
+                    },
+                    "fontFamily": {
+                        "label-sm": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-md": ["Source Serif 4"],
+                        "headline-lg": ["Source Serif 4"],
+                        "display-lg": ["Source Serif 4"],
+                        "display-lg-mobile": ["Source Serif 4"],
+                        "label-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.04em", "fontWeight": "600" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "500" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "fontWeight": "600" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "display-lg-mobile": ["32px", { "lineHeight": "40px", "fontWeight": "600" }],
+                        "label-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "500" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: theme('colors.page-bg');
+            color: theme('colors.on-surface');
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col font-body-md text-body-md antialiased">
+<!-- TopNavBar -->
+<nav class="w-full top-0 sticky bg-surface-bright dark:bg-surface-dim border-b border-border dark:border-outline-variant flat no shadows z-50">
+<div class="max-w-max-width mx-auto flex justify-between items-center px-gutter h-16">
+<div class="flex items-center gap-xl">
+<a class="font-headline-md text-headline-md font-semibold text-primary dark:text-primary-fixed cursor-pointer transition-opacity active:opacity-80" href="#">WW Scorer</a>
+<div class="hidden md:flex items-center gap-md">
+<a class="text-text-secondary dark:text-on-surface-variant hover:text-primary transition-colors hover:text-accent-hover transition-all cursor-pointer transition-opacity active:opacity-80" href="#">Dashboard</a>
+<a class="text-primary dark:text-primary-fixed border-b-2 border-primary dark:border-primary-fixed pb-1 hover:text-accent-hover transition-all cursor-pointer transition-opacity active:opacity-80" href="#">Credits</a>
+<a class="text-text-secondary dark:text-on-surface-variant hover:text-primary transition-colors hover:text-accent-hover transition-all cursor-pointer transition-opacity active:opacity-80" href="#">History</a>
+</div>
+</div>
+<div class="flex items-center gap-sm">
+<button class="p-xs text-text-secondary hover:text-primary transition-colors rounded-full hover:bg-surface-container-highest cursor-pointer transition-opacity active:opacity-80 flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="p-xs text-text-secondary hover:text-primary transition-colors rounded-full hover:bg-surface-container-highest cursor-pointer transition-opacity active:opacity-80 flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<div class="ml-sm cursor-pointer transition-opacity active:opacity-80">
+<div class="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center text-on-secondary-container font-label-md text-label-md overflow-hidden">
+<img alt="User account avatar" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuATrsEYgjuZc40ikx0eDbb3hZlAQQPoySTqMJYehf33d4uXzlylQ7lxAOLLnYI3rwvM4uWG48DzsYs6KElykLtPWsb-AHBcgn8vRAKtryIqi5UKdXhHNIBeixmLB-J7kwJ38f99cktXp-Py2pIGK3zPGBC3ZiGmlP37bymoV8ir9Wfy_ICld6InQVl6DtXsIMeqFbptDPtqnr6MHQimGEkdh62_mbj9D4_cRF0mXUbHzhn6tRppSfor7eTWDbI-sYFkJ9MsOb_sP7pq"/>
+</div>
+</div>
+</div>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="flex-grow max-w-max-width mx-auto w-full px-gutter py-xl flex flex-col gap-xxl">
+<!-- Header Section -->
+<header class="flex flex-col items-center text-center gap-sm mt-lg">
+<h1 class="font-display-lg text-display-lg md:font-display-lg-mobile md:text-display-lg-mobile text-on-surface">Top up your credits</h1>
+<p class="font-body-lg text-body-lg text-text-secondary max-w-2xl mx-auto">Purchase credits to continue scoring resumes. One credit equals one full resume scan.</p>
+</header>
+<!-- Pricing Cards Section (Bento Grid Style) -->
+<section class="grid grid-cols-1 md:grid-cols-3 gap-lg md:gap-gutter">
+<!-- Tier 1 -->
+<article class="bg-surface rounded-xl border border-border p-lg flex flex-col gap-lg shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition-transform hover:-translate-y-1 duration-300">
+<div class="flex flex-col gap-xs">
+<h2 class="font-headline-lg text-headline-lg text-on-surface">500</h2>
+<span class="font-label-md text-label-md text-text-muted uppercase tracking-wider">Credits</span>
+</div>
+<div class="flex items-baseline gap-xs">
+<span class="font-headline-md text-headline-md text-on-surface">$5</span>
+<span class="font-body-md text-body-md text-text-secondary">CAD</span>
+</div>
+<div class="font-body-md text-body-md text-text-secondary pb-md border-b border-border/50">
+                    Perfect for quick batches.
+                </div>
+<button class="mt-auto w-full py-sm px-lg rounded-lg bg-surface border border-border text-primary font-label-md text-label-md hover:bg-surface-alt transition-colors duration-200">
+                    Buy 500 Credits
+                </button>
+</article>
+<!-- Tier 2 (Highlighted) -->
+<article class="bg-surface rounded-xl border border-primary p-lg flex flex-col gap-lg shadow-[0_8px_24px_rgba(143,72,48,0.08)] relative transform scale-100 md:scale-105 z-10 transition-transform hover:-translate-y-1 duration-300">
+<div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#F4E8E1] text-primary px-md py-xs rounded-full font-label-sm text-label-sm whitespace-nowrap">
+                    Most popular
+                </div>
+<div class="flex flex-col gap-xs pt-sm">
+<h2 class="font-headline-lg text-headline-lg text-primary">1,500</h2>
+<span class="font-label-md text-label-md text-primary/80 uppercase tracking-wider">Credits</span>
+</div>
+<div class="flex items-baseline gap-xs">
+<span class="font-headline-md text-headline-md text-on-surface">$14</span>
+<span class="font-body-md text-body-md text-text-secondary">CAD</span>
+</div>
+<div class="font-body-md text-body-md text-text-secondary pb-md border-b border-border/50">
+                    Best for 150+ scans. Save 6%.
+                </div>
+<button class="mt-auto w-full py-sm px-lg rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-accent-hover transition-colors duration-200 shadow-[0_2px_8px_rgba(143,72,48,0.2)]">
+                    Buy 1,500 Credits
+                </button>
+</article>
+<!-- Tier 3 -->
+<article class="bg-surface rounded-xl border border-border p-lg flex flex-col gap-lg shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition-transform hover:-translate-y-1 duration-300">
+<div class="flex flex-col gap-xs">
+<h2 class="font-headline-lg text-headline-lg text-on-surface">5,000</h2>
+<span class="font-label-md text-label-md text-text-muted uppercase tracking-wider">Credits</span>
+</div>
+<div class="flex items-baseline gap-xs">
+<span class="font-headline-md text-headline-md text-on-surface">$45</span>
+<span class="font-body-md text-body-md text-text-secondary">CAD</span>
+</div>
+<div class="font-body-md text-body-md text-text-secondary pb-md border-b border-border/50">
+                    High volume. Save 10%.
+                </div>
+<button class="mt-auto w-full py-sm px-lg rounded-lg bg-surface border border-border text-primary font-label-md text-label-md hover:bg-surface-alt transition-colors duration-200">
+                    Buy 5,000 Credits
+                </button>
+</article>
+</section>
+<!-- Trust Note -->
+<div class="flex items-center justify-center gap-xs text-text-muted mt-lg">
+<span class="material-symbols-outlined text-[18px]" data-icon="lock">lock</span>
+<span class="font-label-sm text-label-sm">Secure checkout via Stripe</span>
+</div>
+</main>
+<!-- Footer -->
+<footer class="w-full py-xl border-t border-border dark:border-outline-variant mt-xxl bg-transparent flat no shadows">
+<div class="max-w-max-width mx-auto flex justify-between items-center px-gutter">
+<span class="font-label-sm text-label-sm text-text-muted">© 2024 WW Scorer. Built for Waterloo Students.</span>
+<div class="flex gap-md">
+<a class="font-label-sm text-label-sm text-text-muted hover:text-text-secondary hover:underline transition-all opacity-90 hover:opacity-100" href="#">Terms</a>
+<a class="font-label-sm text-label-sm text-text-muted hover:text-text-secondary hover:underline transition-all opacity-90 hover:opacity-100" href="#">Privacy</a>
+<a class="font-label-sm text-label-sm text-text-muted hover:text-text-secondary hover:underline transition-all opacity-90 hover:opacity-100" href="#">Feedback</a>
+</div>
+</div>
+</footer>
+</body></html>

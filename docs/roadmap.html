@@ -280,9 +280,13 @@
           credits via Stripe with a real <code>success_url</code> (retires the
           <code>chrome-extension://</code> result shim for web purchases).</dd>
 
-        <dt>v6.3 — profile editor on web</dt>
-        <dd>Structured profile, CV upload + extract, supplementary entries, match
-          criteria, notes — the core "bad UI" fix.</dd>
+        <dt>v6.3 — design system + profile editor on web</dt>
+        <dd>Opens with the Stitch "Warm Editorial" design pass (Tailwind —
+          <a href="decisions/0023-tailwind-for-web-app.html">ADR 0023</a>;
+          v6.3.0 restyles the existing pages), then builds the profile editor as
+          two pages: <code>/profile</code> (CV upload + extract, experiences /
+          projects) and <code>/preferences</code> (structured match criteria,
+          notes) — the core "bad UI" fix.</dd>
 
         <dt>v6.4 — extension slim-down</dt>
         <dd>Options page → thin (signed-in state, balance, <strong>Manage account

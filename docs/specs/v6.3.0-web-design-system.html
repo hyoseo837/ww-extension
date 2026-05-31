@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v6.3.0" />
+    <meta name="status" content="planned" />
+    <meta name="last-updated" content="2026-05-31" />
+    <title>v6.3.0 — Web design system (Tailwind) + restyle existing pages</title>
+  </head>
+  <body>
+    <h1>v6.3.0 — Web design system (Tailwind) + restyle existing pages</h1>
+
+    <h2>Goal</h2>
+    <p>
+      Open v6.3 by applying the Stitch "Warm Editorial" design to the web app:
+      adopt Tailwind with the exported theme config
+      (<a href="../decisions/0023-tailwind-for-web-app.html">ADR 0023</a>) and
+      restyle the existing surfaces (layout, account, billing, buy, history,
+      landing) to match. This establishes the design system <em>before</em> the
+      UI-heavy profile/preferences pages are built (v6.3.1+), so they're written
+      already in-style rather than restyled later. The Stitch export lives in
+      <code>web/design/</code> as reference (outside the build).
+    </p>
+
+    <h2>Files</h2>
+    <h3>Added — <code>web/</code></h3>
+    <ul>
+      <li><code>tailwind.config.js</code> — the Stitch theme (colors, fontFamily,
+        fontSize, spacing, borderRadius); content globs; <code>forms</code> +
+        <code>container-queries</code> plugins.</li>
+      <li><code>postcss.config.js</code> — tailwindcss + autoprefixer.</li>
+    </ul>
+    <h3>Changed — <code>web/</code></h3>
+    <ul>
+      <li><code>package.json</code> — add <code>tailwindcss</code> (v3),
+        <code>postcss</code>, <code>autoprefixer</code>,
+        <code>@tailwindcss/forms</code>, <code>@tailwindcss/container-queries</code>.</li>
+      <li><code>index.html</code> — Google Fonts links (Inter, Source Serif 4,
+        Material Symbols).</li>
+      <li><code>src/index.css</code> — replace the hand-rolled baseline with
+        <code>@tailwind base/components/utilities</code> + minimal base styles.</li>
+      <li><code>src/Layout.tsx</code> — top nav (wordmark, route links with the
+        active underline, credit pill, avatar initial, sign out) + footer, per
+        the export's nav/footer pattern.</li>
+      <li><code>src/pages/Account.tsx</code>, <code>Billing.tsx</code>,
+        <code>Buy.tsx</code>, <code>Landing.tsx</code>, <code>src/HistoryList.tsx</code>
+        — Tailwind utilities matching the Stitch screens. Buy keeps the
+        <strong>real</strong> packages (500/$5, 1000/$10, 2000/$20); only the
+        visual style comes from the design (no "Save %" tiers).</li>
+    </ul>
+
+    <h2>Verify</h2>
+    <ol>
+      <li><code>cd web &amp;&amp; npm run build</code> is clean (Tailwind compiles;
+        no TS errors).</li>
+      <li>Deployed: account / billing / buy / landing match the Stitch screens —
+        warm ivory bg, terracotta <code>#8f4830</code> primary, Source Serif 4
+        headings, soft cards, sticky nav with active-link underline.</li>
+      <li>Functionality unchanged: balance pill, credit history (incl. grouped
+        "Scanned N jobs"), and the Stripe buy round-trip all still work.</li>
+      <li>Responsive: cards stack and nav collapses sensibly on a narrow window.</li>
+    </ol>
+
+    <h2>Notes</h2>
+    <p>
+      <strong>Tailwind v3, not v4</strong> — the Stitch config is v3 JS format, so
+      v3 ports verbatim (ADR 0023).
+    </p>
+    <p>
+      <strong>Landing stays minimal here</strong> — a styled hero only; the full
+      logged-out landing (the <code>landing_page_logged_out</code> export) is
+      v6.5.
+    </p>
+    <p>
+      <strong>Next (v6.3.1+):</strong> build <code>/profile</code> (CV upload +
+      experiences/projects) and <code>/preferences</code> (match criteria) — the
+      <code>candidate_profile_cv_experience</code> and
+      <code>match_preferences</code> Stitch screens — in this style. The
+      extension sidebar restyle (reusing these tokens) is deferred to after the
+      v6.4 slim-down. Admin (<code>admin_dashboard</code>) is v6.6.
+    </p>
+  </body>
+</html>

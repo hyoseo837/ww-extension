@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>WW Scorer Sidebar</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "outline": "#87736d",
+                      "surface-container-highest": "#e9e2d7",
+                      "tertiary-container": "#138376",
+                      "secondary-container": "#ece0d9",
+                      "surface-dim": "#e0d9ce",
+                      "text-secondary": "#6E6A5F",
+                      "secondary": "#655d58",
+                      "on-tertiary-fixed": "#00201c",
+                      "on-secondary": "#ffffff",
+                      "on-surface-variant": "#54433e",
+                      "inverse-primary": "#ffb59e",
+                      "surface": "#FFFFFF",
+                      "outline-variant": "#d9c1ba",
+                      "surface-container-lowest": "#ffffff",
+                      "on-tertiary": "#ffffff",
+                      "surface-bright": "#fff8f0",
+                      "surface-alt": "#FBFAF6",
+                      "secondary-fixed": "#ece0d9",
+                      "surface-container-high": "#efe7dc",
+                      "text-muted": "#9A958A",
+                      "on-tertiary-container": "#f4fffb",
+                      "on-error-container": "#93000a",
+                      "surface-tint": "#924a32",
+                      "background": "#fff8f0",
+                      "surface-container": "#f4ede2",
+                      "on-primary-fixed": "#390b00",
+                      "surface-container-low": "#faf3e7",
+                      "error": "#ba1a1a",
+                      "on-primary": "#ffffff",
+                      "page-bg": "#FAF9F5",
+                      "error-container": "#ffdad6",
+                      "positive": "#5E7C5A",
+                      "on-primary-fixed-variant": "#75331d",
+                      "negative": "#B5544A",
+                      "on-surface": "#1e1b15",
+                      "on-secondary-fixed-variant": "#4d4540",
+                      "primary-fixed": "#ffdbd0",
+                      "primary": "#8f4830",
+                      "tertiary-fixed": "#95f3e4",
+                      "tertiary-fixed-dim": "#79d7c8",
+                      "surface-variant": "#e9e2d7",
+                      "on-secondary-container": "#6b635d",
+                      "primary-fixed-dim": "#ffb59e",
+                      "on-primary-container": "#fffbff",
+                      "on-error": "#ffffff",
+                      "on-secondary-fixed": "#201a16",
+                      "on-background": "#1e1b15",
+                      "secondary-fixed-dim": "#cfc4be",
+                      "inverse-surface": "#333029",
+                      "inverse-on-surface": "#f7f0e5",
+                      "tertiary": "#00685d",
+                      "accent-hover": "#B5644B",
+                      "primary-container": "#ad5f46",
+                      "border": "#E8E5DC",
+                      "on-tertiary-fixed-variant": "#005048"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "lg": "24px",
+                      "xs": "8px",
+                      "max-width": "960px",
+                      "xl": "32px",
+                      "xxl": "48px",
+                      "sm": "12px",
+                      "md": "16px",
+                      "base": "4px",
+                      "gutter": "24px"
+              },
+              "fontFamily": {
+                      "label-sm": [
+                              "Inter"
+                      ],
+                      "label-md": [
+                              "Inter"
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "headline-md": [
+                              "Source Serif 4"
+                      ],
+                      "body-lg": [
+                              "Inter"
+                      ],
+                      "headline-lg": [
+                              "Source Serif 4"
+                      ],
+                      "display-lg-mobile": [
+                              "Source Serif 4"
+                      ],
+                      "display-lg": [
+                              "Source Serif 4"
+                      ]
+              },
+              "fontSize": {
+                      "label-sm": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.04em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "label-md": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "letterSpacing": "0.02em",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "display-lg-mobile": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "display-lg": [
+                              "48px",
+                              {
+                                      "lineHeight": "56px",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "600"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+        body {
+            background-color: transparent;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #E8E5DC;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #d9c1ba;
+        }
+    </style>
+</head>
+<body class="flex justify-end min-h-screen">
+<!-- Sidebar Container -->
+<aside class="w-[380px] h-screen bg-page-bg border-l border-border shadow-sm flex flex-col flex-shrink-0">
+<!-- Header -->
+<header class="flex items-center justify-between px-lg py-md border-b border-border bg-surface">
+<h1 class="text-headline-md font-headline-md text-primary font-bold">WW Scorer</h1>
+<div class="flex items-center gap-xs">
+<button class="p-xs text-text-secondary hover:text-primary transition-colors hover:bg-surface-container-low rounded-full">
+<span class="material-symbols-outlined text-[20px]" data-icon="settings">settings</span>
+</button>
+<button class="p-xs text-text-secondary hover:text-primary transition-colors hover:bg-surface-container-low rounded-full">
+<span class="material-symbols-outlined text-[20px]" data-icon="close">close</span>
+</button>
+</div>
+</header>
+<!-- Controls Section -->
+<section class="px-lg py-lg bg-surface border-b border-border space-y-md">
+<!-- Action Buttons -->
+<div class="flex gap-sm">
+<button class="flex-1 bg-primary text-on-primary py-[10px] px-lg rounded-[10px] font-label-md text-label-md hover:bg-accent-hover transition-colors shadow-sm">
+                    Scan All Jobs
+                </button>
+<button class="bg-surface text-primary border border-border py-[10px] px-lg rounded-[10px] font-label-md text-label-md hover:bg-surface-container-low transition-colors">
+                    Stop
+                </button>
+</div>
+<!-- Threshold & Save -->
+<div class="flex items-center justify-between gap-md">
+<div class="flex items-center gap-xs">
+<label class="text-label-sm font-label-sm text-text-secondary uppercase tracking-widest" for="score-threshold">Score ≥</label>
+<input class="w-16 h-8 rounded-[6px] border-border text-center text-label-md font-label-md focus:border-primary focus:ring-1 focus:ring-primary shadow-sm" id="score-threshold" type="number" value="7"/>
+</div>
+<button class="flex items-center gap-base text-primary text-label-sm font-label-sm hover:text-accent-hover transition-colors px-sm py-xs rounded hover:bg-surface-container-low">
+<span class="material-symbols-outlined text-[16px]" data-icon="folder_special">folder_special</span>
+                    Save to Folder
+                </button>
+</div>
+<!-- Filters -->
+<div class="flex gap-xs pt-xs">
+<button class="px-sm py-xs rounded-full bg-surface-container-low border border-border text-label-sm font-label-sm text-text-secondary hover:bg-[#E8F3EA] hover:text-positive hover:border-[#c2dfc8] transition-all">
+                    Apply
+                </button>
+<button class="px-sm py-xs rounded-full bg-surface-container-low border border-border text-label-sm font-label-sm text-text-secondary hover:bg-[#FEF5E7] hover:text-[#B36B00] hover:border-[#FADAB3] transition-all">
+                    Consider
+                </button>
+<button class="px-sm py-xs rounded-full bg-surface-container-low border border-border text-label-sm font-label-sm text-text-secondary hover:bg-[#FCEAE9] hover:text-negative hover:border-[#F2C2BE] transition-all">
+                    Skip
+                </button>
+<button class="ml-auto px-sm py-xs text-label-sm font-label-sm text-text-muted hover:text-text-secondary transition-colors">
+                    Clear
+                </button>
+</div>
+</section>
+<!-- Results List -->
+<main class="flex-1 overflow-y-auto custom-scrollbar p-md space-y-md bg-page-bg">
+<!-- Card 1 -->
+<article class="bg-surface rounded-[16px] border border-border p-md hover:shadow-[0_4px_12px_rgba(135,115,109,0.04)] transition-shadow">
+<div class="flex items-start justify-between mb-sm">
+<div class="flex items-center gap-sm">
+<div class="flex items-center justify-center w-8 h-8 rounded-full bg-[#E8F3EA] text-positive font-headline-md text-headline-md font-bold">
+                            9
+                        </div>
+<span class="text-[11px] font-semibold tracking-wider text-positive uppercase bg-[#E8F3EA] px-2 py-0.5 rounded-full">Apply</span>
+</div>
+<button class="text-text-muted hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]" data-icon="folder">folder</span>
+</button>
+</div>
+<h3 class="text-label-md font-label-md text-primary mb-1 line-clamp-2 leading-tight">AI - Powered Software Development Internship</h3>
+<p class="text-label-sm font-label-sm text-text-secondary mb-3">RamSoft Inc</p>
+<p class="text-[13px] leading-relaxed text-text-secondary line-clamp-3">
+                    Hyoseo is an excellent fit for this AI-Powered Development Team intern role. Their recent experience aligns perfectly with the required tech stack and problem-solving methodologies...
+                </p>
+</article>
+<!-- Card 2 -->
+<article class="bg-surface rounded-[16px] border border-border p-md hover:shadow-[0_4px_12px_rgba(135,115,109,0.04)] transition-shadow opacity-60">
+<div class="flex items-start justify-between mb-sm">
+<div class="flex items-center gap-sm">
+<div class="flex items-center justify-center w-8 h-8 rounded-full bg-[#FCEAE9] text-negative font-headline-md text-headline-md font-bold">
+                            4
+                        </div>
+<span class="text-[11px] font-semibold tracking-wider text-negative uppercase bg-[#FCEAE9] px-2 py-0.5 rounded-full">Skip</span>
+</div>
+<button class="text-text-muted hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]" data-icon="folder">folder</span>
+</button>
+</div>
+<h3 class="text-label-md font-label-md text-on-surface mb-1 line-clamp-2 leading-tight">Backend Engineering</h3>
+<p class="text-label-sm font-label-sm text-text-secondary mb-3">Cambio Corp</p>
+<p class="text-[13px] leading-relaxed text-text-secondary line-clamp-3">
+                    Candidate lacks core requirements for this specific backend architecture. Significant gap in required database scaling experience noted in the job description.
+                </p>
+</article>
+<!-- Card 3 -->
+<article class="bg-surface rounded-[16px] border border-border p-md hover:shadow-[0_4px_12px_rgba(135,115,109,0.04)] transition-shadow">
+<div class="flex items-start justify-between mb-sm">
+<div class="flex items-center gap-sm">
+<div class="flex items-center justify-center w-8 h-8 rounded-full bg-[#FEF5E7] text-[#B36B00] font-headline-md text-headline-md font-bold">
+                            7
+                        </div>
+<span class="text-[11px] font-semibold tracking-wider text-[#B36B00] uppercase bg-[#FEF5E7] px-2 py-0.5 rounded-full">Consider</span>
+</div>
+<button class="text-text-muted hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]" data-icon="folder">folder</span>
+</button>
+</div>
+<h3 class="text-label-md font-label-md text-primary mb-1 line-clamp-2 leading-tight">Student Transit Planner Co-op</h3>
+<p class="text-label-sm font-label-sm text-text-secondary mb-3">Toronto Transit Commission</p>
+<p class="text-[13px] leading-relaxed text-text-secondary line-clamp-3">
+                    Strong analytical skills present, but domain specific knowledge in urban transit systems is limited. Could be a viable stretch role with onboarding support.
+                </p>
+</article>
+<!-- Card 4 -->
+<article class="bg-surface rounded-[16px] border border-border p-md hover:shadow-[0_4px_12px_rgba(135,115,109,0.04)] transition-shadow">
+<div class="flex items-start justify-between mb-sm">
+<div class="flex items-center gap-sm">
+<div class="flex items-center justify-center w-8 h-8 rounded-full bg-[#E8F3EA] text-positive font-headline-md text-headline-md font-bold">
+                            8
+                        </div>
+<span class="text-[11px] font-semibold tracking-wider text-positive uppercase bg-[#E8F3EA] px-2 py-0.5 rounded-full">Apply</span>
+</div>
+<button class="text-text-muted hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]" data-icon="folder">folder</span>
+</button>
+</div>
+<h3 class="text-label-md font-label-md text-primary mb-1 line-clamp-2 leading-tight">Data Engineering Co-op</h3>
+<p class="text-label-sm font-label-sm text-text-secondary mb-3">Public Health Agency of Canada</p>
+<p class="text-[13px] leading-relaxed text-text-secondary line-clamp-3">
+                    The candidate is an excellent fit for this Data Engineering Co-op role. They possess strong Python skills and demonstrated capability in structuring complex datasets...
+                </p>
+</article>
+</main>
+</aside>
+</body></html>
