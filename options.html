@@ -519,10 +519,6 @@
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="5"/><path d="M20 4l-7.5 7.5M15 4h5v5"/></svg>
           Model
         </button>
-        <button class="nav-item" data-tab="context">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          Profile & Context
-        </button>
         <button class="nav-item" data-tab="settings">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           Settings
@@ -560,90 +556,6 @@
         <div id="status" class="status-line"></div>
       </div>
 
-      <!-- ── Profile & Context ── -->
-      <div id="tab-context" class="tab-panel">
-        <h1 class="page-title">Profile & Context</h1>
-        <p class="page-subtitle">Upload your application package to let AI extract your profile, then set custom match criteria.</p>
-
-        <div class="two-col">
-
-          <div>
-            <div class="card">
-              <span class="field-label">Import Application Package (PDF)</span>
-              <div class="drop-zone" id="dropZone">
-                <input id="packageFile" type="file" accept=".pdf" />
-                <div class="drop-zone-icon">📄</div>
-                <div class="drop-zone-hint">Drag and drop your PDF here or click to choose file</div>
-                <div class="drop-zone-name" id="fileName"></div>
-              </div>
-              <button class="btn-primary" id="extract">⚡ Extract Profile</button>
-              <div id="extractStatus" class="status-line"></div>
-            </div>
-
-            <div class="card ai-card">
-              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
-                <span class="field-label" style="margin-bottom:0;">Extracted Profile</span>
-                <button class="btn-secondary" id="clearCv" style="margin-top:0; padding:4px 12px; font-size:12px;">Clear profile</button>
-              </div>
-              <!-- Structured profile rendered by options.js; falls back to legacy text -->
-              <div id="profileView"></div>
-            </div>
-
-            <div class="card">
-              <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
-                <span class="field-label" style="margin-bottom:0;">Supplementary Entries</span>
-                <button class="opts-help-btn" data-help="supplement">?</button>
-              </div>
-              <!-- {kind,title,description} rows rendered by options.js -->
-              <div id="supplementList"></div>
-              <button class="btn-secondary" id="addSupplement" style="margin-top:8px;">+ Add entry</button>
-              <button class="btn-primary" id="saveSupplement">Save entries</button>
-              <div id="supplementStatus" class="status-line"></div>
-            </div>
-          </div>
-
-          <div>
-            <div class="card">
-              <div class="field">
-                <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
-                  <span class="field-label" style="margin-bottom:0;">Work Authorization</span>
-                  <button class="opts-help-btn" data-help="workAuth">?</button>
-                </div>
-                <select id="workAuth" style="margin-top:0;">
-                  <option value="">Unset / prefer not to say</option>
-                  <option value="citizen">Canadian citizen</option>
-                  <option value="pr">Permanent resident</option>
-                  <option value="international">International student (study permit)</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-              <div class="field">
-                <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
-                  <span class="field-label" style="margin-bottom:0;">Match Preferences</span>
-                  <button class="opts-help-btn" data-help="prefs">?</button>
-                </div>
-                <!-- Weighted/tiered preference blocks rendered by options.js -->
-                <div id="criteriaFields"></div>
-              </div>
-              <div class="field">
-                <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
-                  <span class="field-label" style="margin-bottom:0;">Additional Notes</span>
-                  <button class="opts-help-btn" data-help="criteria">?</button>
-                </div>
-                <textarea id="preferences" style="margin-top:0; min-height:180px;" placeholder="Anything else the AI should weigh — e.g. prioritize high salary, ignore Web3 companies, prefer early-stage startups..."></textarea>
-              </div>
-              <button class="btn-primary" id="saveProfile">Update Profile</button>
-              <div id="profileStatus" class="status-line"></div>
-              <div class="privacy-note">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                Your profile is used locally to evaluate job postings. We do not store your data on our servers.
-              </div>
-            </div>
-          </div>
-
-        </div>
-      </div>
-
       <!-- ── Settings ── -->
       <div id="tab-settings" class="tab-panel">
         <h1 class="page-title">Settings</h1>
@@ -654,8 +566,7 @@
           <span class="field-label">How to Use</span>
           <ol style="margin:0; padding-left:20px; display:flex; flex-direction:column; gap:8px; font-size:13px; color:var(--on-surface); line-height:1.6;">
             <li>Sign in with Google under <b>Account</b> below. New accounts receive 100 free credits — about <b>~200 job scans</b>.</li>
-            <li>Go to <b>Profile &amp; Context</b>, drop in your application package PDF (from WaterlooWorks Documents), and click <b>Extract Profile</b> — the backend extracts your info and saves it to your account.</li>
-            <li>Optionally add <b>Custom Match Criteria</b> (e.g. "Remote only, no Web3") to sharpen scoring.</li>
+            <li>Set up your <b>profile and match preferences</b> on the web app at <a href="https://ww-extension.hyoseo.dev" target="_blank" style="color:var(--primary-dim);">ww-extension.hyoseo.dev</a> — upload your application package to extract your profile, then set your match criteria.</li>
             <li>Navigate to the <a href="https://waterlooworks.uwaterloo.ca/myAccount/co-op/full/jobs.htm" target="_blank" style="color:var(--primary-dim);">WaterlooWorks jobs list</a>, click the purple <b>AI Score</b> tab on the right edge, then hit <b>Scan All Jobs</b>.</li>
           </ol>
           <button class="btn-secondary" id="showWelcome" style="margin-top:16px; width:auto; padding:7px 16px;">Show welcome page again</button>
@@ -677,16 +588,13 @@
             <div style="font-size:13px; color:var(--on-surface-dim); margin-bottom:14px;">
               Balance: <span id="creditBalance" style="font-family:'JetBrains Mono',monospace; color:var(--primary-dim);">—</span>
             </div>
-            <div style="font-size:13px; color:var(--on-surface); margin-bottom:8px;">Buy credits</div>
             <div style="font-size:12px; color:var(--on-surface-dim); line-height:1.6; margin-bottom:10px;">
-              1 credit = $0.01 CAD · a scan ≈ ½¢ · $5 ≈ ~1,100 scans · $10 ≈ ~2,200 · $20 ≈ ~4,400.
+              Buy credits, edit your profile, and view your billing history on the web app.
             </div>
-            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
-              <button class="btn-secondary buy-credits" data-package="credits_500" style="margin-top:0; width:auto; padding:7px 16px;">$5 · 500</button>
-              <button class="btn-secondary buy-credits" data-package="credits_1000" style="margin-top:0; width:auto; padding:7px 16px;">$10 · 1,000</button>
-              <button class="btn-secondary buy-credits" data-package="credits_2000" style="margin-top:0; width:auto; padding:7px 16px;">$20 · 2,000</button>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;">
+              <button class="btn-secondary open-web" data-path="/account" style="margin-top:0; width:auto; padding:7px 16px;">Manage account &amp; credits →</button>
+              <button class="btn-secondary open-web" data-path="/profile" style="margin-top:0; width:auto; padding:7px 16px;">Edit profile &amp; preferences →</button>
             </div>
-            <div id="buyStatus" class="status-line" style="margin-bottom:14px;"></div>
             <button class="btn-secondary" id="signOut" style="margin-top:0; width:auto; padding:7px 16px;">Sign out</button>
           </div>
           <div id="authStatus" class="status-line"></div>
@@ -732,10 +640,12 @@
             <a href="https://ko-fi.com/hyoseo" target="_blank" style="color:var(--primary-dim); text-decoration:none;">Buy me a coffee</a>
           </div>
           <p style="font-size:12px; color:var(--on-surface-dim); line-height:1.65; margin:0;">
-            All settings, your extracted profile text, and scoring results are stored locally in your browser via
-            <code style="font-size:11px;">chrome.storage.local</code>.
-            Job descriptions and your profile are sent to Google's Gemini API for scoring.
-            No data is sent to any server controlled by the developer.
+            Extension settings (model, theme) and scoring results are stored locally via
+            <code style="font-size:11px;">chrome.storage.local</code>. Your account, profile,
+            and credits live on your WW&nbsp;Scorer account — manage them at
+            <a href="https://ww-extension.hyoseo.dev" target="_blank" style="color:var(--primary-dim);">ww-extension.hyoseo.dev</a>.
+            Scoring runs on the backend, which calls Google's Gemini API; job descriptions and
+            your stored profile are sent to the backend per scan.
           </p>
         </div>
       </div>
