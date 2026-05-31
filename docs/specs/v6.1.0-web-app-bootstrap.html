@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v6.1.0" />
+    <meta name="status" content="planned" />
+    <meta name="last-updated" content="2026-05-30" />
+    <title>v6.1.0 — Web app bootstrap</title>
+  </head>
+  <body>
+    <h1>v6.1.0 — Web app bootstrap</h1>
+
+    <h2>Goal</h2>
+    <p>
+      Stand up the web app skeleton and prove the end-to-end auth round-trip
+      before any account/profile features are built on it. Scaffold
+      <code>web/</code> as a Vite + React + TypeScript SPA
+      (<a href="../decisions/0019-web-app-stack-vite-react-ts.html">ADR 0019</a>),
+      wire Supabase Google sign-in
+      (<a href="../decisions/0021-independent-auth-sessions.html">ADR 0021</a>),
+      and ship a deliberately minimal <strong>signed-in shell</strong> that
+      makes one authenticated backend call. Deploy it to
+      <code>ww-extension.hyoseo.dev</code> on Vercel
+      (<a href="../decisions/0022-web-app-hosting-vercel.html">ADR 0022</a>) and
+      open the backend's CORS to the new origin.
+    </p>
+    <p>
+      The success condition is narrow and structural: from the deployed web
+      origin, a user can sign in with Google, and the SPA can call an
+      authenticated FastAPI route with the resulting Supabase JWT and render the
+      response. That validates the SPA → Supabase → FastAPI chain (build, auth
+      redirect, CORS, bearer token) that every later v6 web phase rides on. No
+      account management, profile editing, payments, routing, or landing page in
+      this phase — those are v6.2–v6.5.
+    </p>
+
+    <h2>Files</h2>
+
+    <h3>Added — <code>web/</code> (new top-level dir, ADR 0020)</h3>
+    <ul>
+      <li><code>web/package.json</code> — deps: <code>react</code>,
+        <code>react-dom</code>, <code>@supabase/supabase-js</code>; dev deps:
+        <code>vite</code>, <code>@vitejs/plugin-react</code>,
+        <code>typescript</code>, <code>@types/react</code>,
+        <code>@types/react-dom</code>. Scripts: <code>dev</code>,
+        <code>build</code>, <code>preview</code>.</li>
+      <li><code>web/vite.config.ts</code>, <code>web/tsconfig.json</code>,
+        <code>web/tsconfig.node.json</code> — stock Vite + React + TS config.</li>
+      <li><code>web/index.html</code> — SPA entry; mounts <code>#root</code>.</li>
+      <li><code>web/.gitignore</code> — <code>node_modules/</code>,
+        <code>dist/</code>, <code>.env</code>.</li>
+      <li><code>web/.env.example</code> — committed template:
+        <code>VITE_SUPABASE_URL</code>, <code>VITE_SUPABASE_ANON_KEY</code>
+        (publishable, public by design), <code>VITE_API_BASE_URL</code>. The
+        real <code>web/.env</code> is gitignored. No secrets ever reach the SPA
+        (ADR 0022).</li>
+      <li><code>web/src/main.tsx</code> — React root render.</li>
+      <li><code>web/src/supabase.ts</code> — Supabase browser client from the
+        <code>VITE_</code> envs; Google OAuth (PKCE), <code>redirectTo</code> the
+        app origin, session persisted by the library.</li>
+      <li><code>web/src/api.ts</code> — tiny <code>fetch</code> wrapper:
+        prefixes <code>VITE_API_BASE_URL</code>, attaches
+        <code>Authorization: Bearer &lt;jwt&gt;</code> from the current Supabase
+        session, throws on non-2xx.</li>
+      <li><code>web/src/App.tsx</code> — auth-gated shell. Signed out: a "Sign in
+        with Google" button. Signed in: the user's email and live credit
+        balance, plus "Sign out". This is the smoke test, not a feature.</li>
+      <li><code>web/README.md</code> — local dev / build / deploy notes (Markdown
+        by the README filename exception, rules §1). Documents the
+        <code>VITE_</code> envs and the Vercel/Supabase/Cloudflare setup
+        checklist (see Notes).</li>
+    </ul>
+
+    <h3>Changed — <code>server/</code> (triggers a DO redeploy)</h3>
+    <ul>
+      <li><code>server/app/main.py</code> — add
+        <code>CORSMiddleware</code> allowing the web origin(s) from config,
+        methods <code>GET/POST/PUT/OPTIONS</code>, the <code>Authorization</code>
+        header. Bearer-token auth (no cookies) →
+        <code>allow_credentials=False</code>.</li>
+      <li><code>server/app/core/config.py</code> — add a
+        <code>cors_origins</code> setting (comma-separated string parsed to a
+        list) covering the prod origin and the local dev origin
+        (<code>http://localhost:5173</code>).</li>
+      <li><code>server/.env.example</code> — add the
+        <code>CORS_ORIGINS</code> template entry.</li>
+    </ul>
+
+    <h3>Changed — docs</h3>
+    <ul>
+      <li><code>docs/architecture.html</code> — add the web app as a second
+        client component (the <code>web/</code> file list, Vercel deploy, the
+        <code>VITE_</code> env vars, and CORS on the backend), and note the
+        independent-session model (ADR 0021). The system shape changes here, so
+        this is the phase that updates it.</li>
+      <li><code>docs/reference/api.html</code> — one-line note that authenticated
+        routes accept the web origin via CORS (browser clients send a preflight).</li>
+      <li><code>manifest.json</code> — version <code>6.0.0</code> →
+        <code>6.1.0</code>. The extension code does not change this phase; the
+        bump keeps the single monorepo version line in step
+        (<a href="../decisions/0002-versioning-vXYZ.html">ADR 0002</a>,
+        <a href="../decisions/0010-monorepo-with-server-folder.html">ADR 0010</a>),
+        as v4.1's backend bootstrap did.</li>
+    </ul>
+
+    <h2>Verify</h2>
+    <ol>
+      <li><strong>Build.</strong> <code>cd web &amp;&amp; npm install &amp;&amp;
+        npm run build</code> produces <code>web/dist/</code> with no TypeScript
+        errors. <code>npm run dev</code> serves at
+        <code>http://localhost:5173</code>.</li>
+      <li><strong>CORS.</strong> A preflight <code>OPTIONS</code> to an
+        authenticated route from the web origin returns the
+        <code>Access-Control-Allow-Origin</code> header; an authed
+        <code>GET /me</code> from the browser succeeds with no CORS error in the
+        console.</li>
+      <li><strong>Local round-trip.</strong> With <code>web/.env</code> set and
+        <code>localhost:5173</code> in Supabase redirect URLs + backend CORS:
+        clicking "Sign in with Google" runs the OAuth redirect, returns
+        signed-in, and the shell renders the user's email
+        (<code>GET /me</code>) and balance
+        (<code>GET /credits/balance</code>).</li>
+      <li><strong>Deployed round-trip.</strong>
+        <code>https://ww-extension.hyoseo.dev</code> loads over TLS; the same
+        sign-in → email + balance flow works against the live backend.</li>
+      <li><strong>No secrets in the bundle.</strong> Grep
+        <code>web/dist/</code> for any <code>sk_</code> / secret key —none
+        present; only the publishable Supabase key and the API base URL.</li>
+      <li><strong>Packaging untouched.</strong> <code>./package.sh</code> still
+        produces a zip with no <code>web/</code> (or <code>server/</code>)
+        contents.</li>
+      <li><strong>Extension unchanged.</strong> The unpacked extension still
+        loads and scans; <code>manifest.json</code> reads
+        <code>"version": "6.1.0"</code>.</li>
+    </ol>
+
+    <h2>Notes</h2>
+    <p>
+      <strong>External setup checklist</strong> (operator steps, prerequisites —
+      not code; track in <code>web/README.md</code>):
+    </p>
+    <ul>
+      <li>Create a Vercel project pointed at this repo's <code>web/</code> dir
+        (build <code>npm run build</code>, output <code>dist</code>).</li>
+      <li>Cloudflare DNS: <code>CNAME ww-extension → Vercel</code>, set
+        <strong>DNS-only (grey cloud)</strong> so Cloudflare doesn't double-proxy
+        Vercel's TLS.</li>
+      <li>Supabase Auth → Redirect URLs: add
+        <code>https://ww-extension.hyoseo.dev</code> and
+        <code>http://localhost:5173</code>. If Supabase uses the project's own
+        Google OAuth creds, mirror the authorized origins/redirects in the Google
+        Cloud console.</li>
+      <li>Vercel env vars: <code>VITE_SUPABASE_URL</code>,
+        <code>VITE_SUPABASE_ANON_KEY</code>, <code>VITE_API_BASE_URL</code>
+        (= the DO backend URL).</li>
+      <li>DO App Platform env: set <code>CORS_ORIGINS</code> to include the prod
+        web origin.</li>
+    </ul>
+    <p>
+      <strong>Scope boundary.</strong> The shell is a smoke test, not a feature.
+      Account/credits UI is v6.2, profile editor v6.3, landing page v6.5. No
+      router this phase — a single auth-gated view needs none; add
+      <code>react-router</code> when v6.2 introduces a second route. Keep the
+      React code minimal (ADR 0003 still governs within the app): no state
+      library, no component kit until a real need appears.
+    </p>
+    <p>
+      <strong>Independent sessions (ADR 0021).</strong> This phase touches only
+      <code>web/</code> and <code>server/</code> — the extension is untouched and
+      keeps its own session. The "Manage account →" deep link from the extension
+      lands in v6.4, once the web app has something to manage.
+    </p>
+    <p>
+      <strong>Deploy coupling.</strong> The <code>server/</code> CORS change
+      triggers a DigitalOcean redeploy (expected). Web deploys are independent
+      (Vercel, on <code>web/</code> changes). Confirm the backend stays healthy
+      (<code>GET /health</code>) after the CORS deploy.
+    </p>
+    <p>
+      <strong>Preview deployments.</strong> Vercel previews get rotating URLs not
+      in the CORS/redirect allowlists, so auth/API won't work there by default.
+      For this phase, treat previews as build-only and exercise auth on
+      production; a deliberate preview-wildcard allowance can come later if
+      wanted.
+    </p>
+  </body>
+</html>
