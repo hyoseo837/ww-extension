@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { fmtCredits, kindLabel } from "./format";
+import Icon from "./Icon";
 
 export type Entry = {
   id: string;
@@ -22,11 +23,21 @@ function describe(e: Entry): string {
   return kindLabel(e.kind);
 }
 
+function iconFor(kind: string): string {
+  switch (kind) {
+    case "scan":           return "description";
+    case "profile_extract": return "upload_file";
+    case "purchase":       return "payments";
+    case "signup_bonus":   return "redeem";
+    case "admin_grant":    return "card_giftcard";
+    default:               return "receipt_long";
+  }
+}
+
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString();
 
-// Collapse consecutive scans sharing a batch_id into one group (entries are
-// time-ordered, so a batch's scans are contiguous). Everything else, and any
-// lone scan, stays a single row.
+// Collapse consecutive scans sharing a batch_id (entries are time-ordered, so a
+// batch's scans are contiguous). Everything else, and any lone scan, is single.
 function groupEntries(entries: Entry[]): Group[] {
   const out: Group[] = [];
   let i = 0;
@@ -60,15 +71,28 @@ function groupEntries(entries: Entry[]): Group[] {
 }
 
 function Amount({ delta }: { delta: number }) {
-  return <span className={delta >= 0 ? "amount-pos" : "amount-neg"}>{fmtCredits(delta)}</span>;
+  return (
+    <span className={`font-label-md text-label-md ${delta >= 0 ? "text-positive" : "text-negative"}`}>
+      {fmtCredits(delta)}
+    </span>
+  );
+}
+
+function IconBubble({ name }: { name: string }) {
+  return (
+    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-primary">
+      <Icon name={name} className="text-[20px]" />
+    </span>
+  );
 }
 
 function Row({ e }: { e: Entry }) {
   return (
-    <div className="row">
-      <div>
-        <div>{describe(e)}</div>
-        <div className="muted small">{fmtDate(e.created_at)}</div>
+    <div className="flex items-center gap-md border-b border-border py-sm last:border-0">
+      <IconBubble name={iconFor(e.kind)} />
+      <div className="flex-grow">
+        <div className="font-body-md text-body-md text-on-surface">{describe(e)}</div>
+        <div className="text-text-muted" style={{ fontSize: 12 }}>{fmtDate(e.created_at)}</div>
       </div>
       <Amount delta={e.delta} />
     </div>
@@ -78,37 +102,46 @@ function Row({ e }: { e: Entry }) {
 function BatchRow({ g }: { g: Extract<Group, { type: "batch" }> }) {
   const [open, setOpen] = useState(false);
   return (
-    <>
-      <div className="row batch-head" onClick={() => setOpen((o) => !o)}>
-        <div>
-          <div>
-            <span className="toggle">{open ? "▾" : "▸"}</span>
+    <div className="border-b border-border last:border-0">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center gap-md py-sm text-left transition-colors hover:bg-surface-alt"
+      >
+        <IconBubble name="history" />
+        <div className="flex-grow">
+          <div className="flex items-center gap-xs font-body-md text-body-md text-on-surface">
+            <Icon name={open ? "expand_more" : "chevron_right"} className="text-[20px] text-text-muted" />
             Scanned {g.entries.length} jobs
           </div>
-          <div className="muted small">{fmtDate(g.created_at)}</div>
+          <div className="text-text-muted" style={{ fontSize: 12, paddingLeft: 26 }}>{fmtDate(g.created_at)}</div>
         </div>
         <Amount delta={g.delta} />
-      </div>
-      {open &&
-        g.entries.map((e) => (
-          <div className="row batch-child" key={e.id}>
-            <div>{describe(e)}</div>
-            <Amount delta={e.delta} />
-          </div>
-        ))}
-    </>
+      </button>
+      {open && (
+        <div className="flex flex-col pb-sm" style={{ paddingLeft: 52 }}>
+          {g.entries.map((e) => (
+            <div key={e.id} className="flex items-center justify-between py-xs">
+              <span className="font-body-md text-body-md text-text-secondary">{describe(e)}</span>
+              <Amount delta={e.delta} />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
 export default function HistoryList({ entries, limitRows }: { entries: Entry[]; limitRows?: number }) {
   const groups = useMemo(() => groupEntries(entries), [entries]);
-  if (groups.length === 0) return <p className="muted">No activity yet.</p>;
+  if (groups.length === 0) {
+    return <p className="font-body-md text-body-md text-text-muted">No activity yet.</p>;
+  }
   const shown = limitRows ? groups.slice(0, limitRows) : groups;
   return (
-    <>
+    <div>
       {shown.map((g) =>
         g.type === "single" ? <Row key={g.entry.id} e={g.entry} /> : <BatchRow key={g.batchId} g={g} />,
       )}
-    </>
+    </div>
   );
 }

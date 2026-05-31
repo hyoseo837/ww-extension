@@ -1,37 +1,32 @@
 import { useCallback, useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { apiGet } from "../api";
 import { useDashboard } from "../Layout";
 import HistoryList, { type Entry } from "../HistoryList";
 
+const CARD = "rounded-xl border border-border bg-surface p-lg shadow-[0_2px_8px_rgba(41,38,31,0.04)]";
 const PAGE = 25;
 
 export default function Billing() {
-  const { refetchBalance } = useDashboard();
+  const { balance, refetchBalance } = useDashboard();
   const [params] = useSearchParams();
   const justPaid = params.get("checkout") === "success";
 
   const [entries, setEntries] = useState<Entry[]>([]);
   const [done, setDone] = useState(false);
 
-  // reset=true reloads from the top; otherwise appends the next page.
   const load = useCallback(async (reset: boolean) => {
     const offset = reset ? 0 : entries.length;
-    const d = await apiGet<{ entries: Entry[] }>(
-      `/credits/history?limit=${PAGE}&offset=${offset}`,
-    );
+    const d = await apiGet<{ entries: Entry[] }>(`/credits/history?limit=${PAGE}&offset=${offset}`);
     setEntries((prev) => (reset ? d.entries : [...prev, ...d.entries]));
     setDone(d.entries.length < PAGE);
   }, [entries.length]);
 
   useEffect(() => {
     load(true).catch(() => setDone(true));
-    // initial load only
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // The webhook credit grant lands a few seconds after the Stripe redirect,
-  // so refresh balance + history shortly after returning from checkout.
   useEffect(() => {
     if (!justPaid) return;
     const refresh = () => {
@@ -48,26 +43,43 @@ export default function Billing() {
   }, [justPaid]);
 
   return (
-    <div className="container">
-      <h1 className="page-title">Billing</h1>
+    <div className="mx-auto flex w-full max-w-max-width flex-col gap-xl px-gutter py-xl">
+      <h1 className="font-display-lg text-display-lg text-on-surface">Billing</h1>
 
       {justPaid && (
-        <div className="banner">
+        <div className="rounded-lg bg-accent-soft px-md py-sm font-body-md text-body-md text-primary">
           Payment received — your balance updates within a few seconds.
         </div>
       )}
 
-      <div className="card">
-        <h2>Credit history</h2>
+      <section className={`${CARD} flex flex-col gap-sm`}>
+        <div className="font-headline-lg text-headline-lg text-on-surface">
+          {balance === null ? "…" : balance}
+        </div>
+        <span className="font-body-md text-body-md text-text-secondary">credits available</span>
+        <span className="font-label-sm text-label-sm text-text-muted">1 credit = $0.01 CAD</span>
+        <Link
+          to="/buy"
+          className="mt-sm self-start rounded-lg bg-primary px-lg py-sm font-label-md text-label-md text-on-primary transition-colors hover:bg-accent-hover"
+        >
+          Buy credits
+        </Link>
+      </section>
+
+      <section className={CARD}>
+        <h2 className="mb-md font-headline-md text-headline-md text-on-surface">Credit history</h2>
         <HistoryList entries={entries} />
         {!done && entries.length > 0 && (
-          <p style={{ marginBottom: 0, marginTop: 16 }}>
-            <button className="btn" onClick={() => load(false).catch(() => setDone(true))}>
+          <div className="mt-lg flex justify-center">
+            <button
+              onClick={() => load(false).catch(() => setDone(true))}
+              className="rounded-lg border border-border px-lg py-sm font-label-md text-label-md text-primary transition-colors hover:bg-surface-alt"
+            >
               Load more
             </button>
-          </p>
+          </div>
         )}
-      </div>
+      </section>
     </div>
   );
 }
