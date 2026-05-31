@@ -31,10 +31,13 @@ async def history(user: CurrentUser, limit: int = 50, offset: int = 0) -> dict[s
     entries = [
         {
             "id": str(r["id"]),
-            "created_at": r["created_at"].isoformat(),
             "kind": r["kind"],
             "delta": float(r["delta"]),
-            "ref": r["ref"],
+            "created_at": r["created_at"].isoformat(),
+            "org": r["org"],
+            "title": r["title"],
+            "posting_id": r["posting_id"],
+            "batch_id": r["batch_id"],
         }
         for r in rows
     ]
