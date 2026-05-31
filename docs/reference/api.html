@@ -101,6 +101,35 @@
           (same semantics as <code>/me</code>).</p>
       </dd>
 
+      <dt id="get-credits-history"><code>GET /credits/history</code> (v6.2)</dt>
+      <dd>
+        <p>Authenticated. Paginated credit-ledger entries for the signed-in
+          user, newest-first (uses the
+          <code>(user_id, created_at desc)</code> index). Query params:
+          <code>limit</code> (default 50, clamped 1–100) and
+          <code>offset</code> (default 0).</p>
+        <p><strong>Response:</strong> <code>200 OK</code></p>
+        <pre><code>{
+  "entries": [
+    { "id": "&lt;uuid&gt;", "created_at": "2026-05-30T18:04:11.2Z",
+      "kind": "purchase", "delta": 500, "ref": "evt_..." },
+    { "id": "&lt;uuid&gt;", "created_at": "2026-05-30T17:55:02.9Z",
+      "kind": "scan_debit", "delta": -0.74, "ref": "&lt;scan uuid&gt;" }
+  ],
+  "limit": 50,
+  "offset": 0
+}</code></pre>
+        <p>
+          <code>kind</code> ∈ <code>signup_bonus | admin_grant | purchase |
+          scan_debit | scan_refund</code>. <code>delta</code> is signed credits
+          (positive = grant, negative = debit), <code>NUMERIC</code> →
+          number. <code>ref</code> is the Stripe event id for purchases, the
+          scan UUID for scan rows, else <code>null</code>.
+        </p>
+        <p><strong>Errors:</strong> <code>401</code> on missing/invalid
+          Authorization header.</p>
+      </dd>
+
       <dt id="post-scan"><code>POST /scan</code></dt>
       <dd>
         <p>Authenticated. Scores one job posting. Backend
@@ -313,14 +342,20 @@
           <code>credits_2000</code> ($20).</p>
         <p><strong>Request:</strong></p>
         <pre><code>{
-  "package_id": "credits_500" | "credits_1000" | "credits_2000"
+  "package_id": "credits_500" | "credits_1000" | "credits_2000",
+  "client": "web" | "extension"   // optional, default "extension" (v6.2)
 }</code></pre>
         <p><strong>Response:</strong> <code>200 OK</code></p>
         <pre><code>{
   "url": "https://checkout.stripe.com/c/pay/&lt;session&gt;"
 }</code></pre>
-        <p>The extension opens <code>url</code> in a new tab
-          (<code>chrome.tabs.create</code>).</p>
+        <p>The caller redirects/opens <code>url</code>. The optional
+          <code>client</code> field (v6.2) selects the post-checkout return:
+          <code>"web"</code> returns to the web app
+          (<code>{WEB_APP_URL}/billing?checkout=success</code> /
+          <code>/buy?checkout=cancel</code>); <code>"extension"</code> (the
+          default) uses the <code>/credits/checkout/result</code> shim. The
+          extension still sends no <code>client</code> and is unchanged.</p>
         <p><strong>Errors:</strong>
           <code>400</code> <code>{"detail": "unknown package: …"}</code>
           for an unrecognized <code>package_id</code>;

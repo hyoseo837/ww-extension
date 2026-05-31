@@ -150,12 +150,19 @@
         (<a href="decisions/0022-web-app-hosting-vercel.html">ADR 0022</a>).
       </p>
       <p>
-        <strong>As of v6.1</strong> it is a bootstrap shell only:
-        <code>src/supabase.ts</code> (browser Supabase client, Google OAuth
-        PKCE), <code>src/api.ts</code> (bearer-token <code>fetch</code> wrapper),
-        and <code>src/App.tsx</code> (auth-gated view that calls
-        <code>GET /me</code> + <code>GET /credits/balance</code> as a smoke
-        test). Account/credits UI lands at v6.2, the profile editor at v6.3.
+        <strong>Structure (v6.2).</strong> <code>react-router</code> SPA:
+        <code>src/supabase.ts</code> (browser client, Google OAuth PKCE),
+        <code>src/api.ts</code> (bearer-token <code>fetch</code>/<code>POST</code>),
+        <code>src/useSession.ts</code> (session hook), and <code>src/Layout.tsx</code>
+        (top bar with live credit pill + nav; shares balance via Outlet
+        context). Routes: <code>/account</code> (balance + recent activity),
+        <code>/billing</code> (paginated credit history;
+        <code>GET /credits/history</code>), <code>/buy</code> (packages →
+        <code>POST /credits/checkout {client:"web"}</code> → Stripe), and a
+        logged-out <code>Landing</code>. A <code>vercel.json</code> rewrite
+        serves <code>index.html</code> for all paths so deep links (the Stripe
+        return to <code>/billing</code>) resolve client-side. The profile editor
+        splits into <code>/profile</code> + <code>/preferences</code> at v6.3.
       </p>
       <p>
         <strong>Auth (independent sessions,
@@ -296,15 +303,16 @@
         <code>GEMINI_API_KEY</code>,
         <code>STRIPE_SECRET_KEY</code>,
         <code>STRIPE_WEBHOOK_SECRET</code>,
-        <code>PUBLIC_BASE_URL</code>, <code>CORS_ORIGINS</code>) live in DO App
-        Platform's env store. <code>SUPABASE_SECRET_KEY</code>,
+        <code>PUBLIC_BASE_URL</code>, <code>CORS_ORIGINS</code>,
+        <code>WEB_APP_URL</code>) live in DO App Platform's env store. <code>SUPABASE_SECRET_KEY</code>,
         <code>DATABASE_URL</code>, <code>GEMINI_API_KEY</code>,
         <code>STRIPE_SECRET_KEY</code>, and
         <code>STRIPE_WEBHOOK_SECRET</code> are marked encrypted (they
         embed secrets); the others (including
         <code>PUBLIC_BASE_URL</code>) are public-by-design and stored
         as plain (<code>CORS_ORIGINS</code>, the comma-separated browser
-        origins allowed by CORS for the web app, is also public and plain — v6.1).
+        origins allowed by CORS, and <code>WEB_APP_URL</code>, the web app's
+        base for Stripe return URLs, are also public and plain — v6.1/v6.2).
         Local dev uses <code>server/.env</code> (gitignored);
         <code>server/.env.example</code> is the committed template.
         <code>server/app/core/config.py</code> reads them via
