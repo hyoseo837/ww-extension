@@ -71,7 +71,7 @@ chrome.storage.local.get("auth", (data) => {
 // backend). The backend handles Gemini, ledger debit/refund, and returns
 // the new balance alongside the result so we can update creditBalance
 // without a follow-up /credits/balance fetch.
-async function scoreJob({ meta, descriptionText, model, postingId }) {
+async function scoreJob({ meta, descriptionText, model, postingId, batchId }) {
   const scan_id = crypto.randomUUID();
   const res = await backendFetch("/scan", {
     method: "POST",
@@ -82,6 +82,7 @@ async function scoreJob({ meta, descriptionText, model, postingId }) {
       meta,
       description_text: descriptionText,
       posting_id: postingId,
+      batch_id: batchId,
     }),
   });
 

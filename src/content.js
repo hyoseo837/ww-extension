@@ -260,6 +260,10 @@ async function scanAllJobs() {
   stopBtn.disabled = false;
   aborted = false;
 
+  // One id for this whole Scan run, sent on every /scan so the web app's
+  // credit history can group the batch ("Scanned N jobs"). v6.2.
+  const batchId = crypto.randomUUID();
+
   try {
     const tokens = await sendBridge('extractTokens');
     if (!tokens.selectAll) {
@@ -353,7 +357,8 @@ async function scanAllJobs() {
         meta,
         descriptionText,
         model:       settings.model || 'gemini-2.5-flash',
-        postingId
+        postingId,
+        batchId
       });
 
       if (reply?.ok) {
