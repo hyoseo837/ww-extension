@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v5.5.0" />
+    <meta name="status" content="done" />
+    <meta name="last-updated" content="2026-05-30" />
+    <title>Spec v5.5.0 — Prompts in a distinct module</title>
+  </head>
+  <body>
+    <h1>Spec v5.5.0 — Prompts in a distinct module</h1>
+
+    <section id="goal">
+      <h2>Goal</h2>
+      <p>
+        Refactor (no behavior change). Move the model-facing prompts and
+        response schemas out of <code>scoring/gemini.py</code> into a new
+        <code>scoring/prompts.py</code>, so the prompts are easy to find and
+        iterate on separately from the Gemini transport / serialization /
+        parsing logic. They stay server-side (like all of <code>server/</code>,
+        excluded from the Web Store zip), so the scoring prompt never ships to
+        end users — the original rationale is unchanged, only the file is.
+      </p>
+    </section>
+
+    <section id="files">
+      <h2>Files</h2>
+      <dl>
+        <dt><code>server/app/scoring/prompts.py</code> (added)</dt>
+        <dd>Holds <code>SYSTEM_TEXT</code> + <code>RESPONSE_SCHEMA</code> (scan
+          contract) and <code>PROFILE_EXTRACT_PROMPT</code> +
+          <code>PROFILE_SCHEMA</code> (extract contract). Names made public
+          (dropped the leading underscores) since they're now imported.</dd>
+        <dt><code>server/app/scoring/gemini.py</code> (changed)</dt>
+        <dd>Imports the four from <code>prompts</code>; the definitions are
+          removed and the docstring updated. Transport, serialization
+          (<code>build_job_part</code> / <code>build_profile_context</code>),
+          verdict ladder, and validation stay here.</dd>
+        <dt><code>server/pyproject.toml</code>, <code>manifest.json</code> (changed)</dt>
+        <dd>Version bump.</dd>
+      </dl>
+    </section>
+
+    <section id="verify">
+      <h2>Verify</h2>
+      <ol>
+        <li><code>py_compile</code> passes for both files; the four constants
+          import from <code>prompts</code>.</li>
+        <li>The <code>/scan</code> and <code>/profile/extract</code> request
+          bodies are byte-identical to before (prompts + schemas moved, not
+          changed).</li>
+      </ol>
+    </section>
+  </body>
+</html>
