@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-05-30" />
+    <title>ADR 0022 — Web app hosting on Vercel at ww-extension.hyoseo.dev</title>
+  </head>
+  <body>
+    <h1>ADR 0022 — Web app hosting on Vercel at ww-extension.hyoseo.dev</h1>
+
+    <section id="context">
+      <h2>Context</h2>
+      <p>
+        The web app (<a href="0019-web-app-stack-vite-react-ts.html">ADR 0019</a>)
+        is a static SPA, so it needs static/CDN hosting, not an app server, and a
+        deploy target separate from the FastAPI backend on DigitalOcean
+        (<a href="0007-deploy-on-digitalocean-app-platform.html">ADR 0007</a>). The
+        maintainer owns <code>hyoseo.dev</code> with DNS on Cloudflare and runs a
+        personal site there already.
+      </p>
+    </section>
+
+    <section id="decision">
+      <h2>Decision</h2>
+      <ul>
+        <li>Host the web app on <strong>Vercel</strong>, served at
+          <strong><code>ww-extension.hyoseo.dev</code></strong> (subdomain of the
+          existing <code>hyoseo.dev</code>). Chosen over Cloudflare Pages — the
+          maintainer's default — deliberately, to gain familiarity with Vercel;
+          either would serve a static SPA fine, so this is a low-stakes,
+          reversible call.</li>
+        <li>DNS stays on Cloudflare: a <code>CNAME</code> for
+          <code>ww-extension</code> points at Vercel, set <strong>DNS-only (grey
+          cloud)</strong> so Cloudflare does not double-proxy Vercel's edge/TLS;
+          Vercel issues the certificate.</li>
+        <li>Backend coordination required when the domain goes live:
+          <ul>
+            <li>FastAPI <strong>CORS</strong> allowlist includes
+              <code>https://ww-extension.hyoseo.dev</code> (Bearer-token auth, no
+              cookies → no credentialed-CORS handling needed). Decide per phase
+              whether Vercel preview URLs are also allowed or only production.</li>
+            <li><strong>Supabase Auth → Redirect URLs</strong> include the
+              production domain (and preview URLs if previews must sign in); if
+              Supabase uses the project's own Google OAuth credentials, the Google
+              Cloud console authorized origins/redirects need the domain too.</li>
+            <li>Stripe <code>success_url</code>/<code>cancel_url</code> point at
+              the domain for web-initiated checkout.</li>
+          </ul>
+        </li>
+        <li>Only public values reach the SPA bundle:
+          <code>VITE_SUPABASE_URL</code>, <code>VITE_SUPABASE_ANON_KEY</code>
+          (publishable, safe by design), and <code>VITE_API_BASE_URL</code>. No
+          secret keys are ever shipped to the browser.</li>
+      </ul>
+    </section>
+
+    <section id="consequences">
+      <h2>Consequences</h2>
+      <ul>
+        <li><strong>+</strong> Push-to-deploy static hosting with free TLS and a
+          custom subdomain; no server to operate for the frontend.</li>
+        <li><strong>+</strong> Frontend and backend deploys are fully decoupled
+          (different vendors, different triggers).</li>
+        <li><strong>+</strong> A real <code>success_url</code> on the domain
+          retires the <code>chrome-extension://</code> Stripe result shim for
+          web-initiated purchases.</li>
+        <li><strong>−</strong> A third vendor in the stack (Vercel, alongside DO
+          and Supabase) and a small DNS/redirect/CORS setup checklist that must be
+          right before sign-in or payment works end-to-end.</li>
+        <li><strong>−</strong> Vercel preview deployments get rotating URLs; if
+          previews need auth or API access, CORS and Supabase redirects must
+          account for them. Mitigation: treat previews as build-only and exercise
+          auth/payment on production, or add a preview-wildcard allowance
+          deliberately.</li>
+        <li>Reversible: moving to Cloudflare Pages (or DO static sites) later is a
+          host swap behind the same subdomain, not a code change. Would supersede
+          this ADR.</li>
+      </ul>
+    </section>
+  </body>
+</html>

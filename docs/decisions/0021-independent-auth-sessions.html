@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-05-30" />
+    <title>ADR 0021 — Independent auth sessions for extension and web app (no handoff)</title>
+  </head>
+  <body>
+    <h1>ADR 0021 — Independent auth sessions for extension and web app (no handoff)</h1>
+
+    <section id="context">
+      <h2>Context</h2>
+      <p>
+        With v6 the user has two surfaces that talk to the same backend as the
+        same person: the extension (signs in via
+        <code>chrome.identity.launchWebAuthFlow</code>, shipped v4.2, stores a
+        Supabase session in <code>chrome.storage</code>) and the new web app
+        (<a href="0019-web-app-stack-vite-react-ts.html">ADR 0019</a>, signs in
+        via <code>@supabase/supabase-js</code> in the browser). Both end up
+        holding a Supabase session JWT for the same <code>user_id</code> and call
+        the same authenticated FastAPI routes. The question is whether the two
+        sessions should be shared/handed off, or kept independent.
+      </p>
+      <p>
+        A single-sign-on handoff (sign in once, propagate the session to the
+        other surface across the <code>chrome-extension://</code> boundary) is
+        smoother UX but real plumbing: passing and refreshing tokens across that
+        boundary, keeping two stores in sync, and more failure modes. The
+        extension's <code>launchWebAuthFlow</code> sign-in already works and ships.
+      </p>
+    </section>
+
+    <section id="decision">
+      <h2>Decision</h2>
+      <ul>
+        <li>The extension and the web app keep <strong>independent
+          sessions</strong>. Each signs in on its own and stores its own Supabase
+          session; there is no token sharing or handoff between them.</li>
+        <li>Both are ordinary clients of the same backend: each sends
+          <code>Authorization: Bearer &lt;jwt&gt;</code>, the backend resolves the
+          same <code>user_id</code> from either, and per-user data (profile,
+          credits, ledger) is identical regardless of which surface is used.</li>
+        <li>The surfaces connect by <strong>deep link, not by session</strong>:
+          the extension gets a <strong>Manage account →</strong> link to
+          <code>ww-extension.hyoseo.dev</code>, and links the user there for
+          profile setup, credit purchase, and account management.</li>
+        <li>Profile <em>editing</em> lives only on the web app; the extension
+          remains a profile <em>reader</em> (it fetches <code>match_criteria</code>
+          via <code>GET /profile</code> for the client hard-filter pre-filter,
+          <a href="0018-client-hard-exclusion-prefilter.html">ADR 0018</a>) and a
+          consumer of scan/credit endpoints.</li>
+      </ul>
+    </section>
+
+    <section id="consequences">
+      <h2>Consequences</h2>
+      <ul>
+        <li><strong>+</strong> No new cross-boundary session code; reuses the
+          shipped extension sign-in and a stock Supabase browser session on the
+          web. Fewer moving parts, fewer failure modes.</li>
+        <li><strong>+</strong> The two surfaces can evolve independently — a
+          change to web auth can't break extension scanning.</li>
+        <li><strong>−</strong> The user signs in twice (once per surface). With
+          Google OAuth this is one click each, but it is two distinct flows — the
+          accepted cost of no handoff.</li>
+        <li><strong>−</strong> Two sessions can drift (e.g. sign out on one, still
+          signed in on the other). Acceptable: each surface independently handles
+          <code>401</code> by prompting re-auth.</li>
+        <li>A future SSO handoff remains the upgrade path if the double sign-in
+          proves annoying; it would supersede this ADR rather than be retrofitted
+          silently.</li>
+      </ul>
+    </section>
+  </body>
+</html>

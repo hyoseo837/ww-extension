@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-05-30" />
+    <title>ADR 0019 — Web app stack: Vite + React + TypeScript SPA</title>
+  </head>
+  <body>
+    <h1>ADR 0019 — Web app stack: Vite + React + TypeScript SPA</h1>
+
+    <section id="context">
+      <h2>Context</h2>
+      <p>
+        v6 moves account, profile/CV, match-criteria, and payment management
+        off the extension's options page and onto a dedicated web app (see
+        <a href="../roadmap.html">roadmap</a>, v6 section). The driving reason
+        is UI quality — the three-tab options page is cramped and the profile
+        fields are barely usable. Everything that surface needs already lives
+        server-side behind authenticated FastAPI endpoints
+        (<code>GET/PUT /profile</code>, <code>/credits/*</code>), so the web app
+        is a new <em>client</em> of an existing API, not a re-architecture.
+      </p>
+      <p>
+        The project's "minimal code" rule
+        (<a href="0003-minimal-code.html">ADR 0003</a>) biases toward no
+        framework. But the explicit goal here is a markedly better UI with real
+        forms, validation, routing, and auth state — hand-rolling that in plain
+        DOM would reinvent a framework badly. The relevant question is which
+        stack reaches a good UI with the least incidental complexity for a solo
+        maintainer, while integrating cleanly with Supabase auth and Stripe.
+      </p>
+    </section>
+
+    <section id="decision">
+      <h2>Decision</h2>
+      <ul>
+        <li>Build the web app as a <strong>Vite + React + TypeScript</strong>
+          single-page application — static build artifacts, no app server,
+          talking to the existing FastAPI backend over <code>fetch</code> with a
+          Supabase session bearer token.</li>
+        <li>Auth via <code>@supabase/supabase-js</code> (Google OAuth, PKCE) in
+          the browser; the backend already verifies Supabase JWTs against JWKS,
+          so no backend auth change is required (only CORS — see
+          <a href="0021-independent-auth-sessions.html">ADR 0021</a> /
+          <a href="0022-web-app-hosting-vercel.html">ADR 0022</a>).</li>
+        <li>TypeScript scope is the <strong>web app only</strong>. The existing
+          extension stays JavaScript; a JS→TS extension migration is explicitly
+          out of v6 and left as a separate future decision.</li>
+        <li>The app is built <strong>responsive</strong> from the start —
+          account/profile management is a phone-friendly surface.</li>
+      </ul>
+      <p>
+        React over the considered alternatives (SvelteKit; plain TS + minimal
+        templating): chosen for the largest ecosystem and first-class
+        Supabase/Stripe support, and because it is the stack the maintainer is
+        most familiar with — the deciding factor for a solo project. SvelteKit's
+        smaller bundle and SSR were not worth the smaller ecosystem here; plain
+        TS was rejected because the UI-quality goal would push it toward
+        re-implementing framework primitives.
+      </p>
+    </section>
+
+    <section id="consequences">
+      <h2>Consequences</h2>
+      <ul>
+        <li><strong>+</strong> Reaches a good account/profile UI quickly, with
+          mature libraries for forms, routing, and auth state.</li>
+        <li><strong>+</strong> No backend rewrite — the SPA consumes the
+          existing API; the only backend deltas are CORS, a Supabase redirect
+          URL, and (later) small new read endpoints.</li>
+        <li><strong>+</strong> A real web origin lets Stripe use a proper
+          <code>success_url</code>, retiring the
+          <code>chrome-extension://</code> checkout-result shim for
+          web-initiated purchases.</li>
+        <li><strong>−</strong> Departs from <a href="0003-minimal-code.html">ADR
+          0003</a>'s no-framework bias: a build step, a dependency tree, and a
+          second frontend codebase to maintain alongside the JS extension. Judged
+          worth it for the UI-quality goal; minimal-code still governs <em>within</em>
+          the React code (no premature abstractions, no extra state libraries
+          until a need is proven).</li>
+        <li><strong>−</strong> Two frontend languages in the repo (JS extension,
+          TS web app) until/unless the extension migrates.</li>
+        <li><strong>−</strong> SPA (not SSR) means the public landing/intro page
+          is client-rendered — acceptable, since SEO is a non-goal for a
+          single-product extension companion.</li>
+      </ul>
+    </section>
+  </body>
+</html>

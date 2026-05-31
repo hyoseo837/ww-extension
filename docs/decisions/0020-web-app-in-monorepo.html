@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-05-30" />
+    <title>ADR 0020 — Web app in the monorepo at web/; excluded from the Web Store zip</title>
+  </head>
+  <body>
+    <h1>ADR 0020 — Web app in the monorepo at web/; excluded from the Web Store zip</h1>
+
+    <section id="context">
+      <h2>Context</h2>
+      <p>
+        v6 adds a third codebase to the project: the React web app
+        (<a href="0019-web-app-stack-vite-react-ts.html">ADR 0019</a>). The repo
+        already holds the extension at the root and the backend at
+        <code>server/</code> as a monorepo
+        (<a href="0010-monorepo-with-server-folder.html">ADR 0010</a>). The
+        question is where the web app lives and how it is kept out of the Chrome
+        Web Store bundle, which ships only the allowlisted runtime files via
+        <code>package.sh</code>.
+      </p>
+      <p>
+        The same forces that made the backend a monorepo subdirectory apply: a
+        solo dev, cross-cutting phases (e.g. v6.2 adds a
+        <code>GET /credits/history</code> endpoint <em>and</em> the web UI that
+        renders it), and one authoritative API contract in
+        <code>docs/reference/api.html</code> rather than mirrored copies.
+      </p>
+    </section>
+
+    <section id="decision">
+      <h2>Decision</h2>
+      <ul>
+        <li>The web app lives in a new top-level <strong><code>web/</code></strong>
+          directory in this monorepo, parallel to <code>server/</code> (created
+          at v6.1 bootstrap).</li>
+        <li>It is <strong>excluded from the Web Store zip by construction.</strong>
+          <code>package.sh</code> is an allowlist that names only extension
+          runtime files; anything not listed — including <code>web/</code> — is
+          excluded automatically. No <code>package.sh</code> change is required;
+          the discipline is "never add <code>web/</code> (or <code>server/</code>)
+          to the allowlist," verified at any release touching packaging.</li>
+        <li>The web app deploys from <code>web/</code> to its own host
+          (<a href="0022-web-app-hosting-vercel.html">ADR 0022</a>), independent
+          of the backend's DigitalOcean deploy. DO only rebuilds on
+          <code>server/</code> changes, so <code>web/</code> commits don't trigger
+          backend deploys, and vice versa.</li>
+        <li>The single monorepo version line
+          (<a href="0002-versioning-vXYZ.html">ADR 0002</a>) continues to govern;
+          <code>web/package.json</code> is not required to track
+          <code>manifest.json</code>'s version (it is not a released artifact in
+          the <code>vX.Y.Z</code> sense), but the commit message and
+          <code>manifest.json</code> still carry the phase version.</li>
+      </ul>
+    </section>
+
+    <section id="consequences">
+      <h2>Consequences</h2>
+      <ul>
+        <li><strong>+</strong> Cross-cutting v6 phases (new endpoint + its web UI)
+          stay atomic single-repo commits.</li>
+        <li><strong>+</strong> One doc tree and one API contract serve all three
+          codebases; no contract drift.</li>
+        <li><strong>+</strong> Backend and web deploys remain decoupled despite
+          sharing a repo — different hosts, different change triggers.</li>
+        <li><strong>−</strong> A third codebase grows the repo and the set of
+          things a packaging mistake could leak. The allowlist model contains
+          this: only explicitly named files ship, so the failure mode is
+          "accidentally add to the allowlist," which the packaging-verify step at
+          release catches.</li>
+        <li><strong>−</strong> The root of the repo now mixes three concerns
+          (extension files at root, <code>server/</code>, <code>web/</code>).
+          Acceptable; the extension predates the others and moving it into its own
+          subdirectory is a larger churn than its value.</li>
+      </ul>
+    </section>
+  </body>
+</html>

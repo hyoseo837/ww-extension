@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="project" content="ww-extension" />
     <meta name="type" content="roadmap" />
-    <meta name="active-major-version" content="v05" />
+    <meta name="active-major-version" content="v06" />
     <meta name="last-updated" content="2026-05-30" />
     <title>Roadmap — ww-extension</title>
   </head>
@@ -134,8 +134,16 @@
       </p>
     </section>
 
-    <section id="active" data-status="in-progress">
-      <h2>v5 — Profile structure + scoring quality (active)</h2>
+    <section id="v5" data-status="done">
+      <h2>v5 — Profile structure + scoring quality (shipped)</h2>
+      <p>
+        <strong>Shipped and frozen.</strong> All v5 phase specs are archived
+        under <code>docs/archive/v05/</code> (kept in spec format — see
+        <a href="decisions/0014-archive-shipped-major-version-specs.html">ADR 0014</a>);
+        the cross-cutting decisions remain in <code>docs/decisions/</code>. This
+        section is retained for the vision/rationale; per-phase detail lives in
+        the archived specs.
+      </p>
       <p>
         <strong>Direction set 2026-05-28.</strong> v4 ships a
         functional monetized product but treats user preferences as
@@ -179,10 +187,10 @@
           while the grade report, UW co-op work history, and cover letter are
           captured as raw-text fields on <code>profile_json</code> (v5.1.6
           follow-up). The options-page field visibility is poor and is
-          deliberately left for the v6 UI redesign.
-          See <code>docs/specs/v5.1.0-structured-profile.html</code>.</li>
+          addressed by the v6 UI transition (web app).
+          See <code>docs/archive/v05/v5.1.0-structured-profile.html</code>.</li>
         <li><strong>Scan-prompt rewrite + richer scoring output.</strong>
-          <em>(v5.2.0 — active.)</em> Co-op framing and calibration anchors in
+          <em>(Shipped — v5.2.x.)</em> Co-op framing and calibration anchors in
           the prompt. Moves scoring to a <strong>1–20 scale</strong>
           with a verdict ladder of <strong>five score bands</strong>
           (Strong Apply 17–20 / Apply 14–16 / Consider 10–13 / Unlikely 6–9 /
@@ -200,8 +208,10 @@
           Calibration is <strong>anchored only</strong> this phase; few-shot
           from real disagreements is a later tuning pass once enough live v5
           scans accumulate. See
-          <code>docs/specs/v5.2.0-scan-prompt-rewrite.html</code>.</li>
-        <li><strong>Hard filters.</strong> <em>(v5.3.0 — active.)</em>
+          <code>docs/archive/v05/v5.2.0-scan-prompt-rewrite.html</code>.</li>
+        <li><strong>Hard filters.</strong> <em>(Shipped — v5.3.x; v5.4–v5.5
+          followed: extract line-break fidelity and the <code>prompts.py</code>
+          module extraction.)</em>
           Credit-free pre-scan skip: client-side, before <code>/scan</code>,
           auto-Skip postings that match the candidate's own
           <code>excluded</code>-tier criteria on a structured field (e.g. a City
@@ -211,44 +221,105 @@
           Free-text work-auth/citizenship gates stay with the scan-time Excluded
           verdict (not pre-filtered). Architecture in
           <a href="decisions/0018-client-hard-exclusion-prefilter.html">ADR 0018</a>;
-          see <code>docs/specs/v5.3.0-hard-filters.html</code>.</li>
+          see <code>docs/archive/v05/v5.3.0-hard-filters.html</code>.</li>
       </ul>
     </section>
 
+    <section id="active" data-status="in-progress">
+      <h2>v6 — UI transition to a web app + admin surface (active)</h2>
+      <p>
+        <strong>Direction locked 2026-05-30 (v6.0).</strong> v5 made scoring
+        trustworthy; the remaining weak spot is the <em>UI</em>. The extension's
+        three-tab options page is cramped, and the structured-profile fields it
+        gained in v5.1 are barely usable there. v6's theme is the UI transition:
+        move account, profile/CV, match-criteria, and payment management off the
+        options page and onto a dedicated <strong>web app</strong>, leaving the
+        extension focused on in-page scoring. This absorbs the older
+        "consolidate the options-page Account section" idea — that consolidation
+        now happens <em>on the web</em>, not in the options page.
+      </p>
+      <p>
+        The move is clean because the state already lives server-side: profile
+        and credits sit behind authenticated FastAPI endpoints, and
+        <code>POST /scan</code> reads the stored profile (no client-sent profile
+        since v4.4.2). So the web app is a new <em>client</em> of the existing
+        API, and the extension becomes a profile <em>reader</em> (it still fetches
+        <code>match_criteria</code> for the
+        <a href="decisions/0018-client-hard-exclusion-prefilter.html">ADR 0018</a>
+        pre-filter) rather than an editor.
+      </p>
+      <p><strong>Decisions locked at v6.0:</strong></p>
+      <ul>
+        <li>Stack: Vite + React + TypeScript SPA
+          (<a href="decisions/0019-web-app-stack-vite-react-ts.html">ADR 0019</a>);
+          TypeScript scope is the web app only — the extension stays JS.</li>
+        <li>Repo: web app at <code>web/</code> in the monorepo, excluded from the
+          Web Store zip by the allowlist
+          (<a href="decisions/0020-web-app-in-monorepo.html">ADR 0020</a>).</li>
+        <li>Auth: extension and web app keep independent sessions, connected by a
+          <strong>Manage account →</strong> deep link, no handoff
+          (<a href="decisions/0021-independent-auth-sessions.html">ADR 0021</a>).</li>
+        <li>Hosting: Vercel at <code>ww-extension.hyoseo.dev</code>, Cloudflare
+          DNS-only CNAME
+          (<a href="decisions/0022-web-app-hosting-vercel.html">ADR 0022</a>).</li>
+      </ul>
+      <p><strong>Phases</strong> (one line each; per-phase detail in
+        <code>docs/specs/</code> when written):</p>
+      <dl>
+        <dt><a href="specs/v6.0.0-open-v6.html">v6.0</a> — open v6 (docs only)</dt>
+        <dd>Archive v5, flip this roadmap, write the four locked-decision ADRs
+          (0019–0022). No code.</dd>
+
+        <dt>v6.1 — web app bootstrap</dt>
+        <dd>Scaffold <code>web/</code> (Vite + React + TS), Supabase Google
+          sign-in, signed-in shell, deploy to the subdomain, backend CORS +
+          Supabase redirect config. Architecture doc updated here.</dd>
+
+        <dt>v6.2 — account + credits on web</dt>
+        <dd>Balance, credit history (adds <code>GET /credits/history</code>), Buy
+          credits via Stripe with a real <code>success_url</code> (retires the
+          <code>chrome-extension://</code> result shim for web purchases).</dd>
+
+        <dt>v6.3 — profile editor on web</dt>
+        <dd>Structured profile, CV upload + extract, supplementary entries, match
+          criteria, notes — the core "bad UI" fix.</dd>
+
+        <dt>v6.4 — extension slim-down</dt>
+        <dd>Options page → thin (signed-in state, balance, <strong>Manage account
+          →</strong>, local toggles only); extension fetches
+          <code>match_criteria</code> via <code>GET /profile</code>;
+          out-of-credits nudge + Buy button deep-link to web;
+          <code>profile_not_set</code> routes new users to the web app; welcome
+          page repointed.</dd>
+
+        <dt>v6.5 — landing / introduction page</dt>
+        <dd>The logged-out marketing/intro view of the web app.</dd>
+
+        <dt>v6.6 — admin surface</dt>
+        <dd>Operator-only user list/inspect (balance, credit-ledger history, scan
+          activity) and manual <strong>gift-credit grants</strong> (goodwill,
+          support make-goods, promos) riding the append-only ledger as a new
+          entry <code>kind</code> — balance derivation unchanged, every grant
+          auditable. Admin authZ via an env allowlist of admin
+          <code>user_id</code>s enforced in a FastAPI dependency (the
+          credit-mutating endpoints locked to admins server-side, not just hidden
+          in the UI), plus a who/what/when/why audit trail; admin UI a gated
+          route in the same web app. Its own ADR at that phase.</dd>
+      </dl>
+      <p>
+        <strong>Out of scope for v6</strong> (stay on the whiteboard): re-score
+        feature, scan/extraction prompt upgrades, multi-model support, and the
+        extension JS→TS migration.
+      </p>
+    </section>
+
     <section id="future">
-      <h2>v6 — Web surface + account management (planned)</h2>
+      <h2>Further out (uncommitted)</h2>
       <p>
-        <strong>Exploratory (2026-05-29) — deferred out of v5.</strong> A
-        separate web app (a second frontend on the existing FastAPI backend)
-        for managing the account, CV / profile text, and payment — moving that
-        surface off the extension, which stays focused on in-page scoring. This
-        absorbs the older "consolidate the options-page Account section" idea:
-        rather than build a dedicated Account area into the options page,
-        account / balance / credit-history / profile / payment management would
-        live on the web app. Not committed; if the web direction doesn't
-        proceed, the fallback is an options-page Account consolidation. Revisit
-        once the v5 quality pass ships.
-      </p>
-      <p>
-        <strong>Admin surface (added 2026-05-30).</strong> Alongside the
-        user-facing web app, an <em>operator-only</em> admin area on the same
-        backend to (a) <strong>manage users</strong> — list/inspect accounts
-        with their balance, credit-ledger history, and scan activity — and
-        (b) <strong>grant gift credits</strong> manually (goodwill, support
-        make-goods, promos). Gift grants ride the existing append-only ledger
-        as a new entry kind (e.g. <code>gift</code> / <code>admin_grant</code>),
-        so balance derivation is unchanged and every grant is auditable. Open
-        questions for phase-planning: how an admin is authenticated and
-        authorized (allowlist of admin <code>user_id</code>s vs a role/claim —
-        the credit-mutating endpoints must be locked to admins, not just
-        hidden in the UI), an audit trail (who granted what, when, why), and
-        whether the admin area is a section of the web app or a separate
-        surface.
-      </p>
-      <p>
-        Further-out candidates still on the table (v6+): non-Gemini provider
-        support, cover-letter generation, team / recruiter views, re-score on
-        demand. No commitment yet — revisit at phase-planning time.
+        Candidates still on the table beyond v6, no commitment yet — revisit at
+        phase-planning time: non-Gemini provider / multi-model support,
+        cover-letter generation, re-score on demand, the extension JS→TS
+        migration, and team / recruiter views.
       </p>
     </section>
   </body>

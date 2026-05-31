@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v6.0.0" />
+    <meta name="status" content="in-progress" />
+    <meta name="last-updated" content="2026-05-30" />
+    <title>v6.0.0 — Open v6: archive v5, web-app direction locked</title>
+  </head>
+  <body>
+    <h1>v6.0.0 — Open v6: archive v5, web-app direction locked</h1>
+
+    <h2>Goal</h2>
+    <p>
+      Open major version 6. v5 shipped the scoring-quality pass and is now
+      frozen; v6's theme is the <strong>UI transition</strong> — moving account,
+      profile/CV, match-criteria, and payment management off the extension's
+      cramped options page and onto a dedicated web app, plus an operator-only
+      admin surface. This phase is <strong>pure docs</strong>: archive v5, flip
+      the roadmap, and record the four decisions that lock v6's shape before any
+      code is written. No client, server, or web code changes here.
+    </p>
+    <p>
+      The web app is a new <em>client</em> of the existing FastAPI API, not a
+      re-architecture: profile and credit state already live server-side behind
+      authenticated endpoints, and <code>POST /scan</code> reads the stored
+      profile (no client-sent profile since v4.4.2), so the editing UI can move
+      with zero impact on scanning.
+    </p>
+
+    <h2>Files</h2>
+
+    <h3>Added</h3>
+    <ul>
+      <li><code>docs/specs/v6.0.0-open-v6.html</code> — this file.</li>
+      <li><code>docs/decisions/0019-web-app-stack-vite-react-ts.html</code> —
+        Vite + React + TypeScript SPA.</li>
+      <li><code>docs/decisions/0020-web-app-in-monorepo.html</code> — web app at
+        <code>web/</code>; excluded from the Web Store zip by the allowlist.</li>
+      <li><code>docs/decisions/0021-independent-auth-sessions.html</code> —
+        extension and web app keep independent sessions; deep link, no handoff.</li>
+      <li><code>docs/decisions/0022-web-app-hosting-vercel.html</code> — Vercel at
+        <code>ww-extension.hyoseo.dev</code>; Cloudflare DNS-only CNAME.</li>
+    </ul>
+
+    <h3>Moved (git mv preserves history)</h3>
+    <ul>
+      <li><code>docs/specs/v5.0.0-structured-match-criteria.html</code> →
+        <code>docs/archive/v05/</code></li>
+      <li><code>docs/specs/v5.1.0-structured-profile.html</code> →
+        <code>docs/archive/v05/</code></li>
+      <li><code>docs/specs/v5.2.0-scan-prompt-rewrite.html</code> →
+        <code>docs/archive/v05/</code></li>
+      <li><code>docs/specs/v5.3.0-hard-filters.html</code> →
+        <code>docs/archive/v05/</code></li>
+      <li><code>docs/specs/v5.4.0-extract-linebreaks.html</code> →
+        <code>docs/archive/v05/</code></li>
+      <li><code>docs/specs/v5.5.0-prompts-module.html</code> →
+        <code>docs/archive/v05/</code></li>
+    </ul>
+
+    <h3>Changed</h3>
+    <ul>
+      <li><code>docs/roadmap.html</code> — v5 section flipped to shipped/frozen
+        (spec links repointed to <code>archive/v05/</code> per
+        <a href="../decisions/0014-archive-shipped-major-version-specs.html">ADR
+        0014</a>); v6 section rewritten from exploratory sketch to the committed
+        phase plan (v6.0–v6.6).</li>
+      <li><code>manifest.json</code> — version <code>5.5.0</code> →
+        <code>6.0.0</code>.</li>
+    </ul>
+
+    <h3>Not changed this phase (deferred to the phase that introduces them)</h3>
+    <ul>
+      <li><code>docs/architecture.html</code> — the system shape doesn't change
+        until the web app exists; update at v6.1 bootstrap.</li>
+      <li><code>package.sh</code> — no edit needed; the allowlist excludes
+        <code>web/</code> by construction (ADR 0020). <code>web/</code> doesn't
+        exist until v6.1.</li>
+      <li><code>docs/reference/api.html</code> — new endpoints
+        (<code>GET /credits/history</code>, admin routes) are added in the phases
+        that introduce them.</li>
+    </ul>
+
+    <h2>Verify</h2>
+    <ol>
+      <li><code>git status</code> shows the six v5 spec moves as renames (R), not
+        delete+add.</li>
+      <li><code>ls docs/specs/</code> contains only <code>v6.0.0-open-v6.html</code>;
+        <code>ls docs/archive/v05/</code> contains the six v5 specs.</li>
+      <li><code>grep version manifest.json</code> → <code>"version": "6.0.0"</code>.</li>
+      <li><code>docs/roadmap.html</code> opens with v5 under "Shipped (frozen)"
+        and a committed v6 phase table (v6.0–v6.6); no broken links to
+        <code>docs/specs/v5.*</code>.</li>
+      <li>ADRs 0019–0022 are present, status <code>accepted</code>, and
+        cross-link each other and the ADRs they build on (0003, 0007, 0010,
+        0018).</li>
+      <li>Loading the unpacked extension still works — this phase changes no code.</li>
+    </ol>
+
+    <h2>Notes</h2>
+    <p>
+      <strong>Phase sequence locked for v6</strong> (detail lives in each phase's
+      own spec when written):
+    </p>
+    <dl>
+      <dt>v6.1 — web app bootstrap</dt>
+      <dd>Scaffold <code>web/</code> (Vite + React + TS), Supabase Google
+        sign-in, signed-in shell, deploy to the subdomain, backend CORS +
+        Supabase redirect config. Architecture doc updated here.</dd>
+
+      <dt>v6.2 — account + credits on web</dt>
+      <dd>Balance, credit history (adds <code>GET /credits/history</code>), Buy
+        credits via Stripe with a real <code>success_url</code>.</dd>
+
+      <dt>v6.3 — profile editor on web</dt>
+      <dd>Structured profile, CV upload + extract, supplementary entries, match
+        criteria, notes — the core "bad UI" fix.</dd>
+
+      <dt>v6.4 — extension slim-down</dt>
+      <dd>Options page → thin (signed-in state, balance, <strong>Manage account
+        →</strong>, local toggles only); extension becomes a profile <em>reader</em>
+        (fetches <code>match_criteria</code> via <code>GET /profile</code> for the
+        ADR 0018 pre-filter); out-of-credits nudge + Buy button deep-link to web;
+        <code>profile_not_set</code> routes new users to the web app; welcome page
+        repointed.</dd>
+
+      <dt>v6.5 — landing / introduction page</dt>
+      <dd>The logged-out marketing/intro view of the web app.</dd>
+
+      <dt>v6.6 — admin surface</dt>
+      <dd>Operator-only user list/inspect (balance, ledger, scan activity) and
+        gift-credit grants (new ledger <code>kind</code>); admin authZ via an env
+        allowlist enforced in a FastAPI dependency + audit trail — its own ADR at
+        that phase.</dd>
+    </dl>
+    <p>
+      <strong>Out of scope for v6</strong> (stay on the whiteboard): re-score
+      feature, scan/extraction prompt upgrades, multi-model support, and the
+      extension JS→TS migration.
+    </p>
+  </body>
+</html>
