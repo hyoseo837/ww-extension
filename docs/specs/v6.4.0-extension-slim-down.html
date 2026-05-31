@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v6.4.0" />
+    <meta name="status" content="planned" />
+    <meta name="last-updated" content="2026-05-31" />
+    <title>v6.4.0 — Extension slim-down</title>
+  </head>
+  <body>
+    <h1>v6.4.0 — Extension slim-down</h1>
+
+    <h2>Goal</h2>
+    <p>
+      Now that account, profile, and payment management live on the web app
+      (v6.2–v6.3), strip those surfaces out of the extension and point users to
+      the web app instead. The options page keeps only what's genuinely
+      extension-local — model choice, sign-in/balance, theme, the hard-filter
+      toggle — plus deep links to the web app. The scan flow is unchanged; the
+      extension keeps its own session (independent, ADR 0021) and still reads
+      <code>match_criteria</code> from <code>GET /profile</code> at scan time for
+      the ADR 0018 pre-filter (already the case — no profile-editing UI needed
+      for that).
+    </p>
+
+    <h2>Files</h2>
+    <h3>Changed — <code>options.html</code> + <code>src/options.js</code></h3>
+    <ul>
+      <li>Remove the <strong>Profile &amp; Context</strong> tab entirely (CV
+        upload + extract, structured profile view, supplementary entries,
+        work-authorization, match criteria, additional notes) — all now on the
+        web app's <code>/profile</code> + <code>/preferences</code>.</li>
+      <li>Remove the in-extension <strong>Buy credits</strong> Stripe buttons;
+        replace with a <strong>Manage account &amp; credits →</strong> link to
+        the web app (<code>/account</code>) and an <strong>Edit profile &amp;
+        preferences →</strong> link (<code>/profile</code>).</li>
+      <li>Keep: <strong>Model</strong> tab; <strong>Account</strong> (Google
+        sign-in / email / live balance / sign-out); <strong>Settings</strong>
+        (theme, hard-filter toggle, About). Update the How-to copy and About
+        text to reflect web-app management.</li>
+      <li><code>options.js</code> drops the profile/extract/supplement/criteria
+        /buy code (and their helpers) and the on-sign-in
+        <code>loadProfileFromServer</code>; adds the web deep-link handlers.</li>
+    </ul>
+    <h3>Changed — <code>src/content.js</code> + <code>src/background.js</code></h3>
+    <ul>
+      <li>Out-of-credits nudge (<code>content.js</code>): the "Buy credits"
+        button opens the web app's <code>/buy</code> instead of the options
+        Account section.</li>
+      <li><code>PROFILE_NOT_SET</code> (<code>background.js</code>): message
+        points users to set up their profile on the web app; the sidebar
+        surfaces a link to <code>/profile</code>.</li>
+      <li>New <code>background.js</code> message <code>openWebApp { path }</code>
+        → <code>chrome.tabs.create({ url: WEB_APP_URL + path })</code>
+        (<code>WEB_APP_URL = https://ww-extension.hyoseo.dev</code>). Content
+        scripts can't open tabs directly, so they route through it.</li>
+    </ul>
+    <h3>Changed — <code>welcome.html</code></h3>
+    <ul>
+      <li>Step 2 ("Upload your application package") repointed: set up profile
+        on the web app rather than the options Profile &amp; Context tab.</li>
+    </ul>
+    <h3>Changed — docs</h3>
+    <ul>
+      <li><code>docs/architecture.html</code> — options page is now thin; profile
+        editing is web-only; the extension reads <code>match_criteria</code> at
+        scan time. <code>manifest.json</code> version bumps per slice.</li>
+    </ul>
+
+    <h2>Verify</h2>
+    <ol>
+      <li>Options page shows only Model + Settings (with Account); no Profile &amp;
+        Context tab, no in-extension Buy buttons. "Manage account →" / "Edit
+        profile →" open the web app.</li>
+      <li>Sign-in still works and the balance renders; sign-out clears it.</li>
+      <li>Theme toggle and the hard-filter toggle still work and persist.</li>
+      <li>A scan with no profile set returns the <code>PROFILE_NOT_SET</code>
+        path and the sidebar links to the web app's <code>/profile</code>.</li>
+      <li>An out-of-credits scan halt shows the nudge; its button opens the web
+        app's <code>/buy</code>.</li>
+      <li>A normal scan (signed in, profile + credits present) still scores,
+        including the hard-filter pre-filter (reads <code>match_criteria</code>
+        from <code>GET /profile</code>).</li>
+      <li><code>node --check</code> passes on the changed JS; the unpacked
+        extension loads.</li>
+    </ol>
+
+    <h2>Notes</h2>
+    <p>
+      <strong>Extension styling is untouched here</strong> — the options page
+      keeps its existing dark/light theme. The sidebar/options restyle to the
+      web app's warm tokens is a separate, later pass (deferred until this
+      surface settles).
+    </p>
+    <p>
+      <strong>Stripe shim retires for the extension.</strong> With the extension
+      no longer initiating checkout (Buy moves to web), the
+      <code>chrome-extension</code> <code>/credits/checkout/result</code> shim is
+      now only theoretical for the extension path; the backend endpoint stays
+      (harmless) but the extension no longer calls <code>createCheckout</code>.
+    </p>
+  </body>
+</html>
