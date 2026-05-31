@@ -103,28 +103,42 @@
 
       <dt id="get-credits-history"><code>GET /credits/history</code> (v6.2)</dt>
       <dd>
-        <p>Authenticated. Paginated credit-ledger entries for the signed-in
-          user, newest-first (uses the
-          <code>(user_id, created_at desc)</code> index). Query params:
-          <code>limit</code> (default 50, clamped 1–100) and
-          <code>offset</code> (default 0).</p>
+        <p>Authenticated. Paginated credit-history items for the signed-in
+          user, newest-first. Query params: <code>limit</code> (default 50,
+          clamped 1–100) and <code>offset</code> (default 0).</p>
+        <p>
+          Items are <strong>scan-merged, not raw ledger rows</strong>: each
+          scan's <code>scan_debit</code> + <code>scan_refund</code> are summed
+          into one item with a net <code>delta</code> (a −14.16 debit + 11.85
+          refund → −2.31), and fully-refunded scans (net 0 — failed) are
+          omitted. Non-scan ledger rows pass through unchanged.
+        </p>
         <p><strong>Response:</strong> <code>200 OK</code></p>
         <pre><code>{
   "entries": [
-    { "id": "&lt;uuid&gt;", "created_at": "2026-05-30T18:04:11.2Z",
-      "kind": "purchase", "delta": 500, "ref": "evt_..." },
-    { "id": "&lt;uuid&gt;", "created_at": "2026-05-30T17:55:02.9Z",
-      "kind": "scan_debit", "delta": -0.74, "ref": "&lt;scan uuid&gt;" }
+    { "id": "&lt;scan uuid&gt;", "kind": "scan", "delta": -2.31,
+      "created_at": "2026-05-30T17:55:02.9Z",
+      "org": "Apple Inc.", "title": "Software Engineer",
+      "posting_id": "428913", "batch_id": "&lt;uuid&gt;" },
+    { "id": "&lt;scan uuid&gt;", "kind": "profile_extract", "delta": -3.10,
+      "created_at": "2026-05-30T17:40:00.0Z",
+      "org": null, "title": null, "posting_id": null, "batch_id": null },
+    { "id": "&lt;ledger uuid&gt;", "kind": "purchase", "delta": 500,
+      "created_at": "2026-05-30T12:00:00.0Z",
+      "org": null, "title": null, "posting_id": null, "batch_id": null }
   ],
   "limit": 50,
   "offset": 0
 }</code></pre>
         <p>
-          <code>kind</code> ∈ <code>signup_bonus | admin_grant | purchase |
-          scan_debit | scan_refund</code>. <code>delta</code> is signed credits
-          (positive = grant, negative = debit), <code>NUMERIC</code> →
-          number. <code>ref</code> is the Stripe event id for purchases, the
-          scan UUID for scan rows, else <code>null</code>.
+          <code>kind</code> ∈ <code>scan | profile_extract</code> (merged scan
+          items, from <code>scan.kind</code>) or <code>purchase |
+          signup_bonus | admin_grant</code> (ledger rows). <code>delta</code>
+          is signed net credits. <code>org</code>/<code>title</code>/
+          <code>posting_id</code> are present for scan items when captured
+          (null for old rows / extracts). <code>batch_id</code> groups scans
+          from one Scan run — the client collapses consecutive same-batch scan
+          items into a "Scanned N jobs" group.
         </p>
         <p><strong>Errors:</strong> <code>401</code> on missing/invalid
           Authorization header.</p>
@@ -143,8 +157,15 @@
   "model": "gemini-2.5-flash" | "gemini-2.5-pro",
   "meta": { "title": "...", "org": "..." },
   "description_text": "...",
-  "posting_id": "&lt;WW posting ID&gt;"
+  "posting_id": "&lt;WW posting ID&gt;",
+  "batch_id": "&lt;uuid&gt;"   // optional (v6.2): shared across one Scan run
 }</code></pre>
+        <p>
+          <code>batch_id</code> (v6.2, optional) is one id the extension
+          generates per Scan run and sends on every posting in that run; the
+          backend stores it (with <code>meta.title</code>/<code>meta.org</code>)
+          on the <code>scan</code> row so the credit history can group the batch.
+        </p>
         <p>
           <strong>Breaking change in v4.4.2:</strong>
           <code>cv_text</code> and <code>preferences</code> are no

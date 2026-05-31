@@ -48,15 +48,56 @@ async def get_balance(user_id: str) -> Decimal:
 
 
 async def get_history(user_id: str, limit: int, offset: int) -> list[dict]:
-    """Ledger entries newest-first, for the credit-history view (v6.2).
-    Uses the (user_id, created_at desc) index; id is the stable tiebreaker.
+    """Credit-history items newest-first, for the web view (v6.2).
+
+    Each scan is collapsed to ONE item: its scan_debit + scan_refund ledger
+    rows are summed into a net delta (so a -14.16 debit + 11.85 refund shows
+    as -2.31). Fully-refunded scans (net 0 — failed/no-op) are dropped. Scan
+    items carry the scan's kind ('scan' | 'profile_extract'), org/title, and
+    batch_id (for client-side "Scanned N jobs" grouping). Non-scan ledger rows
+    (purchase / signup_bonus / admin_grant) pass through unchanged.
     """
     async with pool().acquire() as conn:
         rows = await conn.fetch(
-            "select id, created_at, kind, delta, ref "
-            "from credit_ledger_entry where user_id = $1::uuid "
-            "order by created_at desc, id desc "
-            "limit $2 offset $3",
+            """
+            with scan_items as (
+                select s.id::text       as id,
+                       s.kind           as kind,
+                       sum(l.delta)     as delta,
+                       s.created_at     as created_at,
+                       s.org            as org,
+                       s.title          as title,
+                       s.posting_id     as posting_id,
+                       s.batch_id::text as batch_id
+                from credit_ledger_entry l
+                join scan s on s.id = l.ref::uuid
+                where l.user_id = $1::uuid
+                  and l.kind in ('scan_debit', 'scan_refund')
+                group by s.id, s.kind, s.created_at, s.org, s.title,
+                         s.posting_id, s.batch_id
+                having sum(l.delta) <> 0
+            ),
+            ledger_items as (
+                select id::text    as id,
+                       kind        as kind,
+                       delta       as delta,
+                       created_at  as created_at,
+                       null::text  as org,
+                       null::text  as title,
+                       null::text  as posting_id,
+                       null::text  as batch_id
+                from credit_ledger_entry
+                where user_id = $1::uuid
+                  and kind not in ('scan_debit', 'scan_refund')
+            )
+            select * from (
+                select * from scan_items
+                union all
+                select * from ledger_items
+            ) t
+            order by created_at desc, id desc
+            limit $2 offset $3
+            """,
             user_id,
             limit,
             offset,
@@ -125,13 +166,20 @@ async def insert_scan_pending(
     kind: str,
     posting_id: str | None,
     estimated_cost: Decimal,
+    title: str | None = None,
+    org: str | None = None,
+    batch_id: str | None = None,
 ) -> dict | None:
     """Insert a pending scan row. On ID conflict (idempotent retry),
-    return the existing row instead of creating a duplicate."""
+    return the existing row instead of creating a duplicate.
+
+    title/org/batch_id (v6.2) feed the credit-history display; all optional.
+    """
     row = await conn.fetchrow(
         "insert into scan "
-        "(id, user_id, model, kind, posting_id, status, estimated_cost) "
-        "values ($1, $2::uuid, $3, $4, $5, 'pending', $6) "
+        "(id, user_id, model, kind, posting_id, status, estimated_cost, "
+        " title, org, batch_id) "
+        "values ($1, $2::uuid, $3, $4, $5, 'pending', $6, $7, $8, $9::uuid) "
         "on conflict (id) do nothing "
         "returning id",
         scan_id,
@@ -140,6 +188,9 @@ async def insert_scan_pending(
         kind,
         posting_id,
         estimated_cost,
+        title,
+        org,
+        batch_id,
     )
     if row is None:
         # Conflict — return the pre-existing row.

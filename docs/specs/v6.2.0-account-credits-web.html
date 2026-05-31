@@ -145,5 +145,37 @@
       reconciled into <code>index.css</code> tokens, then propagated to the
       extension sidebar and options page.
     </p>
+
+    <h2 id="refinements">Refinements (v6.2.3+) — credit-history readability</h2>
+    <p>
+      The first history cut (raw ledger rows) was too noisy and too thin.
+      Three changes, decided 2026-05-31:
+    </p>
+    <ul>
+      <li><strong>One net row per scan.</strong> <code>get_history</code> sums
+        each scan's <code>scan_debit</code> + <code>scan_refund</code> into a
+        single net item (−14.16 + 11.85 → −2.31); fully-refunded (net-0, failed)
+        scans are dropped.</li>
+      <li><strong>Richer descriptions.</strong> Migration
+        <code>0008_scan_meta_batch.sql</code> adds <code>title</code>/
+        <code>org</code> to <code>scan</code> (stored from the <code>/scan</code>
+        meta); history shows "Scan · <em>Org</em>" for postings and "Extract
+        application package" for <code>profile_extract</code>. Old rows (no org)
+        fall back to "Scan · job posting".</li>
+      <li><strong>Batch grouping.</strong> The same migration adds
+        <code>batch_id</code>; the extension generates one id per Scan run and
+        sends it on every <code>/scan</code> in that run. The web client
+        collapses consecutive same-batch scan items into an expandable "Scanned
+        N jobs · <em>net</em>" group. <em>Decision: a stored batch id (not a
+        time-window heuristic) — exact grouping; applies to scans done after the
+        change.</em></li>
+    </ul>
+    <p>
+      Slices: <strong>v6.2.3</strong> backend (migration, <code>/scan</code>
+      stores meta + batch_id, <code>get_history</code> rewrite, api.html) ·
+      <strong>v6.2.4</strong> extension (per-run <code>batch_id</code>) ·
+      <strong>v6.2.5</strong> web (merged descriptions + collapsible batch
+      groups). Additive and back-compatible — no ADR.
+    </p>
   </body>
 </html>

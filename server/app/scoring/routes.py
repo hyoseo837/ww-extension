@@ -40,6 +40,7 @@ class ScanRequest(BaseModel):
     meta: ScanMeta
     description_text: str
     posting_id: str
+    batch_id: UUID | None = None  # groups scans from one Scan run (v6.2)
 
 
 class BreakdownItem(BaseModel):
@@ -113,6 +114,9 @@ async def scan(req: ScanRequest, user: CurrentUser):
                 kind="scan",
                 posting_id=req.posting_id,
                 estimated_cost=estimate,
+                title=req.meta.title or None,
+                org=req.meta.org or None,
+                batch_id=str(req.batch_id) if req.batch_id else None,
             )
             if existing is not None:
                 return await _replay(existing, user_id)
