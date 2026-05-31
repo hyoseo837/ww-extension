@@ -2,16 +2,16 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiGet } from "../api";
 import { useDashboard } from "../Layout";
-import { fmtCredits, kindLabel } from "../format";
-
-type Entry = { id: string; created_at: string; kind: string; delta: number; ref: string | null };
+import HistoryList, { type Entry } from "../HistoryList";
 
 export default function Account() {
   const { balance } = useDashboard();
   const [recent, setRecent] = useState<Entry[]>([]);
 
   useEffect(() => {
-    apiGet<{ entries: Entry[] }>("/credits/history?limit=5")
+    // Fetch a window wide enough that a batch isn't truncated, then show the
+    // first few grouped rows.
+    apiGet<{ entries: Entry[] }>("/credits/history?limit=25")
       .then((d) => setRecent(d.entries))
       .catch(() => setRecent([]));
   }, []);
@@ -29,24 +29,8 @@ export default function Account() {
 
       <div className="card">
         <h2>Recent activity</h2>
-        {recent.length === 0 ? (
-          <p className="muted">No activity yet.</p>
-        ) : (
-          recent.map((e) => (
-            <div className="row" key={e.id}>
-              <div>
-                <div>{kindLabel(e.kind)}</div>
-                <div className="muted small">
-                  {new Date(e.created_at).toLocaleDateString()}
-                </div>
-              </div>
-              <span className={e.delta >= 0 ? "amount-pos" : "amount-neg"}>
-                {fmtCredits(e.delta)}
-              </span>
-            </div>
-          ))
-        )}
-        <p style={{ marginBottom: 0 }}>
+        <HistoryList entries={recent} limitRows={6} />
+        <p style={{ marginBottom: 0, marginTop: 12 }}>
           <Link to="/billing">View all →</Link>
         </p>
       </div>

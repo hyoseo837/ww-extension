@@ -2,9 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { apiGet } from "../api";
 import { useDashboard } from "../Layout";
-import { fmtCredits, kindLabel } from "../format";
+import HistoryList, { type Entry } from "../HistoryList";
 
-type Entry = { id: string; created_at: string; kind: string; delta: number; ref: string | null };
 const PAGE = 25;
 
 export default function Billing() {
@@ -60,30 +59,7 @@ export default function Billing() {
 
       <div className="card">
         <h2>Credit history</h2>
-        {entries.length === 0 ? (
-          <p className="muted">No activity yet.</p>
-        ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Activity</th>
-                <th className="num">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {entries.map((e) => (
-                <tr key={e.id}>
-                  <td className="muted">{new Date(e.created_at).toLocaleDateString()}</td>
-                  <td>{kindLabel(e.kind)}</td>
-                  <td className={`num ${e.delta >= 0 ? "amount-pos" : "amount-neg"}`}>
-                    {fmtCredits(e.delta)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        <HistoryList entries={entries} />
         {!done && entries.length > 0 && (
           <p style={{ marginBottom: 0, marginTop: 16 }}>
             <button className="btn" onClick={() => load(false).catch(() => setDone(true))}>
