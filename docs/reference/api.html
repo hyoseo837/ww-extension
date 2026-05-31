@@ -35,6 +35,13 @@
       logic. Failures return <code>401</code> with
       <code>WWW-Authenticate: Bearer</code>.
     </p>
+    <p>
+      <strong>CORS (v6.1).</strong> Browser clients (the web app) are served
+      <code>Access-Control-Allow-Origin</code> for the origins in
+      <code>CORS_ORIGINS</code>; methods <code>GET/POST/PUT/OPTIONS</code>,
+      <code>Authorization</code> header allowed, credentials off (bearer-token
+      auth, no cookies).
+    </p>
 
     <h2>Live endpoints</h2>
 
