@@ -18,6 +18,12 @@ class Settings(BaseSettings):
     stripe_secret_key: str
     stripe_webhook_secret: str
     public_base_url: str
+    # Comma-separated browser origins allowed by CORS (web app, v6.1).
+    cors_origins: str = "http://localhost:5173,https://ww-extension.hyoseo.dev"
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
 
 
 settings = Settings()

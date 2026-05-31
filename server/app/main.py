@@ -1,10 +1,12 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.auth.routes import router as auth_router
 from app.billing import db as billing_db
 from app.billing.routes import router as billing_router
+from app.core.config import settings
 from app.core.health import router as health_router
 from app.profile.routes import router as profile_router
 from app.scoring import gemini
@@ -23,6 +25,16 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="ww-extension-backend", lifespan=lifespan)
+
+# CORS for the web app (v6.1). Bearer-token auth, no cookies → credentials off.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origin_list,
+    allow_methods=["GET", "POST", "PUT", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
+    allow_credentials=False,
+)
+
 app.include_router(health_router)
 app.include_router(auth_router)
 app.include_router(billing_router)
