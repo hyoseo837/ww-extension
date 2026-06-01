@@ -381,7 +381,10 @@
         <dt>v6.14 — data export</dt>
         <dd>"Download my data" — the data-subject <em>access/portability</em>
           right, companion to v6.9 deletion. Server already holds it all
-          (profile, ledger, scans); export as JSON. Pairs with the deletion ADR.</dd>
+          (profile, ledger, scans); export as JSON via a new
+          <code>GET /account/export</code> (new <code>app/account/</code> module,
+          where deletion will also live). Pairs with the deletion ADR. Spec:
+          <code>docs/specs/v6.14.0-data-export.html</code>.</dd>
 
         <dt>v6.15 — landing &amp; UX polish</dt>
         <dd><strong>Pricing visible to logged-out users</strong> on the landing

@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v6.14.0" />
+    <meta name="status" content="in-progress" />
+    <meta name="last-updated" content="2026-06-01" />
+    <title>v6.14.0 — Download my data (account export)</title>
+  </head>
+  <body>
+    <h1>v6.14.0 — Download my data</h1>
+
+    <h2>Goal</h2>
+    <p>
+      Give a signed-in user a one-click <strong>JSON export of everything we
+      hold about them</strong> — the data-subject <em>access / portability</em>
+      right, the companion to v6.9 account deletion (the
+      <em>erasure</em> right). The server already stores it all; this phase just
+      assembles it and hands it back as a download. No new data, no credit cost.
+    </p>
+
+    <h2>Scope &amp; policy</h2>
+    <ul>
+      <li><strong>Everything we store, nothing we don't.</strong> The export
+        mirrors what's actually in the DB: account identity, credit balance, the
+        full credit ledger, every scan row, and the full profile (structured
+        <code>profile_json</code>, user-authored <code>profile_supplement</code>,
+        legacy <code>cv_text</code>, free-form notes, and
+        <code>match_criteria</code>). We do <strong>not</strong> store the
+        uploaded application-package PDF — only its extracted text — so the PDF
+        is not in the export (it never existed server-side after extraction).</li>
+      <li><strong>Self-serve, free, no confirmation.</strong> Unlike deletion or
+        a scan, reading your own data is harmless and reversible, so it's a plain
+        button — no dialog, no credit debit.</li>
+      <li><strong>JSON, not a per-table CSV.</strong> One machine-readable file a
+        developer-savvy user (the audience) can diff or re-import. Wrapped with
+        an <code>export_version</code> so the shape can evolve.</li>
+    </ul>
+
+    <h2>Module placement</h2>
+    <p>
+      Introduces <code>server/app/account/</code> — the home for data-subject
+      rights endpoints, exactly as the v6.9 deletion spec anticipated
+      ("<code>app/auth/routes.py</code> <em>or a new</em>
+      <code>app/account/</code>"). Export lands here now; deletion slots in beside
+      it when v6.9 is built. The route reuses existing data access rather than
+      duplicating queries: <code>billing.db</code> for the ledger/scans/balance
+      and account row, <code>profile.db</code> for the profile.
+    </p>
+
+    <h2>Payload shape</h2>
+    <pre>
+{
+  "export_format": "ww-scorer-account-export",
+  "export_version": 1,
+  "exported_at": "&lt;ISO-8601&gt;",
+  "account": { "user_id", "email", "created_at" },
+  "balance": &lt;number&gt;,
+  "profile": { "cv_text", "preferences", "match_criteria",
+               "profile_json", "profile_supplement" },
+  "credit_history": [ { "id","kind","delta","created_at",
+                        "org","title","posting_id","batch_id" }, … ],
+  "scans": [ { "id","kind","status","org","title","cost","created_at" }, … ]
+}
+    </pre>
+    <p>
+      <code>credit_history</code> and <code>scans</code> are the <strong>full</strong>
+      sets (not the 25/50-row paginated views the dashboard uses). The reused
+      <code>get_history</code> helper is called once with a high limit; a new
+      <code>export_user</code> query reads all scan rows.
+    </p>
+
+    <h2>Files</h2>
+    <h3>Server</h3>
+    <ul>
+      <li><code>app/account/__init__.py</code>, <code>app/account/routes.py</code>
+        — authenticated <code>GET /account/export</code>: assemble the payload
+        from <code>billing.db.export_user(sub)</code> +
+        <code>profile.db.get_profile(sub)</code>. Returns the JSON object.</li>
+      <li><code>app/billing/db.py</code> — <code>export_user(user_id)</code>:
+        account row (<code>auth.users</code>), balance, all ledger entries
+        (reuse <code>get_history</code> with a high limit), all scan rows.</li>
+      <li><code>app/main.py</code> — register <code>account_router</code>.</li>
+      <li><code>pyproject.toml</code> — version bump (server touched, ADR 0010).</li>
+    </ul>
+    <h3>Web</h3>
+    <ul>
+      <li><code>src/pages/Account.tsx</code> — a "Your data" card with a
+        <strong>Download my data</strong> button: <code>apiGet("/account/export")</code>,
+        serialize to a Blob, trigger a
+        <code>ww-scorer-data-&lt;date&gt;.json</code> download. Loading + error
+        states inline (no new API helper — reuse <code>apiGet</code>, build the
+        Blob client-side).</li>
+    </ul>
+    <h3>Docs</h3>
+    <ul>
+      <li><code>docs/reference/api.html</code> — document <code>GET
+        /account/export</code> (auth, payload, no cost).</li>
+      <li><code>docs/architecture.html</code> — note the <code>account/</code>
+        module + export path.</li>
+    </ul>
+
+    <h2>Slices</h2>
+    <ol>
+      <li><strong>v6.14.0</strong> — this spec (docs). (this commit)</li>
+      <li><strong>v6.14.1</strong> — server: <code>GET /account/export</code>
+        (+ pyproject bump, api/architecture docs).</li>
+      <li><strong>v6.14.2</strong> — web: Download-my-data button on Account.</li>
+    </ol>
+
+    <h2>Verify</h2>
+    <ol>
+      <li><code>GET /account/export</code> with a valid token returns the full
+        payload; balance, ledger, scans, and profile match the dashboard.</li>
+      <li>No token → 401; a token only ever returns its <em>own</em> data (the
+        query keys on <code>sub</code>, no cross-user read).</li>
+      <li>Web: click Download my data → a
+        <code>ww-scorer-data-&lt;date&gt;.json</code> file downloads and parses;
+        a fresh account (empty ledger/scans) still exports valid JSON.</li>
+      <li>Fetch failure shows an inline error, not a silent no-op.
+        <code>npm run build</code> and server <code>ruff</code>/import check
+        pass.</li>
+    </ol>
+  </body>
+</html>
