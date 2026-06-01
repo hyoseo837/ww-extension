@@ -71,6 +71,13 @@ export default function Privacy() {
         removes it (see Your rights). Stripe retains payment records independently
         for its own legal and compliance purposes.
       </p>
+      <p>
+        One exception survives deletion: a one-way cryptographic hash of your
+        email address. We keep it solely to enforce our one-time signup bonus —
+        so the same account can't be deleted and re-created to claim the bonus
+        repeatedly. The hash can't be reversed to your email and is used for
+        nothing else.
+      </p>
 
       <h2>8. Your rights</h2>
       <p>

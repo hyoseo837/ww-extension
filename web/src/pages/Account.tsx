@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { apiGet } from "../api";
+import { apiDelete, apiGet } from "../api";
+import { signOut } from "../supabase";
 import { useDashboard } from "../Layout";
 import HistoryList, { type Entry } from "../HistoryList";
 import Icon from "../Icon";
@@ -21,6 +22,68 @@ function SnapRow({ label, value, dot }: { label: string; value: string; dot?: "o
   );
 }
 
+// Type-DELETE confirmation before the irreversible account deletion (v6.9).
+function ConfirmDelete({
+  onConfirm,
+  onCancel,
+  deleting,
+  error,
+}: {
+  onConfirm: () => void;
+  onCancel: () => void;
+  deleting: boolean;
+  error: string | null;
+}) {
+  const [text, setText] = useState("");
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && !deleting && onCancel();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onCancel, deleting]);
+  const armed = text.trim().toUpperCase() === "DELETE";
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-on-surface/30 p-gutter"
+      onClick={() => !deleting && onCancel()}
+    >
+      <div className={`${CARD} w-full max-w-md`} onClick={(e) => e.stopPropagation()}>
+        <h2 className="mb-sm font-headline-md text-headline-md text-on-surface">Delete account?</h2>
+        <p className="mb-md font-body-md text-body-md text-text-secondary">
+          This permanently deletes your account and all your data — profile, credit history, scans, and any remaining
+          credits. It can't be undone, and credits are non-refundable. Your purchase records remain in Stripe.
+        </p>
+        <label className="mb-xs block font-label-sm text-label-sm text-text-secondary">
+          Type <span className="font-semibold text-on-surface">DELETE</span> to confirm
+        </label>
+        <input
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="DELETE"
+          autoFocus
+          className="w-full rounded-lg border border-border bg-surface px-sm py-base font-body-md text-body-md"
+        />
+        {error && <p className="mt-sm font-label-sm text-label-sm text-negative">{error}</p>}
+        <div className="mt-lg flex justify-end gap-sm">
+          <button
+            onClick={onCancel}
+            disabled={deleting}
+            className="rounded-lg border border-border px-lg py-sm font-label-md text-label-md text-on-surface hover:bg-surface-alt disabled:opacity-60"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={!armed || deleting}
+            className="rounded-lg bg-negative px-lg py-sm font-label-md text-label-md text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          >
+            {deleting ? "Deleting…" : "Delete my account"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Account() {
   const { balance, email } = useDashboard();
   const [recent, setRecent] = useState<Entry[]>([]);
@@ -29,6 +92,9 @@ export default function Account() {
   const [recentError, setRecentError] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [dataError, setDataError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     apiGet<{ entries: Entry[] }>("/credits/history?limit=25")
@@ -56,6 +122,18 @@ export default function Account() {
       setDataError(`Could not export your data: ${e}`);
     } finally {
       setDownloading(false);
+    }
+  }
+
+  async function deleteAccount() {
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await apiDelete("/account");
+      await signOut(); // session change re-renders App → logged-out landing
+    } catch (e) {
+      setDeleteError(`Could not delete your account: ${e}`);
+      setDeleting(false);
     }
   }
 
@@ -159,6 +237,33 @@ export default function Account() {
           {dataError && <span className="font-label-sm text-label-sm text-negative">{dataError}</span>}
         </div>
       </section>
+
+      {/* Danger zone */}
+      <section className={CARD}>
+        <h3 className="mb-xs font-headline-md text-headline-md text-negative">Danger zone</h3>
+        <p className="mb-md font-body-md text-body-md text-text-secondary">
+          Permanently delete your account and all associated data. This can't be undone.
+        </p>
+        <button
+          onClick={() => {
+            setDeleteError(null);
+            setConfirmDelete(true);
+          }}
+          className="inline-flex items-center gap-xs rounded-lg border border-negative px-lg py-sm font-label-md text-label-md text-negative transition-colors hover:bg-negative/10"
+        >
+          <Icon name="delete" className="text-[18px]" />
+          Delete account
+        </button>
+      </section>
+
+      {confirmDelete && (
+        <ConfirmDelete
+          deleting={deleting}
+          error={deleteError}
+          onCancel={() => setConfirmDelete(false)}
+          onConfirm={deleteAccount}
+        />
+      )}
     </div>
   );
 }

@@ -52,3 +52,17 @@ async function apiSend<T>(method: "POST" | "PUT", path: string, body: unknown): 
 
 export const apiPost = <T>(path: string, body: unknown) => apiSend<T>("POST", path, body);
 export const apiPut = <T>(path: string, body: unknown) => apiSend<T>("PUT", path, body);
+
+// Authenticated DELETE with no body. Resolves on 2xx (including a 204 with no
+// JSON to parse); throws with the status/detail otherwise.
+export async function apiDelete(path: string): Promise<void> {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) throw new Error("Not signed in");
+
+  const res = await fetch(`${BASE}${path}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) await throwForStatus(res);
+}
