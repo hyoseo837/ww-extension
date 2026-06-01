@@ -102,7 +102,7 @@ Each scoring call sends to Gemini:
 
 Nothing else is transmitted.
 
-Full policy: <https://hyoseo.dev/privacy-policy/ww-extension/>
+Full policy: <https://ww-extension.hyoseo.dev/privacy> · Terms: <https://ww-extension.hyoseo.dev/terms>
 
 ## Architecture
 
