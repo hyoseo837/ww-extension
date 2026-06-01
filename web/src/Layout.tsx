@@ -69,7 +69,7 @@ export default function Layout({ email }: { email: string }) {
           </div>
           <div className="min-w-0">
             <h2 className="font-headline-md text-headline-md leading-tight text-primary">WW Scorer</h2>
-            <p className="truncate font-label-md text-label-md text-text-secondary">{email}</p>
+            <p className="break-all font-label-sm text-label-sm text-text-secondary">{email}</p>
           </div>
         </div>
 

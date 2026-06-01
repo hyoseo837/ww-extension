@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v6.8.0" />
+    <meta name="status" content="done" />
+    <meta name="last-updated" content="2026-05-31" />
+    <title>v6.8.0 — Web type-scale tune-down + sidebar email wrap</title>
+  </head>
+  <body>
+    <h1>v6.8.0 — Web type-scale tune-down + sidebar email wrap</h1>
+
+    <h2>Goal</h2>
+    <p>
+      The Stitch type scale rendered too large on real screens — page titles
+      (<code>display-lg</code> 48px) and sidebar wordmark felt oversized; the app
+      only looked right at ~75% browser zoom. Shrink the whole scale at the
+      single source (the Tailwind <code>fontSize</code> tokens, used by every
+      page) and let the sidebar email show in full instead of truncating. No
+      layout/spacing or behavior changes — fonts only. Tunes the tokens from
+      <a href="../decisions/0023-tailwind-for-web-app.html">ADR 0023</a>; the
+      token approach is unchanged, so no new ADR.
+    </p>
+
+    <h2>Files</h2>
+    <ul>
+      <li><code>web/tailwind.config.js</code> — <code>fontSize</code> reduced
+        ~75–80%, headings hit hardest: display-lg 48→34, display-lg-mobile
+        32→26, headline-lg 32→24, headline-md 24→19, body-lg 18→16, body-md
+        16→14, label-md 14→13, label-sm 12→11 (line-heights scaled to match;
+        letter-spacing kept).</li>
+      <li><code>web/src/Layout.tsx</code> — sidebar email
+        <code>truncate</code>/<code>text-label-md</code> →
+        <code>break-all</code>/<code>text-label-sm</code> so the full address
+        shows (wraps if long) instead of clipping.</li>
+      <li><code>ext/manifest.json</code> — version bump to 6.8.0.</li>
+    </ul>
+
+    <h2>Verify</h2>
+    <ol>
+      <li><code>cd web &amp;&amp; npm run build</code> clean.</li>
+      <li>At 100% zoom the app reads like the old ~75–80%: page titles
+        ("Match Preferences", "Welcome back"), the sidebar "WW Scorer", and the
+        admin headings are visibly smaller; body text stays readable (14px).</li>
+      <li>The full email shows in the left sidebar (no "…" clipping).</li>
+    </ol>
+
+    <h2>Notes</h2>
+    <p>
+      Spacing tokens (4px scale, card padding, the 256px sidebar / 960px content
+      width) are unchanged — the complaint was font size, and smaller text in
+      the same generous spacing keeps the airy design. The Stitch export docs
+      (<code>web/design/.../DESIGN.md</code>) still list the original sizes as a
+      historical record; <code>tailwind.config.js</code> is the live source.
+    </p>
+  </body>
+</html>

@@ -66,15 +66,18 @@ export default {
         "label-md": ["Inter", "sans-serif"],
         "label-sm": ["Inter", "sans-serif"],
       },
+      // Type scale tuned down ~75-80% at v6.8 (the Stitch export ran large on
+      // real screens; headings hit hardest). Single source — every page uses
+      // these tokens. Original Stitch sizes are in web/design/.../DESIGN.md.
       fontSize: {
-        "display-lg": ["48px", { lineHeight: "56px", letterSpacing: "-0.01em", fontWeight: "600" }],
-        "display-lg-mobile": ["32px", { lineHeight: "40px", fontWeight: "600" }],
-        "headline-lg": ["32px", { lineHeight: "40px", fontWeight: "600" }],
-        "headline-md": ["24px", { lineHeight: "32px", fontWeight: "500" }],
-        "body-lg": ["18px", { lineHeight: "28px", fontWeight: "400" }],
-        "body-md": ["16px", { lineHeight: "24px", fontWeight: "400" }],
-        "label-md": ["14px", { lineHeight: "20px", letterSpacing: "0.02em", fontWeight: "500" }],
-        "label-sm": ["12px", { lineHeight: "16px", letterSpacing: "0.04em", fontWeight: "600" }],
+        "display-lg": ["34px", { lineHeight: "42px", letterSpacing: "-0.01em", fontWeight: "600" }],
+        "display-lg-mobile": ["26px", { lineHeight: "32px", fontWeight: "600" }],
+        "headline-lg": ["24px", { lineHeight: "30px", fontWeight: "600" }],
+        "headline-md": ["19px", { lineHeight: "26px", fontWeight: "500" }],
+        "body-lg": ["16px", { lineHeight: "24px", fontWeight: "400" }],
+        "body-md": ["14px", { lineHeight: "20px", fontWeight: "400" }],
+        "label-md": ["13px", { lineHeight: "18px", letterSpacing: "0.02em", fontWeight: "500" }],
+        "label-sm": ["11px", { lineHeight: "14px", letterSpacing: "0.04em", fontWeight: "600" }],
       },
       maxWidth: { "max-width": "960px" },
     },
