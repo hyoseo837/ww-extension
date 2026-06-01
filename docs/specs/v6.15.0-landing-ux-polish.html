@@ -80,6 +80,39 @@
       than introducing a shared status-banner abstraction.
     </p>
 
+    <h2>4. Page metadata, favicon &amp; social preview (v6.15.4)</h2>
+    <p>
+      <code>web/index.html</code> shipped with the Vite scaffold's bare head: a
+      static <code>&lt;title&gt;WW Scorer — Account&lt;/title&gt;</code> (reads
+      "Account" even on the logged-out landing), no <code>&lt;link
+      rel="icon"&gt;</code> (blank tab + a <code>/favicon.ico</code> 404), no
+      meta description, and no Open Graph / Twitter card (no preview when the URL
+      is shared). For a public landing we're about to drive traffic to, fix the
+      head:
+    </p>
+    <ul>
+      <li><strong>Title</strong> → a brand + value-prop string that works on
+        every route (the SPA sets the title once; per-route titles are
+        deliberately out of scope — desktop, low value).</li>
+      <li><strong>Description</strong> meta for search/social snippets.</li>
+      <li><strong>Favicon links</strong> — <code>favicon.svg</code> (primary),
+        <code>favicon.ico</code> (fallback), <code>apple-touch-icon.png</code>
+        (180×180). A simple monogram <code>favicon.svg</code> placeholder ships
+        now so nothing 404s; the owner replaces the real assets (and adds the
+        <code>.ico</code> / apple-touch / <code>og-image.png</code>) into
+        <code>web/public/</code> — Vite serves that at the site root.</li>
+      <li><strong>Open Graph + Twitter</strong> tags (title, description, type,
+        url, site_name, <code>og:image</code> → <code>/og-image.png</code>
+        1200×630, <code>twitter:card=summary_large_image</code>) and a
+        <code>theme-color</code>.</li>
+    </ul>
+    <p>
+      <strong>Mobile nav is intentionally untouched</strong> (the audience is
+      desktop): the sidebar's sign-out / buy / support / danger-zone are
+      <code>hidden md:flex</code> and the mobile top bar is thin. Noted so it's a
+      deliberate skip, not an oversight.
+    </p>
+
     <h2>Files</h2>
     <ul>
       <li><code>web/src/packages.ts</code> — new shared credit-package tiers.</li>
@@ -89,6 +122,10 @@
       <li><code>web/src/App.tsx</code> — authenticated <code>*</code> → NotFound.</li>
       <li><code>web/src/pages/Account.tsx</code>,
         <code>web/src/pages/Billing.tsx</code> — loading + error states.</li>
+      <li><code>web/index.html</code> — title, description, favicon links, OG /
+        Twitter tags (v6.15.4).</li>
+      <li><code>web/public/favicon.svg</code> — monogram placeholder, owner to
+        replace (v6.15.4).</li>
     </ul>
 
     <h2>Notes</h2>
@@ -101,10 +138,13 @@
 
     <h2>Slices</h2>
     <ol>
-      <li><strong>v6.15.0</strong> — this spec (docs). (this commit)</li>
+      <li><strong>v6.15.0</strong> — this spec (docs).</li>
       <li><strong>v6.15.1</strong> — logged-out pricing (packages.ts + Landing +
         Buy).</li>
       <li><strong>v6.15.2</strong> — real 404 + Account/Billing states.</li>
+      <li><strong>v6.15.4</strong> — index.html metadata + favicon + social
+        preview (added after the v6.9 deletion backfill; numbered forward to keep
+        the manifest monotonic). (this commit)</li>
     </ol>
 
     <h2>Verify</h2>
@@ -117,7 +157,12 @@
       <li>Force a history fetch failure (offline) on Account and Billing → an
         inline error appears instead of a blank/empty list; on success the lists
         render and empty accounts show the empty state.</li>
-      <li><code>npm run build</code> passes.</li>
+      <li>The tab shows the favicon (placeholder until real assets land) and a
+        brand title, not "WW Scorer — Account", on the logged-out landing.
+        Pasting the URL into a social/chat client unfurls with the title +
+        description (image once <code>og-image.png</code> is added).</li>
+      <li><code>npm run build</code> passes and copies <code>public/</code> into
+        <code>dist/</code>.</li>
     </ol>
   </body>
 </html>
