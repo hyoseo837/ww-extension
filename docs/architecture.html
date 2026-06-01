@@ -273,6 +273,15 @@
           Minimal HTML landing page for Stripe's success/cancel
           redirect (a <code>chrome-extension://</code> URL can't be a
           Stripe <code>success_url</code>).</li>
+        <li><code>/admin/*</code> (v6.6, <code>app.admin</code>) — operator-only
+          (<code>GET /admin/stats</code>, <code>GET /admin/users</code>,
+          <code>GET /admin/users/{id}</code>, <code>POST /admin/grant</code>).
+          Gated by the <code>require_admin</code> dependency: a verified user in
+          the <code>ADMIN_USER_IDS</code> env allowlist, else <code>403</code>
+          (<a href="decisions/0025-admin-authz-and-gift-grant-audit.html">ADR 0025</a>).
+          Grants write a <code>kind='admin_grant'</code> ledger row with
+          audit columns <code>created_by</code> (the admin) + <code>note</code>
+          (reason) added in migration 0009.</li>
       </ul>
       <p>
         Auth: <code>Authorization: Bearer &lt;jwt&gt;</code> on

@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-05-31" />
+    <title>ADR 0025 — Admin authZ (env allowlist) + gift-grant audit columns</title>
+  </head>
+  <body>
+    <h1>ADR 0025 — Admin authZ (env allowlist) + gift-grant audit columns</h1>
+
+    <section id="context">
+      <h2>Context</h2>
+      <p>
+        v6.6 adds an operator console: inspect users and issue manual
+        gift-credit grants. Two decisions need recording, because both constrain
+        later work and a future agent would otherwise re-debate them.
+      </p>
+      <p>
+        <strong>(1) How to authorize admins.</strong> There is a single operator
+        (the project owner) and no role system. Options ranged from a full
+        roles/permissions table to a Supabase custom claim to a static env
+        allowlist. A grant endpoint <em>mutates balances</em>, so the gate must
+        be enforced server-side on the endpoint — hiding the UI is not enough.
+      </p>
+      <p>
+        <strong>(2) Where the gift-grant audit trail lives.</strong> The roadmap
+        requires grants to ride the append-only ledger as a new entry
+        <code>kind</code> with balance derivation unchanged, plus a
+        who/what/when/why audit trail. <code>kind='admin_grant'</code> was
+        already reserved in the ledger CHECK constraint (migration 0001) and
+        already flows through history. The ledger row already carries
+        <em>what</em> (<code>delta</code>) and <em>when</em>
+        (<code>created_at</code>); it lacks <em>who</em> (the granting admin) and
+        <em>why</em> (the reason). The <code>ref</code> column is unsuitable —
+        it is single-purpose (Stripe event id / scan id) and overloading it with
+        a who+why blob would be opaque.
+      </p>
+    </section>
+
+    <section id="decision">
+      <h2>Decision</h2>
+      <ul>
+        <li><strong>AuthZ: static env allowlist.</strong> A new
+          <code>ADMIN_USER_IDS</code> env var holds comma-separated Supabase
+          <code>user_id</code>s. A FastAPI dependency <code>require_admin</code>
+          runs the normal JWT verification (<code>current_user</code>) and then
+          returns <code>403</code> unless the verified <code>sub</code> is in the
+          allowlist. Every <code>/admin/*</code> endpoint — including the
+          balance-mutating <code>POST /admin/grant</code> — depends on it. No
+          roles table, no custom claims.</li>
+        <li><strong>Gift grants reuse <code>kind='admin_grant'</code></strong>
+          (no schema change to the constraint, no new kind). Balance stays
+          <code>SUM(delta)</code>.</li>
+        <li><strong>Audit trail: two nullable columns on the ledger</strong>
+          (migration 0009): <code>created_by uuid references auth.users(id)</code>
+          (the actor) and <code>note text</code> (the reason). Grant rows set
+          both; all other rows leave them NULL. This keeps who/what/when/why on
+          the one append-only row without a side table.</li>
+      </ul>
+    </section>
+
+    <section id="consequences">
+      <h2>Consequences</h2>
+      <ul>
+        <li><strong>+</strong> Minimal: a config string + one dependency + two
+          nullable columns. No roles infrastructure for a one-operator product;
+          fits ADR 0003.</li>
+        <li><strong>+</strong> The mutating endpoint is locked server-side; the
+          web route can be public because the data/actions are gated by the
+          backend (403), not by hiding the UI.</li>
+        <li><strong>+</strong> The audit columns are general-purpose — any future
+          actor-attributed or annotated ledger entry (e.g. a future reversal or
+          promo) can reuse <code>created_by</code>/<code>note</code>.</li>
+        <li><strong>−</strong> Adding/removing an admin is a redeploy (env
+          change), not a runtime action. Acceptable at this scale.</li>
+        <li><strong>−</strong> <code>created_by</code> is not enforced to be an
+          admin at the DB level (it is just an FK to a user). Integrity rests on
+          only the admin-gated endpoint ever writing <code>admin_grant</code>
+          rows. Accepted; the constraint would add little for a backend-only
+          writer.</li>
+        <li>The web app learns "am I an admin?" only by calling an
+          <code>/admin/*</code> endpoint and seeing 200 vs 403 — there is no
+          separate admin claim in the session.</li>
+      </ul>
+    </section>
+  </body>
+</html>

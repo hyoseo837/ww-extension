@@ -6,8 +6,8 @@
     <meta name="type" content="reference" />
     <meta name="subject" content="backend-api-contract" />
     <meta name="status" content="live" />
-    <meta name="last-updated" content="2026-05-30" />
-    <meta name="version-pin" content="server v5.2" />
+    <meta name="last-updated" content="2026-05-31" />
+    <meta name="version-pin" content="server v6.6" />
     <title>Backend API Contract — ww-extension</title>
   </head>
   <body>
@@ -413,6 +413,86 @@
           http(s) <code>success_url</code> and a
           <code>chrome-extension://</code> URL is not allowed. Purely a
           UX page — it does not grant credits (the webhook does).</p>
+      </dd>
+
+      <dt id="admin-authz"><code>/admin/*</code> — authZ (v6.6)</dt>
+      <dd>
+        <p>Operator-only console
+          (<a href="../decisions/0025-admin-authz-and-gift-grant-audit.html">ADR 0025</a>).
+          Every <code>/admin/*</code> endpoint verifies the JWT as usual, then
+          requires the user's <code>sub</code> to be in the
+          <code>ADMIN_USER_IDS</code> env allowlist (comma-separated Supabase
+          user_ids). <code>403 {"detail": "admin only"}</code> otherwise — the
+          balance-mutating <code>POST /admin/grant</code> is locked here,
+          server-side, not just hidden in the UI.</p>
+      </dd>
+
+      <dt id="get-admin-stats"><code>GET /admin/stats</code> (v6.6)</dt>
+      <dd>
+        <p>Admin. Headline aggregates.</p>
+        <p><strong>Response:</strong> <code>200 OK</code></p>
+        <pre><code>{
+  "total_users": 4289,
+  "total_credits_issued": 128500,   // SUM(delta) over all delta &gt; 0 rows
+  "credits_used_24h": 3102          // net consumed (scan_debit+scan_refund), last 24h
+}</code></pre>
+      </dd>
+
+      <dt id="get-admin-users"><code>GET /admin/users</code> (v6.6)</dt>
+      <dd>
+        <p>Admin. Users newest-first with live balance. Query params:
+          <code>search</code> (email ILIKE substring; default ""),
+          <code>limit</code> (default 50, clamped 1–100), <code>offset</code>
+          (default 0).</p>
+        <p><strong>Response:</strong> <code>200 OK</code></p>
+        <pre><code>{
+  "users": [
+    { "user_id": "&lt;uuid&gt;", "email": "user@example.com",
+      "created_at": "2026-05-01T12:00:00Z", "balance": 450 }
+  ],
+  "limit": 50, "offset": 0
+}</code></pre>
+      </dd>
+
+      <dt id="get-admin-user"><code>GET /admin/users/{user_id}</code> (v6.6)</dt>
+      <dd>
+        <p>Admin. Inspect one user: identity, balance, recent scan activity, and
+          scan-merged credit history (same item shape as
+          <a href="#get-credits-history"><code>GET /credits/history</code></a>).</p>
+        <p><strong>Response:</strong> <code>200 OK</code></p>
+        <pre><code>{
+  "user_id": "&lt;uuid&gt;", "email": "user@example.com",
+  "created_at": "2026-05-01T12:00:00Z", "balance": 450,
+  "profile": { "cv_ready": true, "summary": "..." },
+  "scans":  [ { "id": "&lt;uuid&gt;", "kind": "scan", "status": "success",
+                "org": "Apple Inc.", "title": "SWE", "cost": 2.31,
+                "created_at": "..." } ],
+  "history": [ { ...same items as /credits/history... } ]
+}</code></pre>
+        <p><strong>Errors:</strong> <code>404</code> if no such user;
+          <code>403</code> if not an admin.</p>
+      </dd>
+
+      <dt id="post-admin-grant"><code>POST /admin/grant</code> (v6.6)</dt>
+      <dd>
+        <p>Admin. Issue a manual gift-credit grant. Resolves the target by
+          email, then writes one <code>kind='admin_grant'</code> ledger row with
+          <code>created_by</code> = the granting admin and <code>note</code> =
+          the reason (the audit trail, ADR 0025). Balance is still
+          <code>SUM(delta)</code>.</p>
+        <p><strong>Request:</strong></p>
+        <pre><code>{
+  "email": "user@example.com",
+  "credits": 500,            // must be &gt; 0; 1 credit = $0.01 CAD
+  "reason": "Beta tester reward"   // optional, stored in note
+}</code></pre>
+        <p><strong>Response:</strong> <code>200 OK</code>
+          <code>{ "user_id": "&lt;uuid&gt;", "balance": 950 }</code> (the
+          target's balance after the grant).</p>
+        <p><strong>Errors:</strong>
+          <code>400</code> <code>{"detail": "credits must be positive"}</code>;
+          <code>404</code> <code>{"detail": "no user with email: …"}</code>;
+          <code>403</code> if not an admin.</p>
       </dd>
     </dl>
   </body>

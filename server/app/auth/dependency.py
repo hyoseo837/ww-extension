@@ -44,3 +44,16 @@ def current_user(
 
 
 CurrentUser = Annotated[dict, Depends(current_user)]
+
+
+def require_admin(user: CurrentUser) -> dict:
+    """Admin gate (v6.6, ADR 0025): a verified user whose `sub` is in the
+    ADMIN_USER_IDS env allowlist. 403 otherwise. Enforced on every /admin/*
+    endpoint so the credit-mutating ones are locked server-side, not just
+    hidden in the UI."""
+    if user.get("sub") not in settings.admin_user_id_list:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="admin only")
+    return user
+
+
+RequireAdmin = Annotated[dict, Depends(require_admin)]

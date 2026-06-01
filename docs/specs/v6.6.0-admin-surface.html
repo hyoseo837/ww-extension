@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v6.6.0" />
+    <meta name="status" content="in-progress" />
+    <meta name="last-updated" content="2026-05-31" />
+    <title>v6.6.0 — Admin surface (operator console)</title>
+  </head>
+  <body>
+    <h1>v6.6.0 — Admin surface (operator console)</h1>
+
+    <h2>Goal</h2>
+    <p>
+      Add an operator-only admin console: list/inspect users (balance, credit
+      ledger, scan activity) and issue manual <strong>gift-credit grants</strong>
+      (goodwill, support make-goods, promos). Grants ride the existing
+      append-only ledger as <code>kind='admin_grant'</code> (already in the
+      ledger CHECK constraint, migration 0001) — balance derivation
+      (<code>SUM(delta)</code>) is unchanged and every grant is auditable.
+      Admin authZ is an env allowlist of admin <code>user_id</code>s enforced in
+      a FastAPI dependency, so the credit-mutating endpoint is locked
+      server-side, not merely hidden in the UI. Matches the
+      <code>admin_dashboard_sidebar</code> Stitch screen. Decisions in
+      <a href="../decisions/0025-admin-authz-and-gift-grant-audit.html">ADR 0025</a>.
+    </p>
+    <p>
+      Sliced into two commits: <strong>v6.6.0</strong> (backend: authZ, admin
+      endpoints, gift grant + audit migration) and <strong>v6.6.1</strong>
+      (web: the <code>/admin</code> page). This spec covers both.
+    </p>
+
+    <h2>Files</h2>
+    <h3>Added — <code>server/</code></h3>
+    <ul>
+      <li><code>migrations/0009_ledger_audit_columns.sql</code> — add nullable
+        <code>created_by uuid references auth.users(id)</code> and
+        <code>note text</code> to <code>credit_ledger_entry</code> (the audit
+        trail for admin grants: who / why). Nullable, idempotent; existing rows
+        and non-grant kinds stay NULL. Does not affect <code>SUM(delta)</code>.</li>
+      <li><code>app/admin/__init__.py</code>, <code>app/admin/db.py</code>,
+        <code>app/admin/routes.py</code> — admin queries + router.</li>
+    </ul>
+    <h3>Changed — <code>server/</code></h3>
+    <ul>
+      <li><code>app/core/config.py</code> — add <code>admin_user_ids: str = ""</code>
+        (comma-separated) + <code>admin_user_id_list</code> property.</li>
+      <li><code>app/auth/dependency.py</code> — add <code>require_admin</code>
+        dependency (<code>RequireAdmin</code> alias): runs <code>current_user</code>,
+        then <code>403</code> unless <code>sub</code> ∈ the allowlist.</li>
+      <li><code>app/main.py</code> — register the admin router.</li>
+      <li><code>pyproject.toml</code> — bump version (server touched, ADR 0010);
+        <code>/health</code> reports it.</li>
+    </ul>
+    <h3>Added / changed — <code>web/</code></h3>
+    <ul>
+      <li><code>src/pages/Admin.tsx</code> — the admin console: stat cards,
+        user-management table (search by email, View / Manage), Issue Gift
+        Credits form. Self-contained shell (own header/footer), not the user
+        <code>Layout</code>.</li>
+      <li><code>src/App.tsx</code> — add a top-level <code>/admin</code> route
+        (outside the user <code>Layout</code>). The page is gated by the server
+        (403 → access-denied state); it is not advertised in the user nav.</li>
+      <li><code>src/api.ts</code> — reuse the existing bearer-token helpers; add
+        a <code>DELETE</code>/query helper only if needed (likely none).</li>
+    </ul>
+    <h3>Changed — docs</h3>
+    <ul>
+      <li><code>docs/reference/api.html</code> — document
+        <code>GET /admin/stats</code>, <code>GET /admin/users</code>,
+        <code>GET /admin/users/{id}</code>, <code>POST /admin/grant</code>, and
+        the admin authZ (403) convention.</li>
+      <li><code>docs/architecture.html</code> — note the admin module + authZ
+        allowlist; <code>docs/roadmap.html</code> — mark v6.6 shape.</li>
+    </ul>
+
+    <h2>Endpoints (new, all admin-gated → 403 for non-admins)</h2>
+    <ul>
+      <li><code>GET /admin/stats</code> → <code>{ total_users,
+        total_credits_issued, credits_used_24h }</code> (aggregates over
+        <code>auth.users</code> + <code>credit_ledger_entry</code>).</li>
+      <li><code>GET /admin/users?search=&amp;limit=&amp;offset=</code> →
+        <code>{ users: [{ user_id, email, created_at, balance }], ... }</code>;
+        <code>search</code> is an email ILIKE.</li>
+      <li><code>GET /admin/users/{user_id}</code> → <code>{ user_id, email,
+        created_at, balance, profile: {cv_ready, summary?}, history: [...],
+        scans: [{id, kind, status, org, title, cost, created_at}] }</code>
+        (history reuses the scan-merged shape).</li>
+      <li><code>POST /admin/grant</code> body <code>{ email, credits, reason }</code>
+        → resolve email→user_id (<code>404</code> if unknown,
+        <code>400</code> if credits ≤ 0), insert one
+        <code>admin_grant</code> ledger row (<code>created_by</code> = admin,
+        <code>note</code> = reason) → <code>{ user_id, balance }</code>.</li>
+    </ul>
+
+    <h2>Verify</h2>
+    <ol>
+      <li>Migration 0009 applies cleanly and is idempotent; existing rows have
+        NULL <code>created_by</code>/<code>note</code>; balances unchanged.</li>
+      <li>With <code>ADMIN_USER_IDS</code> set to a test admin uid: that user's
+        bearer token reaches all <code>/admin/*</code> endpoints; a non-admin
+        token gets <code>403</code> on every one (including
+        <code>POST /admin/grant</code> — server-side lock, not UI-only).</li>
+      <li><code>POST /admin/grant</code> adds credits to the target user's
+        balance, writes one <code>admin_grant</code> row with the granting
+        admin in <code>created_by</code> and the reason in <code>note</code>,
+        and the grant shows in that user's <code>/credits/history</code>.</li>
+      <li>Web <code>/admin</code> matches the Stitch screen for an admin (stat
+        cards, searchable user table, gift form that grants and refreshes); a
+        non-admin sees an access-denied state.</li>
+      <li><code>cd web &amp;&amp; npm run build</code> clean;
+        <code>/health</code> reports the bumped server version.</li>
+    </ol>
+
+    <h2>Notes</h2>
+    <p>
+      <strong>No new ledger <code>kind</code>.</strong> <code>admin_grant</code>
+      was reserved in migration 0001 and already passes through
+      <code>get_history</code> / <code>HistoryList</code> (its
+      <code>card_giftcard</code> icon and "Admin grant" label exist). Only the
+      audit columns are new.</p>
+    <p>
+      <strong>Design copy is illustrative.</strong> The screen's
+      <code>+12% since last week</code> and the Activity Logs / System Settings
+      nav items are not built — the console is one dashboard page (stats + users
+      + gift). Stat cards show real aggregates.</p>
+    <p>
+      <strong>Service-role DB access.</strong> The backend pool already bypasses
+      RLS, so admin queries can read <code>auth.users</code> and any user's
+      ledger/scan rows directly; authZ is the env allowlist, not RLS.</p>
+  </body>
+</html>
