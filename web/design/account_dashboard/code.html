@@ -1,0 +1,272 @@
+<!DOCTYPE html><html class="light" lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Dashboard - WW Scorer</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Source+Serif+4:opsz,wght@8..60,400;500;600&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-bright": "#fff8f0",
+                    "on-secondary": "#ffffff",
+                    "surface-container": "#f4ede2",
+                    "inverse-primary": "#ffb59e",
+                    "on-surface-variant": "#54433e",
+                    "on-error-container": "#93000a",
+                    "tertiary": "#00685d",
+                    "on-secondary-fixed-variant": "#4d4540",
+                    "on-error": "#ffffff",
+                    "on-primary-fixed-variant": "#75331d",
+                    "error": "#ba1a1a",
+                    "surface-container-low": "#faf3e7",
+                    "on-tertiary-container": "#f4fffb",
+                    "page-bg": "#FAF9F5",
+                    "negative": "#B5544A",
+                    "on-primary-container": "#fffbff",
+                    "surface-alt": "#FBFAF6",
+                    "on-tertiary-fixed": "#00201c",
+                    "inverse-surface": "#333029",
+                    "surface-container-high": "#efe7dc",
+                    "secondary-container": "#ece0d9",
+                    "error-container": "#ffdad6",
+                    "background": "#fff8f0",
+                    "surface-tint": "#924a32",
+                    "secondary-fixed": "#ece0d9",
+                    "tertiary-fixed": "#95f3e4",
+                    "outline-variant": "#d9c1ba",
+                    "text-muted": "#9A958A",
+                    "border": "#E8E5DC",
+                    "surface-container-highest": "#e9e2d7",
+                    "on-tertiary": "#ffffff",
+                    "on-secondary-container": "#6b635d",
+                    "inverse-on-surface": "#f7f0e5",
+                    "secondary": "#655d58",
+                    "primary-container": "#ad5f46",
+                    "on-surface": "#1e1b15",
+                    "primary-fixed": "#ffdbd0",
+                    "secondary-fixed-dim": "#cfc4be",
+                    "tertiary-fixed-dim": "#79d7c8",
+                    "accent-hover": "#B5644B",
+                    "on-tertiary-fixed-variant": "#005048",
+                    "surface-dim": "#e0d9ce",
+                    "surface-container-lowest": "#ffffff",
+                    "on-primary-fixed": "#390b00",
+                    "tertiary-container": "#138376",
+                    "primary-fixed-dim": "#ffb59e",
+                    "outline": "#87736d",
+                    "on-primary": "#ffffff",
+                    "positive": "#5E7C5A",
+                    "surface-variant": "#e9e2d7",
+                    "surface": "#FFFFFF",
+                    "on-background": "#1e1b15",
+                    "on-secondary-fixed": "#201a16",
+                    "primary": "#8f4830",
+                    "text-secondary": "#6E6A5F"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "xs": "8px",
+                    "gutter": "24px",
+                    "sm": "12px",
+                    "max-width": "960px",
+                    "lg": "24px",
+                    "xl": "32px",
+                    "xxl": "48px",
+                    "md": "16px",
+                    "base": "4px"
+            },
+            "fontFamily": {
+                    "headline-lg": ["Source Serif 4"],
+                    "label-sm": ["Inter"],
+                    "body-md": ["Inter"],
+                    "display-lg-mobile": ["Source Serif 4"],
+                    "headline-md": ["Source Serif 4"],
+                    "display-lg": ["Source Serif 4"],
+                    "body-lg": ["Inter"],
+                    "label-md": ["Inter"]
+            },
+            "fontSize": {
+                    "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "600"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.04em", "fontWeight": "600"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "display-lg-mobile": ["32px", {"lineHeight": "40px", "fontWeight": "600"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "500"}],
+                    "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "500"}]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-page-bg text-on-surface antialiased min-h-screen">
+<!-- TopNavBar (Mobile) -->
+<header class="md:hidden w-full top-0 sticky border-b border-border bg-surface-bright z-50">
+<div class="max-w-max-width mx-auto flex justify-between items-center px-gutter h-16">
+<div class="font-headline-md text-headline-md font-semibold text-primary">WW Scorer</div>
+<nav class="flex gap-4">
+<a class="text-primary border-b-2 border-primary pb-1 font-body-md text-body-md cursor-pointer transition-opacity active:opacity-80 hover:text-accent-hover transition-all" href="#">Dashboard</a>
+<a class="text-text-secondary hover:text-primary transition-colors font-body-md text-body-md cursor-pointer transition-opacity active:opacity-80 hover:text-accent-hover transition-all hidden sm:block" href="#">Credits</a>
+<a class="text-text-secondary hover:text-primary transition-colors font-body-md text-body-md cursor-pointer transition-opacity active:opacity-80 hover:text-accent-hover transition-all hidden sm:block" href="#">History</a>
+</nav>
+<div class="flex items-center gap-xs text-primary font-body-md text-body-md">
+<span class="material-symbols-outlined cursor-pointer transition-opacity active:opacity-80 hover:text-accent-hover transition-all" data-icon="notifications">notifications</span>
+<img alt="User account avatar" class="w-8 h-8 rounded-full ml-sm object-cover border border-border" data-alt="A professional headshot of a friendly university student looking approachable, against a minimal, off-white background with warm editorial lighting and subtle styling." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAJaYGSj9x7aQ7K6ABJAVhoFF9KNtyDAymudXSrdrBGB4K_V4jKlD4HMpY-2jUsSn6H3S7gTc2tdeMMem0NI-1JXHLJ0zpc5E78SDc4a3QxiV8eNNBfb_Q28Kw8XZy77HOkdzD8tCxNx4klswcPWahvuC7UtfsolAI1s6YU9aYLRrnz4O5ODne5UMEucpXGj_vOBrIhr1-r7qxmFCs2SZmg1ivDS96OIV99xZx5MtcBLGVob7YvNztvIwHTCuJKQv-hzr91-C3WtJSM">
+</div>
+</div>
+</header>
+<!-- SideNavBar (Desktop) -->
+<aside class="hidden md:flex h-screen w-64 fixed left-0 top-0 border-r border-border bg-surface-container-low flex-col p-md space-y-base z-40">
+<div class="flex items-center gap-sm px-sm py-md mb-xl">
+<img alt="Student avatar" class="w-12 h-12 rounded-full object-cover border border-border" data-alt="A professional headshot of a friendly university student looking approachable, against a minimal, off-white background with warm editorial lighting and subtle styling." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCqVDvPkvd5ko4xZSieXLrWqd2NhCfgyy0F_Mn7FU9pVsTcqD4Z8SHSwQ9ZzWg_1G_VxUVjT0Bn54SV2EpeMgVScuj30C4cjrxclt_psEv-BkN_JAFZMuiVZiH1O2Qq2YBWu18FRv5Bb8d3hGExtl0WgPBmQpaxRYHH2K-XW-DPYrC8gGfnEC5MNiP1VZ3woAHstWe14TUKLyX8P22lXm_9bh1ZdizOtL8RF54s1hSzBmA3GzcaxPkDKWW0Y0OYuTHpxzPlsPtSMA7o">
+<div>
+<h2 class="font-headline-md text-headline-md text-primary leading-tight">UW Student</h2>
+<p class="font-label-md text-label-md text-text-secondary">Co-op Scorer Pro</p>
+</div>
+</div>
+<nav class="flex-1 space-y-base">
+<a class="flex items-center gap-sm px-sm py-sm duration-200 ease-in-out bg-secondary-container text-on-secondary-container rounded-lg font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+                Dashboard
+            </a>
+<a class="flex items-center gap-sm px-sm py-sm duration-200 ease-in-out text-on-surface-variant hover:bg-surface-container-highest transition-colors font-label-md text-label-md rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+                Credits
+            </a>
+<a class="flex items-center gap-sm px-sm py-sm duration-200 ease-in-out text-on-surface-variant hover:bg-surface-container-highest transition-colors font-label-md text-label-md rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+                History
+            </a>
+<a class="flex items-center gap-sm px-sm py-sm duration-200 ease-in-out text-on-surface-variant hover:bg-surface-container-highest transition-colors font-label-md text-label-md rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+                Profile
+            </a>
+</nav>
+<div class="pt-xl border-t border-border mt-auto space-y-base">
+<button class="w-full bg-primary text-on-primary font-label-md text-label-md rounded-lg px-[20px] py-sm mb-lg shadow-sm hover:bg-accent-hover transition-colors">Buy Credits</button>
+<a class="flex items-center gap-sm px-sm py-sm duration-200 ease-in-out text-on-surface-variant hover:bg-surface-container-highest transition-colors font-label-md text-label-md rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+                Support
+            </a>
+<a class="flex items-center gap-sm px-sm py-sm duration-200 ease-in-out text-on-surface-variant hover:bg-surface-container-highest transition-colors font-label-md text-label-md rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+                Logout
+            </a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="md:ml-64 pb-xxl">
+<div class="max-w-max-width mx-auto p-gutter lg:p-xxl space-y-xxl">
+<!-- Hero / Header -->
+<section class="mt-md">
+<h1 class="font-display-lg-mobile md:font-display-lg text-display-lg-mobile md:text-display-lg text-on-surface mb-xs">Welcome back, Alex</h1>
+<p class="font-body-lg text-body-lg text-text-secondary">Here is your scoring overview for today.</p>
+</section>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-lg">
+<!-- Credit Balance Card -->
+<div class="md:col-span-2 bg-surface border border-border rounded-xl p-lg flex flex-col justify-between shadow-[0_2px_8px_rgba(0,0,0,0.02)] relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-lg opacity-10 group-hover:opacity-20 transition-opacity duration-500">
+<span class="material-symbols-outlined text-[120px] text-primary" data-icon="generating_tokens">generating_tokens</span>
+</div>
+<div>
+<h3 class="font-label-md text-label-md text-text-muted mb-sm uppercase tracking-widest">Available Credits</h3>
+<div class="font-display-lg text-display-lg text-on-surface mb-xs">142</div>
+<p class="font-body-md text-body-md text-text-secondary mb-xl">Sufficient for approximately 14 standard resume scores.</p>
+</div>
+<div>
+<button class="bg-primary text-on-primary font-label-md text-label-md rounded-lg px-[24px] py-[12px] hover:bg-accent-hover transition-colors shadow-sm inline-flex items-center gap-xs">
+<span class="material-symbols-outlined text-[18px]" data-icon="add_circle">add_circle</span>
+                            Buy Credits
+                        </button>
+</div>
+</div>
+<!-- Profile Summary -->
+<div class="bg-surface border border-border rounded-xl p-lg flex flex-col shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
+<h3 class="font-label-md text-label-md text-text-muted uppercase tracking-widest mb-md">Profile Snapshot</h3>
+<div class="flex-1 space-y-0"><div class="border-b border-border pb-base"><div class="font-label-sm text-label-sm text-text-secondary mb-0">CV Status</div><div class="flex items-center gap-xs font-body-md text-body-md text-on-surface"><span class="w-2 h-2 rounded-full bg-positive inline-block"></span>Active &amp; Ready</div></div><div class="border-b border-border pb-base pt-base"><div class="font-label-sm text-label-sm text-text-secondary mb-0">Match Preference</div><div class="font-body-md text-body-md text-on-surface">Software Engineering</div></div><div class="border-b border-border pb-base pt-base"><div class="font-label-sm text-label-sm text-text-secondary mb-0">Target Term</div><div class="font-body-md text-body-md text-on-surface">Winter 2025</div></div><div class="mt-md pt-md"><div class="font-label-md text-label-md text-text-muted mb-sm uppercase tracking-widest">Settings</div><div class="space-y-sm"><div class="flex items-center justify-between"><div class="flex flex-col"><span class="font-body-md text-body-md text-on-surface">Automatic Exclusions</span><span class="font-label-sm text-label-sm text-text-secondary">Skip excluded jobs</span></div><label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" value="" class="sr-only peer" checked=""><div class="w-11 h-6 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div></label></div><div class="flex flex-col gap-xs"><label class="font-label-sm text-label-sm text-text-secondary">AI Scoring Model</label><select class="w-full bg-surface-bright border border-border text-on-surface font-body-md text-body-md rounded-lg px-sm py-xs focus:ring-primary focus:border-primary"><option>Gemini 1.5 Flash</option><option>Gemini 1.5 Pro</option></select></div></div></div></div>
+<button class="w-full bg-surface-bright border border-border text-primary font-label-md text-label-md rounded-lg px-[20px] py-sm hover:bg-surface-container-low transition-colors mt-md">
+                        Edit Profile
+                    </button>
+</div>
+<!-- Recent Activity Table/List -->
+<div class="md:col-span-3 bg-surface border border-border rounded-xl p-lg shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
+<div class="flex justify-between items-end mb-xl border-b border-border pb-sm">
+<h3 class="font-headline-md text-headline-md text-on-surface">Recent Activity</h3>
+<a class="font-label-md text-label-md text-primary hover:text-accent-hover transition-colors" href="#">View All</a>
+</div>
+<div class="space-y-0">
+<!-- Item 1 -->
+<div class="flex items-center justify-between py-md border-b border-border last:border-0 hover:bg-surface-alt transition-colors px-xs rounded-lg">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-full bg-secondary-container text-primary flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="description">description</span>
+</div>
+<div>
+<div class="font-body-md text-body-md text-on-surface font-medium">AI Scan - Detailed review</div>
+<div class="font-label-sm text-label-sm text-text-secondary">Today, 10:42 AM</div>
+</div>
+</div>
+<div class="font-body-md text-body-md text-negative font-medium">-25 Credits</div>
+</div>
+<!-- Item 2 -->
+<div class="flex items-center justify-between py-md border-b border-border last:border-0 hover:bg-surface-alt transition-colors px-xs rounded-lg">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-full bg-[#E8F3ED] text-positive flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+</div>
+<div>
+<div class="font-body-md text-body-md text-on-surface font-medium">Signup bonus</div>
+<div class="font-label-sm text-label-sm text-text-secondary">Oct 20, 2024</div>
+</div>
+</div>
+<div class="font-body-md text-body-md text-positive font-medium">+100 Credits</div>
+</div>
+<!-- Item 3 -->
+<div class="flex items-center justify-between py-md border-b border-border last:border-0 hover:bg-surface-alt transition-colors px-xs rounded-lg">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-full bg-secondary-container text-primary flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="description">description</span>
+</div>
+<div>
+<div class="font-body-md text-body-md text-on-surface font-medium">AI Scan - Basic analysis</div>
+<div class="font-label-sm text-label-sm text-text-secondary">Oct 18, 2024</div>
+</div>
+</div>
+<div class="font-body-md text-body-md text-negative font-medium">-5 Credits</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Footer -->
+<footer class="w-full py-xl border-t border-border mt-xxl bg-transparent">
+<div class="max-w-max-width mx-auto flex flex-col md:flex-row justify-between items-center px-gutter gap-md">
+<p class="font-label-sm text-label-sm text-text-muted">© 2024 WW Scorer. Built for Waterloo Students.</p>
+<div class="flex gap-md font-label-sm text-label-sm text-text-muted opacity-90 hover:opacity-100 transition-opacity">
+<a class="hover:underline transition-all hover:text-text-secondary" href="#">Terms</a>
+<a class="hover:underline transition-all hover:text-text-secondary" href="#">Privacy</a>
+<a class="hover:underline transition-all hover:text-text-secondary" href="#">Feedback</a>
+</div>
+</div>
+</footer>
+</main>
+
+
+</body></html>

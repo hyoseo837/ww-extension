@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en" style=""><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Match Preferences - WW Scorer</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400..700&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-variant": "#e9e2d7",
+                        "inverse-primary": "#ffb59e",
+                        "surface-tint": "#924a32",
+                        "on-primary-container": "#fffbff",
+                        "inverse-surface": "#333029",
+                        "secondary": "#655d58",
+                        "primary-fixed-dim": "#ffb59e",
+                        "surface-alt": "#FBFAF6",
+                        "on-tertiary-fixed": "#00201c",
+                        "on-tertiary-container": "#f4fffb",
+                        "on-error": "#ffffff",
+                        "on-primary-fixed-variant": "#75331d",
+                        "on-surface": "#1e1b15",
+                        "surface-dim": "#e0d9ce",
+                        "secondary-container": "#ece0d9",
+                        "on-error-container": "#93000a",
+                        "on-tertiary": "#ffffff",
+                        "tertiary": "#00685d",
+                        "surface-container-high": "#efe7dc",
+                        "surface": "#FFFFFF",
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary-fixed": "#95f3e4",
+                        "negative": "#B5544A",
+                        "background": "#fff8f0",
+                        "page-bg": "#FAF9F5",
+                        "text-secondary": "#6E6A5F",
+                        "outline-variant": "#d9c1ba",
+                        "tertiary-fixed-dim": "#79d7c8",
+                        "on-secondary": "#ffffff",
+                        "inverse-on-surface": "#f7f0e5",
+                        "on-tertiary-fixed-variant": "#005048",
+                        "on-surface-variant": "#54433e",
+                        "surface-container-low": "#faf3e7",
+                        "on-secondary-fixed": "#201a16",
+                        "surface-container": "#f4ede2",
+                        "primary-container": "#ad5f46",
+                        "on-secondary-fixed-variant": "#4d4540",
+                        "secondary-fixed": "#ece0d9",
+                        "on-background": "#1e1b15",
+                        "positive": "#5E7C5A",
+                        "surface-bright": "#fff8f0",
+                        "outline": "#87736d",
+                        "surface-container-highest": "#e9e2d7",
+                        "on-secondary-container": "#6b635d",
+                        "accent-hover": "#B5644B",
+                        "border": "#E8E5DC",
+                        "tertiary-container": "#138376",
+                        "primary": "#8f4830",
+                        "text-muted": "#9A958A",
+                        "secondary-fixed-dim": "#cfc4be",
+                        "on-primary": "#ffffff",
+                        "error": "#ba1a1a",
+                        "primary-fixed": "#ffdbd0",
+                        "on-primary-fixed": "#390b00",
+                        "error-container": "#ffdad6"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xs": "8px",
+                        "base": "4px",
+                        "xxl": "48px",
+                        "sm": "12px",
+                        "gutter": "24px",
+                        "max-width": "960px",
+                        "md": "16px",
+                        "lg": "24px",
+                        "xl": "32px"
+                    },
+                    "fontFamily": {
+                        "display-lg-mobile": ["Source Serif 4"],
+                        "body-md": ["Inter"],
+                        "headline-lg": ["Source Serif 4"],
+                        "label-sm": ["Inter"],
+                        "display-lg": ["Source Serif 4"],
+                        "body-lg": ["Inter"],
+                        "label-md": ["Inter"],
+                        "headline-md": ["Source Serif 4"]
+                    },
+                    "fontSize": {
+                        "display-lg-mobile": ["32px", { "lineHeight": "40px", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "fontWeight": "600" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.04em", "fontWeight": "600" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "label-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "500" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "500" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings: 'FILL' 1;
+        }
+        
+        /* Custom Checkbox styles for chips */
+        .chip-checkbox:checked + label {
+            background-color: #F4E8E1; /* Accent soft fill */
+            border-color: #924a32;
+            color: #924a32;
+        }
+        .chip-radio:checked + label {
+             background-color: #F4E8E1;
+             border-color: #924a32;
+             color: #924a32;
+        }
+    </style>
+</head>
+<body class="bg-page-bg text-on-surface min-h-screen flex font-body-md antialiased selection:bg-primary-fixed selection:text-on-primary-fixed">
+<!-- SideNavBar (Desktop) - Replaced TopNavBar -->
+<aside class="hidden md:flex h-screen w-64 fixed left-0 top-0 border-r border-border bg-surface-container-low flex-col p-md space-y-base z-40">
+<div class="flex items-center gap-sm px-sm py-md mb-xl">
+<img alt="Student avatar" class="w-12 h-12 rounded-full object-cover border border-border" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCqVDvPkvd5ko4xZSieXLrWqd2NhCfgyy0F_Mn7FU9pVsTcqD4Z8SHSwQ9ZzWg_1G_VxUVjT0Bn54SV2EpeMgVScuj30C4cjrxclt_psEv-BkN_JAFZMuiVZiH1O2Qq2YBWu18FRv5Bb8d3hGExtl0WgPBmQpaxRYHH2K-XW-DPYrC8gGfnEC5MNiP1VZ3woAHstWe14TUKLyX8P22lXm_9bh1ZdizOtL8RF54s1hSzBmA3GzcaxPkDKWW0Y0OYuTHpxzPlsPtSMA7o"/>
+<div>
+<h2 class="font-headline-md text-headline-md text-primary leading-tight">UW Student</h2>
+<p class="font-label-md text-label-md text-text-secondary">Co-op Scorer Pro</p>
+</div>
+</div>
+<nav class="flex-1 space-y-base">
+<a class="flex items-center gap-sm px-sm py-sm duration-200 ease-in-out text-on-surface-variant hover:bg-surface-container-highest transition-colors font-label-md text-label-md rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+            Dashboard
+        </a>
+<a class="flex items-center gap-sm px-sm py-sm duration-200 ease-in-out text-on-surface-variant hover:bg-surface-container-highest transition-colors font-label-md text-label-md rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+            Credits
+        </a>
+<a class="flex items-center gap-sm px-sm py-sm duration-200 ease-in-out text-on-surface-variant hover:bg-surface-container-highest transition-colors font-label-md text-label-md rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+            History
+        </a>
+<a class="flex items-center gap-sm px-sm py-sm duration-200 ease-in-out bg-secondary-container text-on-secondary-container rounded-lg font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+            Profile
+        </a>
+</nav>
+<div class="pt-xl border-t border-border mt-auto space-y-base">
+<button class="w-full bg-primary text-on-primary font-label-md text-label-md rounded-lg px-[20px] py-sm mb-lg shadow-sm hover:bg-accent-hover transition-colors">Buy Credits</button>
+<a class="flex items-center gap-sm px-sm py-sm duration-200 ease-in-out text-on-surface-variant hover:bg-surface-container-highest transition-colors font-label-md text-label-md rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+            Support
+        </a>
+<a class="flex items-center gap-sm px-sm py-sm duration-200 ease-in-out text-on-surface-variant hover:bg-surface-container-highest transition-colors font-label-md text-label-md rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+            Logout
+        </a>
+</div>
+</aside>
+<!-- Mobile NavBar -->
+<header class="md:hidden w-full top-0 sticky border-b border-border bg-surface-bright z-50">
+<div class="max-w-max-width mx-auto flex justify-between items-center px-gutter h-16">
+<div class="font-headline-md text-headline-md font-semibold text-primary">WW Scorer</div>
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-primary cursor-pointer" data-icon="menu">menu</span>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-grow w-full md:ml-64 bg-page-bg">
+<div class="max-w-max-width mx-auto px-md md:px-gutter py-xl md:py-xxl pb-32">
+<!-- Header Section -->
+<header class="mb-xl">
+<h1 class="font-display-lg-mobile md:font-display-lg text-display-lg-mobile md:text-display-lg text-on-surface mb-xs">Match Preferences</h1>
+<p class="font-body-lg text-body-lg text-text-secondary max-w-2xl">Tell the AI what you're looking for in a co-op to get better job recommendations.</p>
+</header>
+<!-- Bento Grid Layout for Preferences -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-lg">
+<!-- Section 1: Work Style -->
+<section class="col-span-1 md:col-span-12 bg-surface rounded-[16px] border border-border p-lg md:p-xl shadow-[0_4px_24px_rgba(30,27,21,0.04)] transition-shadow">
+<div class="flex items-center gap-sm mb-md">
+<span class="material-symbols-outlined text-primary" data-icon="work" data-weight="fill">work</span>
+<h2 class="font-headline-md text-headline-md text-on-surface">Work Style</h2>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-xl">
+<!-- Term & Auth -->
+<div class="space-y-md">
+<div>
+<h3 class="font-label-md text-label-md text-text-secondary mb-sm uppercase tracking-wider">Target Term</h3>
+<div class="flex flex-wrap gap-sm">
+<div><input checked="" class="chip-checkbox hidden" id="term-fall" name="term" type="checkbox"/><label class="inline-flex items-center px-4 py-2 rounded-full border border-border bg-surface text-on-surface font-label-md text-label-md cursor-pointer hover:bg-surface-variant/30 hover:!border-primary/50 transition-all" for="term-fall">Fall 2024</label></div>
+<div><input class="chip-checkbox hidden" id="term-winter" name="term" type="checkbox"/><label class="inline-flex items-center px-4 py-2 rounded-full border border-border bg-surface text-on-surface font-label-md text-label-md cursor-pointer hover:bg-surface-variant/30 hover:!border-primary/50 transition-all" for="term-winter">Winter 2025</label></div>
+<div><input class="chip-checkbox hidden" id="term-spring" name="term" type="checkbox"/><label class="inline-flex items-center px-4 py-2 rounded-full border border-border bg-surface text-on-surface font-label-md text-label-md cursor-pointer hover:bg-surface-variant/30 hover:!border-primary/50 transition-all" for="term-spring">Spring 2025</label></div>
+</div>
+</div>
+<div>
+<h3 class="font-label-md text-label-md text-text-secondary mb-sm uppercase tracking-wider">Term Length</h3>
+<div class="flex flex-wrap gap-sm">
+<div><input checked="" class="chip-checkbox hidden" id="len-4" name="term-length" type="checkbox"/><label class="inline-flex items-center px-4 py-2 rounded-full border border-border bg-surface text-on-surface font-label-md text-label-md cursor-pointer hover:bg-surface-variant/30 hover:!border-primary/50 transition-all" for="len-4">4-month</label></div>
+<div><input class="chip-checkbox hidden" id="len-8" name="term-length" type="checkbox"/><label class="inline-flex items-center px-4 py-2 rounded-full border border-border bg-surface text-on-surface font-label-md text-label-md cursor-pointer hover:bg-surface-variant/30 hover:!border-primary/50 transition-all" for="len-8">8-month</label></div>
+</div>
+</div>
+<div>
+<h3 class="font-label-md text-label-md text-text-secondary mb-sm uppercase tracking-wider">Work Authorization</h3>
+<div class="relative">
+<select class="w-full p-sm rounded-lg border border-border bg-surface text-on-surface font-body-md focus:border-primary focus:ring-1 focus:ring-primary/50 outline-none appearance-none">
+<option value="canadian_citizen">Canadian citizen</option>
+<option value="permanent_resident">Permanent resident</option>
+<option value="international_student">International student (study permit)</option>
+<option value="other">Other</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted">expand_more</span>
+</div>
+</div>
+</div>
+<!-- Work Mode -->
+<div class="space-y-sm">
+<h3 class="font-label-md text-label-md text-text-secondary mb-xs uppercase tracking-wider">Work Mode</h3>
+<div class="flex flex-col gap-sm">
+<div class="space-y-sm">
+<div class="p-sm rounded-lg border border-border bg-surface space-y-sm">
+<div class="flex justify-between items-center">
+<span class="font-label-md text-label-md font-semibold text-on-surface">Remote</span>
+<select class="text-xs p-1 rounded border border-border bg-surface-alt font-label-sm"><option>Must</option><option>Strong</option><option selected="">Nice-to-have</option></select>
+</div>
+</div>
+<div class="p-sm rounded-lg border border-outline-variant bg-surface-variant/20 space-y-sm">
+<div class="flex justify-between items-center">
+<span class="font-label-md text-label-md font-semibold text-primary">Hybrid</span>
+<select class="text-xs p-1 rounded border border-border bg-surface text-primary font-label-sm"><option>Must</option><option selected="">Strong</option><option>Nice-to-have</option></select>
+</div>
+</div>
+<div class="p-sm rounded-lg border border-border bg-surface space-y-sm">
+<div class="flex justify-between items-center">
+<span class="font-label-md text-label-md font-semibold text-on-surface">In-Office</span>
+<select class="text-xs p-1 rounded border border-border bg-surface-alt font-label-sm"><option>Must</option><option>Strong</option><option>Nice-to-have</option></select>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Section 2: Location Preferences -->
+<section class="col-span-1 md:col-span-7 bg-surface rounded-[16px] border border-border p-lg md:p-xl shadow-[0_4px_24px_rgba(30,27,21,0.04)]">
+<div class="flex items-center justify-between mb-md">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary" data-icon="location_on" data-weight="fill">location_on</span>
+<h2 class="font-headline-md text-headline-md text-on-surface">Location Preferences</h2>
+</div>
+<button class="text-primary hover:text-accent-hover font-label-md text-label-md flex items-center gap-1 transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="add">add</span> Add Region
+                    </button>
+</div>
+<div class="space-y-lg">
+<!-- Preferred Tier -->
+<div class="p-md rounded-lg border border-positive/20 bg-positive/5">
+<div class="flex items-center gap-2 mb-sm">
+<span class="w-2 h-2 rounded-full bg-positive"></span>
+<h3 class="font-label-md text-label-md font-semibold text-positive">Preferred</h3>
+</div>
+<div class="flex flex-wrap gap-xs">
+<span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-surface border border-positive/30 text-on-surface font-label-md text-label-md text-sm">
+                                Toronto, ON
+                                <button class="text-text-muted hover:text-negative transition-colors"><span class="material-symbols-outlined text-[16px]" data-icon="close">close</span></button>
+</span>
+<span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-surface border border-positive/30 text-on-surface font-label-md text-label-md text-sm">
+                                Waterloo, ON
+                                <button class="text-text-muted hover:text-negative transition-colors"><span class="material-symbols-outlined text-[16px]" data-icon="close">close</span></button>
+</span>
+<span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-surface border border-positive/30 text-on-surface font-label-md text-label-md text-sm">
+                                New York, NY
+                                <button class="text-text-muted hover:text-negative transition-colors"><span class="material-symbols-outlined text-[16px]" data-icon="close">close</span></button>
+</span>
+</div>
+</div>
+<!-- Acceptable Tier -->
+<div class="p-md rounded-lg border border-border bg-surface-alt">
+<div class="flex items-center gap-2 mb-sm">
+<span class="w-2 h-2 rounded-full bg-text-muted"></span>
+<h3 class="font-label-md text-label-md font-semibold text-text-secondary">Acceptable</h3>
+</div>
+<div class="flex flex-wrap gap-xs">
+<span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-surface border border-border text-on-surface font-label-md text-label-md text-sm">
+                                Vancouver, BC
+                                <button class="text-text-muted hover:text-negative transition-colors"><span class="material-symbols-outlined text-[16px]" data-icon="close">close</span></button>
+</span>
+<span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-surface border border-border text-on-surface font-label-md text-label-md text-sm">
+                                San Francisco, CA
+                                <button class="text-text-muted hover:text-negative transition-colors"><span class="material-symbols-outlined text-[16px]" data-icon="close">close</span></button>
+</span>
+</div>
+</div>
+<!-- Avoid Tier -->
+<div class="p-md rounded-lg border border-negative/20 bg-negative/5">
+<div class="flex items-center gap-2 mb-sm">
+<span class="w-2 h-2 rounded-full bg-negative"></span>
+<h3 class="font-label-md text-label-md font-semibold text-negative">Avoid</h3>
+</div>
+<div class="flex flex-wrap gap-xs">
+<span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-surface border border-negative/30 text-on-surface font-label-md text-label-md text-sm">
+                                Remote Only Companies
+                                <button class="text-text-muted hover:text-negative transition-colors"><span class="material-symbols-outlined text-[16px]" data-icon="close">close</span></button>
+</span>
+</div>
+</div>
+<div class="p-md rounded-lg border border-error/20 bg-error/5">
+<div class="flex items-center gap-2 mb-sm"><span class="w-2 h-2 rounded-full bg-error"></span><h3 class="font-label-md text-label-md font-semibold text-error">Excluded</h3></div>
+<div class="flex flex-wrap gap-xs"><p class="text-text-muted text-xs font-body-md">No locations excluded yet.</p></div>
+</div>
+</div>
+</section>
+<!-- Section 3: Additional Criteria -->
+<section class="col-span-1 md:col-span-5 bg-surface rounded-[16px] border border-border p-lg md:p-xl shadow-[0_4px_24px_rgba(30,27,21,0.04)] flex flex-col">
+<div class="flex items-center gap-sm mb-md">
+<span class="material-symbols-outlined text-primary" data-icon="edit_note" data-weight="fill">edit_note</span>
+<h2 class="font-headline-md text-headline-md text-on-surface">Additional Criteria</h2>
+</div>
+<p class="font-body-md text-body-md text-text-secondary text-sm mb-md">Add specific constraints, desires, or technologies you want the AI to prioritize when scoring matches.</p>
+<div class="flex-grow flex flex-col">
+<textarea class="w-full flex-grow min-h-[200px] p-md rounded-[10px] border border-border bg-surface focus:border-primary focus:ring-1 focus:ring-primary/50 outline-none transition-all font-body-md text-body-md text-on-surface resize-y" placeholder="e.g., 'I strongly prefer companies using modern React stacks. Avoid legacy banking systems. Highly value mentorship programs.'">I'm primarily looking for frontend roles focusing on React and Tailwind. Would prefer mid-size startups over large corporations. Strong preference for teams that offer clear mentorship.</textarea>
+</div>
+</section>
+</div>
+</div>
+<!-- Sticky Footer -->
+<div class="fixed bottom-0 right-0 w-full md:w-[calc(100%-16rem)] bg-white/80 backdrop-blur-md border-t border-border py-4 z-40">
+<div class="max-w-max-width mx-auto flex justify-between items-center px-gutter">
+<div class="text-text-muted font-body-md text-sm">Unsaved changes</div>
+<div class="flex gap-md items-center">
+<button class="px-6 py-2.5 rounded-lg border border-border text-on-surface font-label-md hover:bg-surface-container-low transition-colors">Cancel</button>
+<button class="px-6 py-2.5 rounded-lg bg-primary text-on-primary font-label-md hover:bg-accent-hover transition-all flex items-center gap-2 shadow-sm">
+<span class="material-symbols-outlined text-[18px]">save</span>Save Preferences
+                </button>
+</div>
+</div>
+</div>
+</main>
+</body></html>

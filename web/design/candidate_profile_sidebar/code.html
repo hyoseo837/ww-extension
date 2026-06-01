@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Candidate Profile - WW Scorer</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Source+Serif+4:opsz,wght@8..60,500;600&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-variant": "#e9e2d7",
+                        "inverse-primary": "#ffb59e",
+                        "surface-tint": "#924a32",
+                        "on-primary-container": "#fffbff",
+                        "inverse-surface": "#333029",
+                        "secondary": "#655d58",
+                        "primary-fixed-dim": "#ffb59e",
+                        "surface-alt": "#FBFAF6",
+                        "on-tertiary-fixed": "#00201c",
+                        "on-tertiary-container": "#f4fffb",
+                        "on-error": "#ffffff",
+                        "on-primary-fixed-variant": "#75331d",
+                        "on-surface": "#1e1b15",
+                        "surface-dim": "#e0d9ce",
+                        "secondary-container": "#ece0d9",
+                        "on-error-container": "#93000a",
+                        "on-tertiary": "#ffffff",
+                        "tertiary": "#00685d",
+                        "surface-container-high": "#efe7dc",
+                        "surface": "#FFFFFF",
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary-fixed": "#95f3e4",
+                        "negative": "#B5544A",
+                        "background": "#fff8f0",
+                        "page-bg": "#FAF9F5",
+                        "text-secondary": "#6E6A5F",
+                        "outline-variant": "#d9c1ba",
+                        "tertiary-fixed-dim": "#79d7c8",
+                        "on-secondary": "#ffffff",
+                        "inverse-on-surface": "#f7f0e5",
+                        "on-tertiary-fixed-variant": "#005048",
+                        "on-surface-variant": "#54433e",
+                        "surface-container-low": "#faf3e7",
+                        "on-secondary-fixed": "#201a16",
+                        "surface-container": "#f4ede2",
+                        "primary-container": "#ad5f46",
+                        "on-secondary-fixed-variant": "#4d4540",
+                        "secondary-fixed": "#ece0d9",
+                        "on-background": "#1e1b15",
+                        "positive": "#5E7C5A",
+                        "surface-bright": "#fff8f0",
+                        "outline": "#87736d",
+                        "surface-container-highest": "#e9e2d7",
+                        "on-secondary-container": "#6b635d",
+                        "accent-hover": "#B5644B",
+                        "border": "#E8E5DC",
+                        "tertiary-container": "#138376",
+                        "primary": "#8f4830",
+                        "text-muted": "#9A958A",
+                        "secondary-fixed-dim": "#cfc4be",
+                        "on-primary": "#ffffff",
+                        "error": "#ba1a1a",
+                        "primary-fixed": "#ffdbd0",
+                        "on-primary-fixed": "#390b00",
+                        "error-container": "#ffdad6"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    spacing: {
+                        "xs": "8px",
+                        "base": "4px",
+                        "xxl": "48px",
+                        "sm": "12px",
+                        "gutter": "24px",
+                        "max-width": "960px",
+                        "md": "16px",
+                        "lg": "24px",
+                        "xl": "32px"
+                    },
+                    fontFamily: {
+                        "display-lg-mobile": ["Source Serif 4"],
+                        "body-md": ["Inter"],
+                        "headline-lg": ["Source Serif 4"],
+                        "label-sm": ["Inter"],
+                        "display-lg": ["Source Serif 4"],
+                        "body-lg": ["Inter"],
+                        "label-md": ["Inter"],
+                        "headline-md": ["Source Serif 4"]
+                    },
+                    fontSize: {
+                        "display-lg-mobile": ["32px", { lineHeight: "40px", fontWeight: "600" }],
+                        "body-md": ["16px", { lineHeight: "24px", fontWeight: "400" }],
+                        "headline-lg": ["32px", { lineHeight: "40px", fontWeight: "600" }],
+                        "label-sm": ["12px", { lineHeight: "16px", letterSpacing: "0.04em", fontWeight: "600" }],
+                        "display-lg": ["48px", { lineHeight: "56px", letterSpacing: "-0.01em", fontWeight: "600" }],
+                        "body-lg": ["18px", { lineHeight: "28px", fontWeight: "400" }],
+                        "label-md": ["14px", { lineHeight: "20px", letterSpacing: "0.02em", fontWeight: "500" }],
+                        "headline-md": ["24px", { lineHeight: "32px", fontWeight: "500" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined[data-weight="fill"] {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .soft-shadow {
+            box-shadow: 0 4px 24px rgba(30, 27, 21, 0.04);
+        }
+        @media (max-width: 768px) {
+            .sidebar-nav {
+                display: none;
+            }
+            .mobile-header {
+                display: flex;
+            }
+            main {
+                margin-left: 0 !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-page-bg text-on-surface font-body-md min-h-screen">
+<!-- Mobile TopNavBar -->
+<header class="mobile-header hidden w-full top-0 sticky border-b border-border bg-surface-bright z-50 flex md:hidden">
+<div class="w-full flex justify-between items-center px-gutter h-16">
+<div class="font-headline-md text-headline-md font-semibold text-primary">WW Scorer</div>
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-primary cursor-pointer p-xs" data-icon="menu">menu</span>
+</div>
+</div>
+</header>
+<!-- SideNavBar (Desktop) -->
+<aside class="sidebar-nav hidden md:flex h-screen w-64 fixed left-0 top-0 border-r border-border bg-surface-container-low flex-col p-md space-y-base z-40">
+<div class="flex items-center gap-sm px-sm py-md mb-xl">
+<img alt="Student avatar" class="w-12 h-12 rounded-full object-cover border border-border" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCqVDvPkvd5ko4xZSieXLrWqd2NhCfgyy0F_Mn7FU9pVsTcqD4Z8SHSwQ9ZzWg_1G_VxUVjT0Bn54SV2EpeMgVScuj30C4cjrxclt_psEv-BkN_JAFZMuiVZiH1O2Qq2YBWu18FRv5Bb8d3hGExtl0WgPBmQpaxRYHH2K-XW-DPYrC8gGfnEC5MNiP1VZ3woAHstWe14TUKLyX8P22lXm_9bh1ZdizOtL8RF54s1hSzBmA3GzcaxPkDKWW0Y0OYuTHpxzPlsPtSMA7o"/>
+<div>
+<h2 class="font-headline-md text-headline-md text-primary leading-tight text-[20px]">UW Student</h2>
+<p class="font-label-md text-label-md text-text-secondary">Co-op Scorer Pro</p>
+</div>
+</div>
+<nav class="flex-1 space-y-base">
+<a class="flex items-center gap-sm px-sm py-sm duration-200 ease-in-out text-on-surface-variant hover:bg-surface-container-highest transition-colors font-label-md text-label-md rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+            Dashboard
+        </a>
+<a class="flex items-center gap-sm px-sm py-sm duration-200 ease-in-out text-on-surface-variant hover:bg-surface-container-highest transition-colors font-label-md text-label-md rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+            Credits
+        </a>
+<a class="flex items-center gap-sm px-sm py-sm duration-200 ease-in-out text-on-surface-variant hover:bg-surface-container-highest transition-colors font-label-md text-label-md rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+            History
+        </a>
+<a class="flex items-center gap-sm px-sm py-sm duration-200 ease-in-out bg-secondary-container text-on-secondary-container rounded-lg font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+            Profile
+        </a>
+</nav>
+<div class="pt-xl border-t border-border mt-auto space-y-base">
+<button class="w-full bg-primary text-on-primary font-label-md text-label-md rounded-lg px-[20px] py-sm mb-lg shadow-sm hover:bg-accent-hover transition-colors">Buy Credits</button>
+<a class="flex items-center gap-sm px-sm py-sm duration-200 ease-in-out text-on-surface-variant hover:bg-surface-container-highest transition-colors font-label-md text-label-md rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+            Support
+        </a>
+<a class="flex items-center gap-sm px-sm py-sm duration-200 ease-in-out text-on-surface-variant hover:bg-surface-container-highest transition-colors font-label-md text-label-md rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+            Logout
+        </a>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="md:ml-64 flex flex-col min-h-screen">
+<div class="flex-grow w-full max-w-max-width mx-auto px-gutter py-xl flex flex-col gap-xxl pb-[140px]">
+<!-- Header -->
+<header class="max-w-3xl">
+<h1 class="font-display-lg text-display-lg text-primary font-display-lg-mobile text-display-lg-mobile md:text-display-lg block">Candidate Profile</h1>
+<p class="font-body-lg text-body-lg text-text-secondary mt-sm">Manage your CV and professional experience to improve your match scores.</p>
+</header>
+<!-- Section 1: Resume & Summary -->
+<section class="bg-surface rounded-xl border border-border p-xl soft-shadow flex flex-col gap-lg">
+<h2 class="font-headline-md text-headline-md text-on-surface">Resume &amp; Summary</h2>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-xl">
+<!-- Upload Zone -->
+<div class="flex flex-col gap-sm">
+<label class="font-label-md text-label-md text-on-surface-variant">Resume Document</label>
+<div class="relative group cursor-pointer border-2 border-dashed border-border rounded-lg p-xl flex flex-col items-center justify-center text-center bg-surface-alt hover:bg-surface-container-low hover:border-outline-variant transition-all h-full min-h-[160px]">
+<input accept=".pdf,.doc,.docx" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" type="file"/>
+<div class="bg-secondary-container text-primary rounded-full p-sm mb-md group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-[24px]" data-icon="upload_file">upload_file</span>
+</div>
+<p class="font-label-md text-label-md text-primary">Click to upload or drag and drop</p>
+<p class="font-label-sm text-label-sm text-text-muted mt-xs">PDF, DOCX up to 5MB</p>
+</div>
+</div>
+<!-- Summary Textarea -->
+<div class="flex flex-col gap-sm">
+<label class="font-label-md text-label-md text-on-surface-variant" for="summary">Professional Summary</label>
+<textarea class="w-full bg-surface border border-border rounded-lg p-md font-body-md text-body-md text-on-surface focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all resize-none placeholder-text-muted" id="summary" placeholder="Write a brief overview of your professional background, key strengths, and career goals..." rows="6"></textarea>
+</div>
+</div>
+</section>
+<!-- Section 2: Academic Performance -->
+<section class="bg-surface rounded-xl border border-border p-xl soft-shadow flex flex-col gap-lg">
+<h2 class="font-headline-md text-headline-md text-on-surface">Academic Performance</h2>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-lg">
+<div class="flex flex-col gap-xs">
+<label class="font-label-md text-label-md text-on-surface-variant">Overall GPA</label>
+<input class="w-full bg-surface-alt border border-border rounded-lg p-md font-headline-md text-primary focus:ring-1 focus:ring-primary" readonly="" type="text" value="3.92 / 4.0"/>
+</div>
+<div class="md:col-span-2 flex flex-col gap-xs">
+<label class="font-label-md text-label-md text-on-surface-variant">Grade Report Summary</label>
+<div class="p-md border border-border rounded-lg bg-surface-alt font-body-md text-on-surface">
+                        Major GPA: 4.0 • Deans List (4 Semesters) • Summa Cum Laude Candidate
+                    </div>
+</div>
+</div>
+</section>
+<!-- Experience & Projects -->
+<section class="flex flex-col gap-xl">
+<!-- Experience -->
+<div class="flex flex-col gap-md">
+<div class="flex justify-between items-center border-b border-border pb-sm">
+<h2 class="font-headline-md text-headline-md text-on-surface">Experience</h2>
+<button class="flex items-center gap-xs font-label-md text-label-md text-primary bg-surface border border-border rounded-lg px-md py-xs hover:bg-surface-alt transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="add">add</span>
+                        Add
+                    </button>
+</div>
+<div class="grid grid-cols-1 gap-md">
+<!-- Card 1 -->
+<div class="bg-surface rounded-xl border border-border p-xl soft-shadow flex flex-col gap-sm group relative">
+<div class="absolute top-md right-md opacity-0 group-hover:opacity-100 transition-opacity flex gap-xs">
+<button class="p-xs text-text-muted hover:text-primary transition-colors"><span class="material-symbols-outlined text-[18px]" data-icon="edit">edit</span></button>
+<button class="p-xs text-text-muted hover:text-negative transition-colors"><span class="material-symbols-outlined text-[18px]" data-icon="delete">delete</span></button>
+</div>
+<div class="flex flex-col gap-1">
+<h3 class="font-label-md text-label-md text-on-surface text-[16px] pr-xl font-semibold">Senior Product Designer</h3>
+<div class="flex items-center gap-xs">
+<span class="font-body-md text-body-md text-primary font-medium">TechFlow Inc.</span>
+<span class="text-text-muted">•</span>
+<span class="font-body-md text-body-md text-text-secondary">Jan 2020 - Present</span>
+</div>
+</div>
+<p class="font-body-md text-body-md text-on-surface mt-md leading-relaxed">Led the redesign of the core enterprise dashboard, improving user task completion rate by 24%. Collaborated closely with engineering to establish a new React-based design system.</p>
+</div>
+</div>
+</div>
+<!-- Projects -->
+<div class="flex flex-col gap-md">
+<div class="flex justify-between items-center border-b border-border pb-sm">
+<h2 class="font-headline-md text-headline-md text-on-surface">Projects</h2>
+<button class="flex items-center gap-xs font-label-md text-label-md text-primary bg-surface border border-border rounded-lg px-md py-xs hover:bg-surface-alt transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="add">add</span>
+                        Add
+                    </button>
+</div>
+<div class="grid grid-cols-1 gap-md">
+<div class="text-center p-xl border border-dashed border-border rounded-xl bg-surface-alt text-text-muted font-body-md text-body-md">
+                        No projects added yet. Highlight your personal or academic work here.
+                    </div>
+</div>
+</div>
+</section>
+<!-- Section 3: Skills & Languages -->
+<section class="grid grid-cols-1 md:grid-cols-2 gap-xl">
+<!-- Skills -->
+<div class="bg-surface rounded-xl border border-border p-xl soft-shadow flex flex-col gap-md">
+<h2 class="font-headline-md text-headline-md text-on-surface mb-xs">Skills</h2>
+<div class="flex flex-wrap gap-sm" id="skills-container">
+<div class="inline-flex items-center gap-xs bg-[#F4E8E1] text-on-surface-variant font-label-md text-label-md px-sm py-xs rounded-full border border-outline-variant/30">
+                        Python
+                        <button aria-label="Remove skill" class="hover:text-primary transition-colors flex items-center"><span class="material-symbols-outlined text-[16px]" data-icon="close">close</span></button>
+</div>
+<div class="inline-flex items-center gap-xs bg-[#F4E8E1] text-on-surface-variant font-label-md text-label-md px-sm py-xs rounded-full border border-outline-variant/30">
+                        C++
+                        <button aria-label="Remove skill" class="hover:text-primary transition-colors flex items-center"><span class="material-symbols-outlined text-[16px]" data-icon="close">close</span></button>
+</div>
+<div class="inline-flex items-center gap-xs bg-[#F4E8E1] text-on-surface-variant font-label-md text-label-md px-sm py-xs rounded-full border border-outline-variant/30">
+                        React
+                        <button aria-label="Remove skill" class="hover:text-primary transition-colors flex items-center"><span class="material-symbols-outlined text-[16px]" data-icon="close">close</span></button>
+</div>
+<div class="inline-flex items-center gap-xs bg-[#F4E8E1] text-on-surface-variant font-label-md text-label-md px-sm py-xs rounded-full border border-outline-variant/30">
+                        SQL
+                        <button aria-label="Remove skill" class="hover:text-primary transition-colors flex items-center"><span class="material-symbols-outlined text-[16px]" data-icon="close">close</span></button>
+</div>
+</div>
+<div class="relative mt-sm">
+<input class="w-full bg-surface border border-border rounded-lg py-sm pl-md pr-xl font-body-md text-body-md text-on-surface focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all placeholder-text-muted" placeholder="Add a skill..." type="text"/>
+<button class="absolute right-xs top-1/2 -translate-y-1/2 p-xs text-text-muted hover:text-primary transition-colors"><span class="material-symbols-outlined text-[20px]" data-icon="add_circle">add_circle</span></button>
+</div>
+</div>
+<!-- Languages -->
+<div class="bg-surface rounded-xl border border-border p-xl soft-shadow flex flex-col gap-md">
+<h2 class="font-headline-md text-headline-md text-on-surface mb-xs">Languages</h2>
+<div class="flex flex-wrap gap-sm" id="languages-container">
+<div class="inline-flex items-center gap-xs bg-[#F4E8E1] text-on-surface-variant font-label-md text-label-md px-sm py-xs rounded-full border border-outline-variant/30">
+                        English (Native)
+                        <button aria-label="Remove language" class="hover:text-primary transition-colors flex items-center"><span class="material-symbols-outlined text-[16px]" data-icon="close">close</span></button>
+</div>
+<div class="inline-flex items-center gap-xs bg-[#F4E8E1] text-on-surface-variant font-label-md text-label-md px-sm py-xs rounded-full border border-outline-variant/30">
+                        Korean
+                        <button aria-label="Remove language" class="hover:text-primary transition-colors flex items-center"><span class="material-symbols-outlined text-[16px]" data-icon="close">close</span></button>
+</div>
+</div>
+<div class="relative mt-sm flex-grow flex items-end">
+<div class="w-full relative">
+<input class="w-full bg-surface border border-border rounded-lg py-sm pl-md pr-xl font-body-md text-body-md text-on-surface focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all placeholder-text-muted" placeholder="Add a language..." type="text"/>
+<button class="absolute right-xs top-1/2 -translate-y-1/2 p-xs text-text-muted hover:text-primary transition-colors"><span class="material-symbols-outlined text-[20px]" data-icon="add_circle">add_circle</span></button>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Sticky Footer -->
+<div class="fixed bottom-0 md:left-64 left-0 right-0 bg-surface/90 backdrop-blur-md border-t border-border z-50 py-lg px-gutter">
+<div class="max-w-max-width mx-auto flex justify-between items-center h-12">
+<span class="font-label-sm text-label-sm text-text-muted hidden md:inline-block">Last saved: Just now</span>
+<div class="flex gap-md w-full md:w-auto justify-end">
+<button class="font-label-md text-label-md text-primary bg-surface border border-border rounded-lg px-xl py-[10px] hover:bg-surface-alt transition-colors w-full md:w-auto text-center">
+                    Cancel
+                </button>
+<button class="font-label-md text-label-md text-on-primary bg-primary rounded-lg px-xl py-[10px] hover:bg-accent-hover transition-colors w-full md:w-auto text-center flex items-center justify-center gap-xs shadow-sm">
+<span class="material-symbols-outlined text-[18px]" data-icon="check" data-weight="fill">check</span>
+                    Save Profile
+                </button>
+</div>
+</div>
+</div>
+</main>
+</body></html>

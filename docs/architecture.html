@@ -162,8 +162,8 @@
         <code>src/supabase.ts</code> (browser client, Google OAuth PKCE),
         <code>src/api.ts</code> (bearer-token <code>fetch</code>/<code>POST</code>),
         <code>src/useSession.ts</code> (session hook), and <code>src/Layout.tsx</code>
-        (top bar with live credit pill + nav; shares balance via Outlet
-        context). Routes: <code>/account</code> (balance + recent activity),
+        (the app shell; shares balance via Outlet context). Routes:
+        <code>/account</code> (dashboard home),
         <code>/billing</code> (paginated credit history;
         <code>GET /credits/history</code>), <code>/buy</code> (packages →
         <code>POST /credits/checkout {client:"web"}</code> → Stripe), and a
@@ -171,6 +171,14 @@
         serves <code>index.html</code> for all paths so deep links (the Stripe
         return to <code>/billing</code>) resolve client-side. The profile editor
         splits into <code>/profile</code> + <code>/preferences</code> at v6.3.
+        v6.3 styled the app with Tailwind
+        (<a href="decisions/0023-tailwind-for-web-app.html">ADR 0023</a>); v6.5
+        reshaped the shell into a persistent left sidebar
+        (<code>w-64</code>; content offsets <code>md:ml-64</code>, fixed bars
+        <code>md:left-64</code>), made <code>/account</code> a dashboard home
+        (welcome + balance + profile snapshot + recent activity), and built the
+        full logged-out landing
+        (<a href="decisions/0024-web-sidebar-shell-dashboard-home.html">ADR 0024</a>).
       </p>
       <p>
         <strong>Auth (independent sessions,

@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v6.5.0" />
+    <meta name="status" content="in-progress" />
+    <meta name="last-updated" content="2026-05-31" />
+    <title>v6.5.0 — Web v2 design: sidebar shell + dashboard home + landing</title>
+  </head>
+  <body>
+    <h1>v6.5.0 — Web v2 design: sidebar shell + dashboard home + landing</h1>
+
+    <h2>Goal</h2>
+    <p>
+      Adopt the <strong>second</strong> Stitch design iteration (the
+      <code>*_sidebar</code> exports in <code>web/design/</code>) as the live web
+      app. It keeps the same Warm Editorial design tokens
+      (<a href="../decisions/0023-tailwind-for-web-app.html">ADR 0023</a>) but
+      changes the app's layout and information architecture: a persistent
+      <strong>left sidebar shell</strong> replaces the v6.3 top nav, the
+      <code>/account</code> page becomes a <strong>dashboard home</strong>
+      (welcome + balance + profile snapshot + recent activity) rather than a
+      raw balance/history list, and the logged-out
+      <code>/</code> route gets the <strong>full landing page</strong> promised
+      in the v6.3.0 spec (hero + feature cards + footer). The shell/IA shift is
+      recorded in <a href="../decisions/0024-web-sidebar-shell-dashboard-home.html">ADR 0024</a>.
+      This phase is web-only — no server, manifest behavior, or API changes.
+    </p>
+
+    <h2>Files</h2>
+    <h3>Changed — <code>web/</code></h3>
+    <ul>
+      <li><code>src/Layout.tsx</code> — top nav replaced by a fixed 256px
+        (<code>w-64</code>) desktop sidebar (wordmark + avatar, nav links with
+        the active <code>secondary-container</code> pill, Buy Credits CTA, sign
+        out) and a sticky mobile top bar; main content offsets
+        <code>md:ml-64</code>.</li>
+      <li><code>src/pages/Account.tsx</code> — reworked into the dashboard home
+        (<code>account_dashboard</code> screen): "Welcome back" header, balance
+        card, profile snapshot (CV status / top location / target term, with
+        Edit profile + Edit preferences links), recent-activity card.</li>
+      <li><code>src/pages/Profile.tsx</code>, <code>src/pages/Preferences.tsx</code>
+        — sticky save bar offset <code>md:left-64</code> so it clears the
+        sidebar (the only change; both pages already used the design tokens).</li>
+      <li><code>src/pages/Landing.tsx</code> — rebuilt to the
+        <code>landing_page_logged_out</code> screen: minimal header wordmark,
+        hero (AI-Powered Matching pill, serif headline, subcopy, Google
+        sign-in), 3 feature cards, footer.</li>
+      <li><code>tailwind.config.js</code> — add the
+        <code>display-lg-mobile</code> token (Source Serif 4, 32px/40px/600).
+        It is listed in the design system (<code>web/design/.../DESIGN.md</code>)
+        and used by the dashboard/landing headings, but was omitted from the
+        v6.3 config port, so <code>text-display-lg-mobile</code> silently
+        produced nothing.</li>
+    </ul>
+    <h3>Moved / reorganized — <code>web/design/</code> (reference only, outside the build)</h3>
+    <ul>
+      <li>Replaced the first-iteration screens with the second-iteration
+        <code>*_sidebar</code> exports (account_dashboard, buy_credits_sidebar,
+        billing_history_sidebar, candidate_profile_sidebar,
+        match_preferences_sidebar, admin_dashboard_sidebar,
+        landing_page_logged_out, extension_sidebar_job_scan); refreshed
+        <code>design.md</code> and <code>warm_editorial/DESIGN.md</code>.</li>
+    </ul>
+
+    <h2>Verify</h2>
+    <ol>
+      <li><code>cd web &amp;&amp; npm run build</code> is clean (tsc + Vite, no
+        errors).</li>
+      <li>Logged in: a persistent left sidebar shows on desktop with the active
+        link highlighted; main content clears it (no overlap); the mobile top
+        bar appears below <code>md</code>. The dashboard home matches
+        <code>account_dashboard</code>; Profile/Preferences sticky save bars sit
+        flush to the right of the sidebar, not under it.</li>
+      <li>The dashboard "Welcome back" heading renders in Source Serif 4 at
+        32px on mobile (not body text) and 48px at <code>md+</code>.</li>
+      <li>Logged out: <code>/</code> renders the full landing (pill, hero,
+        3 feature cards, footer) and Sign in with Google still works.</li>
+      <li>Functionality unchanged: balance, credit history, profile/preferences
+        save, and the Stripe buy round-trip all still work.</li>
+    </ol>
+
+    <h2>Notes</h2>
+    <p>
+      <strong>Buy / Billing carry over unchanged.</strong> Both were built to
+      the design tokens in v6.3 and read correctly inside the sidebar shell, so
+      they are not edited here. Buy keeps the <em>real</em> packages
+      (500/$5, 1000/$10, 2000/$20) mirroring <code>payments.py</code>; the
+      Stitch "Save %" / 1,500 / 5,000 tiers remain illustrative only.</p>
+    <p>
+      <strong>Preferences has no sidebar nav entry</strong> by design — it is
+      reached from the dashboard profile snapshot ("Edit preferences") and from
+      Profile. The four nav items stay Dashboard / Credits / History / Profile.</p>
+    <p>
+      <strong>Admin (<code>admin_dashboard_sidebar</code>) is v6.6</strong> — it
+      needs backend work (admin authZ + gift-credit grants) and is specced
+      separately.</p>
+  </body>
+</html>

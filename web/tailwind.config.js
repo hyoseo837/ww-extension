@@ -58,6 +58,7 @@ export default {
       },
       fontFamily: {
         "display-lg": ["Source Serif 4", "serif"],
+        "display-lg-mobile": ["Source Serif 4", "serif"],
         "headline-lg": ["Source Serif 4", "serif"],
         "headline-md": ["Source Serif 4", "serif"],
         "body-lg": ["Inter", "sans-serif"],
@@ -67,6 +68,7 @@ export default {
       },
       fontSize: {
         "display-lg": ["48px", { lineHeight: "56px", letterSpacing: "-0.01em", fontWeight: "600" }],
+        "display-lg-mobile": ["32px", { lineHeight: "40px", fontWeight: "600" }],
         "headline-lg": ["32px", { lineHeight: "40px", fontWeight: "600" }],
         "headline-md": ["24px", { lineHeight: "32px", fontWeight: "500" }],
         "body-lg": ["18px", { lineHeight: "28px", fontWeight: "400" }],

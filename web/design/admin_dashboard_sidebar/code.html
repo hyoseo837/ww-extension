@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Admin Dashboard - WW Scorer</title>
+<!-- Fonts & Icons -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Source+Serif+4:opsz,wght@8..60,500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind Config -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface": "#FFFFFF",
+                        "error-container": "#ffdad6",
+                        "secondary-container": "#ece0d9",
+                        "on-secondary-fixed": "#201a16",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary-fixed": "#390b00",
+                        "surface-dim": "#e0d9ce",
+                        "on-primary-fixed-variant": "#75331d",
+                        "error": "#ba1a1a",
+                        "surface-container": "#f4ede2",
+                        "on-secondary-fixed-variant": "#4d4540",
+                        "text-muted": "#9A958A",
+                        "surface-alt": "#FBFAF6",
+                        "on-tertiary-fixed": "#00201c",
+                        "on-primary": "#ffffff",
+                        "primary-fixed": "#ffdbd0",
+                        "tertiary-fixed-dim": "#79d7c8",
+                        "background": "#fff8f0",
+                        "secondary": "#655d58",
+                        "on-surface": "#1e1b15",
+                        "on-secondary": "#ffffff",
+                        "primary": "#8f4830",
+                        "surface-tint": "#924a32",
+                        "on-tertiary": "#ffffff",
+                        "on-background": "#1e1b15",
+                        "on-error": "#ffffff",
+                        "on-primary-container": "#fffbff",
+                        "positive": "#5E7C5A",
+                        "inverse-primary": "#ffb59e",
+                        "page-bg": "#FAF9F5",
+                        "border": "#E8E5DC",
+                        "surface-container-highest": "#e9e2d7",
+                        "on-secondary-container": "#6b635d",
+                        "on-error-container": "#93000a",
+                        "inverse-on-surface": "#f7f0e5",
+                        "surface-container-low": "#faf3e7",
+                        "primary-container": "#ad5f46",
+                        "outline-variant": "#d9c1ba",
+                        "surface-variant": "#e9e2d7",
+                        "accent-hover": "#B5644B",
+                        "tertiary-container": "#138376",
+                        "surface-bright": "#fff8f0",
+                        "tertiary-fixed": "#95f3e4",
+                        "on-surface-variant": "#54433e",
+                        "outline": "#87736d",
+                        "tertiary": "#00685d",
+                        "inverse-surface": "#333029",
+                        "on-tertiary-container": "#f4fffb",
+                        "surface-container-high": "#efe7dc",
+                        "primary-fixed-dim": "#ffb59e",
+                        "secondary-fixed": "#ece0d9",
+                        "on-tertiary-fixed-variant": "#005048",
+                        "negative": "#B5544A",
+                        "text-secondary": "#6E6A5F",
+                        "secondary-fixed-dim": "#cfc4be"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "sm": "12px",
+                        "md": "16px",
+                        "xl": "32px",
+                        "max-width": "960px",
+                        "lg": "24px",
+                        "base": "4px",
+                        "gutter": "24px",
+                        "xs": "8px",
+                        "xxl": "48px"
+                    },
+                    "fontFamily": {
+                        "body-md": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "headline-lg": ["Source Serif 4"],
+                        "display-lg": ["Source Serif 4"],
+                        "display-lg-mobile": ["Source Serif 4"],
+                        "body-lg": ["Inter"],
+                        "label-md": ["Inter"],
+                        "headline-md": ["Source Serif 4"]
+                    },
+                    "fontSize": {
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.04em", "fontWeight": "600" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "fontWeight": "600" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "display-lg-mobile": ["32px", { "lineHeight": "40px", "fontWeight": "600" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "label-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "500" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "500" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { background-color: theme('colors.page-bg'); }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="text-on-surface font-body-md antialiased min-h-screen">
+<!-- Mobile Header (Hidden on Desktop) -->
+<header class="md:hidden w-full top-0 sticky border-b border-border bg-surface z-50">
+<div class="flex justify-between items-center h-16 px-gutter">
+<div class="font-headline-md text-headline-md text-primary">CreditAdmin</div>
+<button class="text-text-secondary p-xs">
+<span class="material-symbols-outlined">menu</span>
+</button>
+</div>
+</header>
+<!-- SideNavBar (Desktop) -->
+<aside class="hidden md:flex h-screen w-64 fixed left-0 top-0 border-r border-border bg-surface-container-low flex-col p-md space-y-base z-40">
+<div class="flex items-center gap-sm px-sm py-md mb-xl">
+<div class="w-12 h-12 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container">
+<span class="material-symbols-outlined text-[28px]">admin_panel_settings</span>
+</div>
+<div>
+<h2 class="font-headline-md text-headline-md text-primary leading-tight">Admin Console</h2>
+<p class="font-label-md text-label-md text-text-secondary">System Administrator</p>
+</div>
+</div>
+<nav class="flex-1 space-y-base">
+<a class="flex items-center gap-sm px-sm py-sm duration-200 ease-in-out bg-secondary-container text-on-secondary-container rounded-lg font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+            Dashboard
+        </a>
+<a class="flex items-center gap-sm px-sm py-sm duration-200 ease-in-out text-on-surface-variant hover:bg-surface-container-highest transition-colors font-label-md text-label-md rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+            User Management
+        </a>
+<a class="flex items-center gap-sm px-sm py-sm duration-200 ease-in-out text-on-surface-variant hover:bg-surface-container-highest transition-colors font-label-md text-label-md rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="history_edu">history_edu</span>
+            Activity Logs
+        </a>
+<a class="flex items-center gap-sm px-sm py-sm duration-200 ease-in-out text-on-surface-variant hover:bg-surface-container-highest transition-colors font-label-md text-label-md rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+            System Settings
+        </a>
+</nav>
+<div class="pt-xl border-t border-border mt-auto space-y-base">
+<a class="flex items-center gap-sm px-sm py-sm duration-200 ease-in-out text-on-surface-variant hover:bg-surface-container-highest transition-colors font-label-md text-label-md rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+            Support
+        </a>
+<a class="flex items-center gap-sm px-sm py-sm duration-200 ease-in-out text-on-surface-variant hover:bg-surface-container-highest transition-colors font-label-md text-label-md rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+            Logout
+        </a>
+</div>
+</aside>
+<!-- Main Canvas -->
+<main class="md:ml-64 flex-grow w-full max-w-max-width mx-auto px-md md:px-lg py-xl flex flex-col gap-xl">
+<!-- Header -->
+<header>
+<h1 class="font-headline-lg text-headline-lg text-on-surface">Admin Console</h1>
+</header>
+<!-- Stats Row -->
+<section class="grid grid-cols-1 md:grid-cols-3 gap-md">
+<div class="bg-surface rounded-xl border border-border p-lg flex flex-col gap-sm">
+<h2 class="font-label-sm text-label-sm text-text-muted uppercase">Total Users</h2>
+<div class="font-display-lg text-display-lg text-primary">4,289</div>
+<div class="flex items-center gap-xs font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-positive text-[16px]">trending_up</span>
+<span class="text-positive">+12%</span>
+<span class="text-text-muted font-normal">since last week</span>
+</div>
+</div>
+<div class="bg-surface rounded-xl border border-border p-lg flex flex-col gap-sm">
+<h2 class="font-label-sm text-label-sm text-text-muted uppercase">Total Credits Issued</h2>
+<div class="font-display-lg text-display-lg text-primary">128.5k</div>
+</div>
+<div class="bg-surface rounded-xl border border-border p-lg flex flex-col gap-sm">
+<h2 class="font-label-sm text-label-sm text-text-muted uppercase">Credits Used (Last 24h)</h2>
+<div class="font-display-lg text-display-lg text-primary">3,102</div>
+</div>
+</section>
+<!-- User Management Card -->
+<section class="bg-surface rounded-xl border border-border p-lg flex flex-col gap-lg">
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-md">
+<h2 class="font-headline-md text-headline-md text-on-surface">User Management</h2>
+<div class="relative w-full md:w-64">
+<span aria-hidden="true" class="material-symbols-outlined absolute left-sm top-1/2 -translate-y-1/2 text-text-muted" data-icon="search">search</span>
+<input class="w-full bg-surface border border-border rounded-lg pl-[36px] pr-md py-sm font-body-md text-body-md text-on-surface placeholder:text-text-muted focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-shadow" placeholder="Search by email..." type="text"/>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-border">
+<th class="font-label-md text-label-md text-text-muted py-sm px-sm font-medium">User</th>
+<th class="font-label-md text-label-md text-text-muted py-sm px-sm font-medium">Join Date</th>
+<th class="font-label-md text-label-md text-text-muted py-sm px-sm font-medium">Credit Balance</th>
+<th class="font-label-md text-label-md text-text-muted py-sm px-sm font-medium text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-border">
+<tr class="hover:bg-surface-alt transition-colors group">
+<td class="py-md px-sm">
+<div class="font-body-md text-body-md text-on-surface">Elena Rostova</div>
+<div class="font-label-sm text-label-sm text-text-muted font-normal mt-1">elena.r@example.com</div>
+</td>
+<td class="py-md px-sm font-body-md text-body-md text-text-secondary">Oct 12, 2023</td>
+<td class="py-md px-sm font-body-md text-body-md text-on-surface font-medium">1,250</td>
+<td class="py-md px-sm text-right flex items-center justify-end gap-sm">
+<button class="font-label-sm text-label-sm text-text-secondary hover:text-primary transition-colors px-sm py-[6px]">View Profile</button>
+<button class="bg-surface border border-border text-primary font-label-md text-label-md rounded-lg px-sm py-[6px] hover:bg-surface-container-low transition-colors">Manage Credits</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-alt transition-colors group">
+<td class="py-md px-sm">
+<div class="font-body-md text-body-md text-on-surface">Hyoseo Kim</div>
+<div class="font-label-sm text-label-sm text-text-muted font-normal mt-1">hyoseo837@gmail.com</div>
+</td>
+<td class="py-md px-sm font-body-md text-body-md text-text-secondary">Nov 04, 2023</td>
+<td class="py-md px-sm font-body-md text-body-md text-on-surface font-medium">450</td>
+<td class="py-md px-sm text-right flex items-center justify-end gap-sm">
+<button class="font-label-sm text-label-sm text-text-secondary hover:text-primary transition-colors px-sm py-[6px]">View Profile</button>
+<button class="bg-surface border border-border text-primary font-label-md text-label-md rounded-lg px-sm py-[6px] hover:bg-surface-container-low transition-colors">Manage Credits</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-alt transition-colors group">
+<td class="py-md px-sm">
+<div class="font-body-md text-body-md text-on-surface">Marcus Vance</div>
+<div class="font-label-sm text-label-sm text-text-muted font-normal mt-1">mvance.work@domain.co</div>
+</td>
+<td class="py-md px-sm font-body-md text-body-md text-text-secondary">Jan 18, 2024</td>
+<td class="py-md px-sm font-body-md text-body-md text-on-surface font-medium">0</td>
+<td class="py-md px-sm text-right flex items-center justify-end gap-sm">
+<button class="font-label-sm text-label-sm text-text-secondary hover:text-primary transition-colors px-sm py-[6px]">View Profile</button>
+<button class="bg-surface border border-border text-primary font-label-md text-label-md rounded-lg px-sm py-[6px] hover:bg-surface-container-low transition-colors">Manage Credits</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<!-- Gift Credits Section -->
+<section class="bg-surface rounded-xl border border-border p-lg flex flex-col gap-lg w-full md:w-2/3">
+<h2 class="font-headline-md text-headline-md text-on-surface">Issue Gift Credits</h2>
+<form class="flex flex-col gap-md">
+<div class="flex flex-col gap-xs">
+<label class="font-label-md text-label-md text-on-surface" for="giftEmail">User Email</label>
+<input class="bg-surface border border-border rounded-lg px-md py-sm font-body-md text-body-md text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-shadow" id="giftEmail" placeholder="e.g., user@domain.com" type="email"/>
+</div>
+<div class="flex flex-col gap-xs">
+<label class="font-label-md text-label-md text-on-surface" for="giftAmount">Credit Amount</label>
+<input class="bg-surface border border-border rounded-lg px-md py-sm font-body-md text-body-md text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-shadow" id="giftAmount" placeholder="0" type="number"/>
+</div>
+<div class="flex flex-col gap-xs">
+<label class="font-label-md text-label-md text-on-surface" for="giftReason">Reason / Note</label>
+<textarea class="bg-surface border border-border rounded-lg px-md py-sm font-body-md text-body-md text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-shadow resize-y" id="giftReason" placeholder="Support resolution, Beta tester reward..." rows="3"></textarea>
+</div>
+<div class="pt-sm">
+<button class="bg-primary text-on-primary font-label-md text-label-md rounded-lg px-lg py-sm hover:bg-accent-hover transition-colors shadow-sm inline-flex items-center gap-xs" type="button">
+<span aria-hidden="true" class="material-symbols-outlined text-[18px]" data-icon="redeem">redeem</span>
+                    Grant Gift Credits
+                </button>
+</div>
+</form>
+</section>
+</main>
+<!-- Footer -->
+<footer class="bg-page-bg w-full py-xl mt-xxl border-t border-border mt-auto">
+<div class="flex flex-col md:flex-row justify-between items-center px-lg max-w-max-width mx-auto gap-md font-label-sm text-label-sm md:pl-[280px]">
+<div class="font-label-md text-label-md text-text-secondary opacity-80 hover:opacity-100 transition-opacity">
+            © 2024 CreditAdmin System. All rights reserved.
+        </div>
+<div class="flex items-center gap-md">
+<a class="text-text-muted hover:text-text-secondary hover:underline opacity-80 hover:opacity-100 transition-opacity" href="#">Support</a>
+<a class="text-text-muted hover:text-text-secondary hover:underline opacity-80 hover:opacity-100 transition-opacity" href="#">Privacy Policy</a>
+<a class="text-text-muted hover:text-text-secondary hover:underline opacity-80 hover:opacity-100 transition-opacity" href="#">Terms of Service</a>
+</div>
+</div>
+</footer>
+</body></html>

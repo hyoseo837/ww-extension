@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-05-31" />
+    <title>ADR 0024 — Web app: persistent sidebar shell + dashboard home</title>
+  </head>
+  <body>
+    <h1>ADR 0024 — Web app: persistent sidebar shell + dashboard home</h1>
+
+    <section id="context">
+      <h2>Context</h2>
+      <p>
+        v6.3 applied the first Stitch "Warm Editorial" iteration to the web app:
+        a <strong>top navigation</strong> shell, with <code>/account</code> as a
+        balance + credit-history page. The user then produced a
+        <strong>second</strong> Stitch iteration (the <code>*_sidebar</code>
+        exports in <code>web/design/</code>) and chose it as the live design.
+        The visual language and tokens are unchanged
+        (<a href="0023-tailwind-for-web-app.html">ADR 0023</a> still governs the
+        palette/type/spacing); what changed is the <strong>layout and
+        information architecture</strong>:
+      </p>
+      <ul>
+        <li>A fixed left sidebar (256px / <code>w-64</code>) replaces the top
+          nav as the primary navigation on desktop.</li>
+        <li><code>/account</code> becomes a <strong>dashboard home</strong>
+          (welcome, balance card, profile snapshot, recent activity) rather than
+          the raw balance/history view. Full history moves to its own card / the
+          <code>/billing</code> route.</li>
+      </ul>
+      <p>
+        This is a cross-cutting shell decision: every authenticated page now
+        renders inside the sidebar shell, and a future agent adding a page will
+        re-derive the same offsets unless they are written down.
+      </p>
+    </section>
+
+    <section id="decision">
+      <h2>Decision</h2>
+      <ul>
+        <li>Adopt the second-iteration <strong>sidebar shell</strong> as the web
+          app layout. <code>Layout.tsx</code> renders a fixed
+          <code>w-64</code> desktop sidebar (<code>md:flex</code>) and a sticky
+          mobile top bar (<code>md:hidden</code>); authenticated page content
+          lives in <code>&lt;main class="md:ml-64"&gt;</code>.</li>
+        <li>Any element fixed to the viewport that must clear the sidebar (e.g.
+          the Profile/Preferences sticky save bar) offsets
+          <strong><code>md:left-64</code></strong>. This is the shell's one
+          layout contract for new pages.</li>
+        <li>Nav items are Dashboard / Credits / History / Profile. Preferences is
+          intentionally <em>not</em> a top-level nav item — it is reached from
+          the dashboard snapshot and from Profile.</li>
+        <li><code>/account</code> is the <strong>dashboard home</strong> (summary
+          surface, read-mostly), distinct from <code>/billing</code> (full credit
+          history) and <code>/buy</code> (purchase).</li>
+        <li>This <strong>supersedes the v6.3 top-nav shell</strong>. ADR 0023
+          (tokens) and the v6.3 page-level styling remain in force; only the
+          shell/IA change.</li>
+      </ul>
+    </section>
+
+    <section id="consequences">
+      <h2>Consequences</h2>
+      <ul>
+        <li><strong>+</strong> A single, persistent navigation surface; the
+          dashboard gives a logged-in user an at-a-glance overview instead of a
+          bare ledger.</li>
+        <li><strong>+</strong> One documented layout contract
+          (<code>md:ml-64</code> for content, <code>md:left-64</code> for fixed
+          bars) — new pages drop into the shell without re-deriving offsets.</li>
+        <li><strong>−</strong> A hardcoded sidebar width (<code>w-64</code>)
+          couples three call sites (sidebar width, main margin, fixed-bar offset).
+          Accepted as minimal-code over a CSS variable / layout-grid abstraction
+          for a four-route app.</li>
+        <li>The dashboard duplicates some data already on <code>/billing</code>
+          (recent activity vs. full history) and <code>/profile</code> (snapshot
+          vs. editor) — intended redundancy for an overview surface, not a new
+          data source.</li>
+      </ul>
+    </section>
+  </body>
+</html>

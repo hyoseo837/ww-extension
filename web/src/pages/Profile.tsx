@@ -292,7 +292,7 @@ export default function Profile() {
       </section>
 
       {/* Sticky save bar */}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface-bright">
+      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-surface-bright md:left-64">
         <div className="mx-auto flex max-w-max-width items-center justify-between px-gutter py-sm">
           <span className="font-label-sm text-label-sm text-text-muted">{status ?? ""}</span>
           <button
