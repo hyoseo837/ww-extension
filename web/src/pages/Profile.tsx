@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { apiGet, apiPost, apiPut } from "../api";
 import { useDashboard } from "../Layout";
+import { creditUnit, fmtBalance } from "../format";
 import Icon from "../Icon";
 import type { Profile as ProfileT, StructuredProfile, SupplementEntry } from "../types";
 
@@ -107,12 +108,68 @@ function ExtractedProfile({ p }: { p: StructuredProfile }) {
   );
 }
 
+// Confirm before extraction spends credits (v6.13 — gate any credit use).
+function ConfirmExtract({
+  filename,
+  balance,
+  onConfirm,
+  onCancel,
+}: {
+  filename: string;
+  balance: number | null;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onCancel();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onCancel]);
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-on-surface/30 p-gutter"
+      onClick={onCancel}
+    >
+      <div className={`${CARD} w-full max-w-md`} onClick={(e) => e.stopPropagation()}>
+        <h2 className="mb-sm font-headline-md text-headline-md text-on-surface">Extract profile?</h2>
+        <p className="mb-lg font-body-md text-body-md text-text-secondary">
+          Extract your profile from{" "}
+          <span className="font-semibold text-on-surface">{filename}</span>. This uses a small number
+          of credits
+          {balance !== null && (
+            <>
+              {" "}— you have {fmtBalance(balance)} {creditUnit(balance)}
+            </>
+          )}
+          .
+        </p>
+        <div className="flex justify-end gap-sm">
+          <button
+            onClick={onCancel}
+            className="rounded-lg border border-border px-lg py-sm font-label-md text-label-md text-on-surface hover:bg-surface-alt"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="rounded-lg bg-primary px-lg py-sm font-label-md text-label-md text-on-primary hover:bg-accent-hover"
+          >
+            Extract
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Profile() {
-  const { refetchBalance } = useDashboard();
+  const { refetchBalance, balance } = useDashboard();
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [profile, setProfile] = useState<ProfileT | null>(null);
   const [supplement, setSupplement] = useState<SupplementEntry[]>([]);
+  const [staged, setStaged] = useState<File | null>(null);
+  const [confirming, setConfirming] = useState(false);
   const [extracting, setExtracting] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -126,11 +183,19 @@ export default function Profile() {
       .catch((e) => setStatus(`Could not load profile: ${e}`));
   }, []);
 
-  async function onFile(file: File) {
+  // Picking/dropping only stages the file — extraction (and the credit debit)
+  // waits for the explicit Extract button + confirmation below.
+  function stageFile(file: File) {
     if (file.size > MAX_PDF) {
       setStatus("File exceeds the 5 MB limit.");
       return;
     }
+    setStaged(file);
+    setStatus(null);
+  }
+
+  async function extract(file: File) {
+    setConfirming(false);
     setExtracting(true);
     setStatus(null);
     try {
@@ -143,6 +208,7 @@ export default function Profile() {
       setProfile(fresh);
       setSupplement(fresh.profile_supplement);
       refetchBalance();
+      setStaged(null);
       setStatus(`Profile extracted (cost ${res.cost.toFixed(2)} credits).`);
     } catch (e) {
       setStatus(`Extraction failed: ${e}`);
@@ -198,7 +264,7 @@ export default function Profile() {
           type="file"
           accept="application/pdf"
           className="hidden"
-          onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])}
+          onChange={(e) => e.target.files?.[0] && stageFile(e.target.files[0])}
         />
         <button
           type="button"
@@ -207,20 +273,43 @@ export default function Profile() {
           onDrop={(e) => {
             e.preventDefault();
             const f = e.dataTransfer.files?.[0];
-            if (f) onFile(f);
+            if (f) stageFile(f);
           }}
           disabled={extracting}
           className="flex w-full flex-col items-center gap-xs rounded-lg border border-dashed border-outline-variant bg-surface-alt px-lg py-xl text-center transition-colors hover:bg-surface-container-low disabled:opacity-60"
         >
           <span className="flex h-12 w-12 items-center justify-center rounded-full bg-accent-soft text-primary">
-            <Icon name="upload_file" className="text-[24px]" />
+            <Icon name={staged ? "description" : "upload_file"} className="text-[24px]" />
           </span>
           <span className="font-label-md text-label-md text-primary">
-            {extracting ? "Extracting…" : "Click to upload or drag and drop"}
+            {staged ? staged.name : "Click to upload or drag and drop"}
           </span>
-          <span className="font-label-sm text-label-sm text-text-muted">PDF, up to 5 MB · uses a small number of credits</span>
+          <span className="font-label-sm text-label-sm text-text-muted">
+            {staged ? "Click to choose a different file" : "PDF, up to 5 MB · uses a small number of credits"}
+          </span>
         </button>
+        {staged && (
+          <div className="mt-md flex justify-end">
+            <button
+              type="button"
+              onClick={() => setConfirming(true)}
+              disabled={extracting}
+              className="rounded-lg bg-primary px-lg py-sm font-label-md text-label-md text-on-primary hover:bg-accent-hover disabled:opacity-60"
+            >
+              {extracting ? "Extracting…" : "Extract profile"}
+            </button>
+          </div>
+        )}
       </section>
+
+      {confirming && staged && (
+        <ConfirmExtract
+          filename={staged.name}
+          balance={balance}
+          onCancel={() => setConfirming(false)}
+          onConfirm={() => extract(staged)}
+        />
+      )}
 
       {/* Extracted profile (read-only) */}
       <section className={CARD}>

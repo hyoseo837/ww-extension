@@ -5,7 +5,7 @@
     <meta name="project" content="ww-extension" />
     <meta name="type" content="spec" />
     <meta name="version" content="v6.13.0" />
-    <meta name="status" content="planned" />
+    <meta name="status" content="in-progress" />
     <meta name="last-updated" content="2026-06-01" />
     <title>v6.13.0 — Confirm before spending credits (Scan All Jobs)</title>
   </head>
@@ -25,11 +25,23 @@
 
     <h2>Scope — where credits are actually spent</h2>
     <p>
-      The only credit-spending action in the product today is the extension's
-      <strong>Scan All Jobs</strong> batch (each posting scored = one
-      <code>/scan</code> debit). Buying credits is the web app (not a "use"), and
-      re-score is a future whiteboard item. So a single gate on Scan All Jobs
-      covers all current credit use.
+      <strong>Correction (2026-06-01, v6.13.2).</strong> This section originally
+      claimed Scan All Jobs was the <em>only</em> credit use. It missed one: the
+      web app's <strong>application-package PDF extraction</strong>
+      (<code>POST /profile/extract</code>, <code>routes.py:212</code>), which
+      debits credits per upload (<code>Profile.tsx</code>
+      <code>onFile()</code>). The whiteboard ask was "confirmation button for
+      <em>any</em> credit uses", so this phase now gates both:
+    </p>
+    <ul>
+      <li><strong>Extension — Scan All Jobs</strong> (each posting = one
+        <code>/scan</code> debit). Gated in v6.13.1.</li>
+      <li><strong>Web — application-package extraction</strong> (each upload =
+        one <code>/profile/extract</code> debit). Gated in v6.13.2.</li>
+    </ul>
+    <p>
+      Buying credits is the web app (not a "use"), and re-score is a future
+      whiteboard item.
     </p>
 
     <h2>Decisions (confirmed with owner 2026-06-01)</h2>
@@ -80,8 +92,41 @@
       neutral/bordered.
     </p>
 
+    <h2>Web — application-package extraction (v6.13.2)</h2>
+    <p>
+      Today <code>Profile.tsx</code> extracts the instant a file is picked or
+      dropped (<code>onChange</code>/<code>onDrop</code> → <code>onFile()</code>
+      → <code>/profile/extract</code>), so a stray file pick spends credits with
+      no chance to back out. Two changes, matching the extension's gate:
+    </p>
+    <ol>
+      <li><strong>Stage, don't auto-extract.</strong> Picking/dropping a PDF now
+        only <em>stages</em> it (validates the 5&nbsp;MB limit, shows the
+        filename). No <code>/profile/extract</code> call happens on file
+        selection — picking a file is free.</li>
+      <li><strong>Explicit "Extract profile" button</strong> appears once a file
+        is staged. Clicking it opens a confirmation dialog: "Extract your profile
+        from <em>filename.pdf</em>? This uses a small number of credits — you
+        have X." with <em>Cancel</em> / <em>Extract</em>. Only <em>Extract</em>
+        proceeds to <code>onFile()</code> and the debit.</li>
+    </ol>
+    <p>
+      Balance comes from <code>useDashboard().balance</code> (same source as the
+      sidebar credits figure), formatted with <code>fmtBalance</code>. The dialog
+      reuses the existing modal shape from <code>Admin.tsx</code>'s
+      <code>InspectModal</code> (<code>fixed inset-0 z-50</code> backdrop, card
+      with <code>stopPropagation</code>, backdrop-click + Esc to cancel). Exact
+      cost isn't known pre-call (it's estimated from PDF bytes server-side), so
+      the dialog says "a small number of credits" rather than an exact figure —
+      matching the existing helper copy under the upload zone.
+    </p>
+
     <h2>Files</h2>
     <ul>
+      <li><code>web/src/pages/Profile.tsx</code> — stage the picked file instead
+        of extracting; add an "Extract profile" button and a
+        <code>&lt;ConfirmExtract&gt;</code> dialog gating the call to
+        <code>onFile()</code>.</li>
       <li><code>ext/src/content.js</code> — add <code>confirmScan(count,
         balance)</code> returning a <code>Promise&lt;boolean&gt;</code> (builds
         the overlay, wires Cancel/Scan/backdrop/Esc, resolves, removes itself);
@@ -95,8 +140,10 @@
 
     <h2>Slices</h2>
     <ol>
-      <li><strong>v6.13.0</strong> — this spec + roadmap renumber (docs). (this commit)</li>
-      <li><strong>v6.13.1</strong> — implementation (content.js + sidebar.css).</li>
+      <li><strong>v6.13.0</strong> — this spec + roadmap renumber (docs).</li>
+      <li><strong>v6.13.1</strong> — extension implementation (content.js + sidebar.css).</li>
+      <li><strong>v6.13.2</strong> — web extraction: stage-then-confirm + Extract
+        button (Profile.tsx). (this commit)</li>
     </ol>
 
     <h2>Verify</h2>
@@ -109,6 +156,21 @@
       <li>With everything already scored → "All jobs already scored.", no dialog.</li>
       <li>Dark and light themes both render correctly. <code>node --check
         ext/src/content.js</code> passes.</li>
+    </ol>
+
+    <h3>Web (v6.13.2)</h3>
+    <ol>
+      <li>Open <code>/profile</code>; pick or drop a PDF → it stages (filename
+        shown), <strong>no</strong> extraction fires and the balance is
+        unchanged.</li>
+      <li>Click <em>Extract profile</em> → dialog shows the filename and current
+        balance.</li>
+      <li><em>Cancel</em> (or backdrop / Esc) → nothing extracted, balance
+        unchanged, file still staged.</li>
+      <li><em>Extract</em> → <code>/profile/extract</code> runs as before; on
+        success the extracted profile and balance refresh.</li>
+      <li>A file over 5&nbsp;MB → the limit message, nothing staged.
+        <code>npm run build</code> (or <code>tsc</code>) passes.</li>
     </ol>
   </body>
 </html>
