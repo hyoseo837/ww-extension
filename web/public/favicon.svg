@@ -1,7 +1,0 @@
-<!-- Placeholder favicon — replace with the real brand mark. -->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="WW Scorer">
-  <rect width="64" height="64" rx="14" fill="#8F4830" />
-  <text x="32" y="43" text-anchor="middle" fill="#FFFFFF"
-        font-family="Inter, system-ui, -apple-system, sans-serif"
-        font-size="30" font-weight="700" letter-spacing="-2">WW</text>
-</svg>

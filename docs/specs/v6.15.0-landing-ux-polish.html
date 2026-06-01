@@ -124,8 +124,10 @@
         <code>web/src/pages/Billing.tsx</code> — loading + error states.</li>
       <li><code>web/index.html</code> — title, description, favicon links, OG /
         Twitter tags (v6.15.4).</li>
-      <li><code>web/public/favicon.svg</code> — monogram placeholder, owner to
-        replace (v6.15.4).</li>
+      <li><code>web/public/</code> — favicon set
+        (<code>favicon.ico</code>, 16/32 PNG, <code>apple-touch-icon.png</code>,
+        android-chrome 192/512) + <code>site.webmanifest</code>; placeholder SVG
+        removed (v6.15.5).</li>
     </ul>
 
     <h2>Notes</h2>
@@ -142,9 +144,12 @@
       <li><strong>v6.15.1</strong> — logged-out pricing (packages.ts + Landing +
         Buy).</li>
       <li><strong>v6.15.2</strong> — real 404 + Account/Billing states.</li>
-      <li><strong>v6.15.4</strong> — index.html metadata + favicon + social
+      <li><strong>v6.15.4</strong> — index.html metadata + favicon links + social
         preview (added after the v6.9 deletion backfill; numbered forward to keep
-        the manifest monotonic). (this commit)</li>
+        the manifest monotonic).</li>
+      <li><strong>v6.15.5</strong> — real favicon assets (owner-generated PNG/ICO
+        set + webmanifest) into <code>web/public/</code>; head switched from the
+        SVG placeholder to the standard set. (this commit)</li>
     </ol>
 
     <h2>Verify</h2>
