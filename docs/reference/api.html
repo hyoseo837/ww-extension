@@ -81,6 +81,32 @@
           debugging; v4.3+ may sanitize.</p>
       </dd>
 
+      <dt id="get-account-export"><code>GET /account/export</code></dt>
+      <dd>
+        <p>Authenticated. The data-subject access / portability export (v6.14):
+          everything stored about the caller, as one JSON object. No credit
+          cost. Keyed on the JWT <code>sub</code>, so a token only ever returns
+          its own data. Assembled in <code>app/account/routes.py</code> from
+          <code>billing.db.export_user</code> (account row, balance, full credit
+          ledger, all scans) and <code>profile.db.get_profile</code>. The
+          uploaded application-package PDF is never stored, so it is not in the
+          export.</p>
+        <p><strong>Response:</strong> <code>200 OK</code></p>
+        <pre><code>{
+  "export_format": "ww-scorer-account-export",
+  "export_version": 1,
+  "exported_at": "&lt;ISO-8601&gt;",
+  "account": { "user_id", "email", "created_at" },
+  "balance": &lt;number&gt;,
+  "profile": { ...same shape as GET /profile... },
+  "credit_history": [ { "id","kind","delta","created_at",
+                        "org","title","posting_id","batch_id" }, ... ],
+  "scans": [ { "id","kind","status","org","title","cost","created_at" }, ... ]
+}</code></pre>
+        <p><strong>Errors:</strong> <code>401</code> (missing/invalid token);
+          <code>404</code> if the auth user no longer exists.</p>
+      </dd>
+
       <dt id="get-credits-balance"><code>GET /credits/balance</code></dt>
       <dd>
         <p>Authenticated. Returns the signed-in user's current credit

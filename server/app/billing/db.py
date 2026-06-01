@@ -105,6 +105,69 @@ async def get_history(user_id: str, limit: int, offset: int) -> list[dict]:
         return [dict(r) for r in rows]
 
 
+# Upper bound on ledger rows pulled into a single data export (v6.14). A
+# personal account's full history is far below this; the cap just keeps an
+# export bounded.
+_EXPORT_MAX_ROWS = 100_000
+
+
+async def export_user(user_id: str) -> dict | None:
+    """All of one user's billing-side data for the self-serve export (v6.14):
+    account identity, balance, the full credit ledger, and every scan row.
+    The profile is added by the route from profile.db. Returns None if the
+    auth user doesn't exist."""
+    async with pool().acquire() as conn:
+        account = await conn.fetchrow(
+            "select id::text as user_id, email, created_at "
+            "from auth.users where id = $1::uuid",
+            user_id,
+        )
+        if account is None:
+            return None
+        scans = await conn.fetch(
+            "select id::text as id, kind, status, org, title, "
+            "       coalesce(actual_cost, estimated_cost) as cost, created_at "
+            "from scan where user_id = $1::uuid "
+            "order by created_at desc",
+            user_id,
+        )
+    balance = await get_balance(user_id)
+    history = await get_history(user_id, _EXPORT_MAX_ROWS, 0)
+    return {
+        "account": {
+            "user_id": account["user_id"],
+            "email": account["email"],
+            "created_at": account["created_at"].isoformat(),
+        },
+        "balance": float(balance),
+        "credit_history": [
+            {
+                "id": str(h["id"]),
+                "kind": h["kind"],
+                "delta": float(h["delta"]),
+                "created_at": h["created_at"].isoformat(),
+                "org": h["org"],
+                "title": h["title"],
+                "posting_id": h["posting_id"],
+                "batch_id": h["batch_id"],
+            }
+            for h in history
+        ],
+        "scans": [
+            {
+                "id": s["id"],
+                "kind": s["kind"],
+                "status": s["status"],
+                "org": s["org"],
+                "title": s["title"],
+                "cost": float(s["cost"]) if s["cost"] is not None else None,
+                "created_at": s["created_at"].isoformat(),
+            }
+            for s in scans
+        ],
+    }
+
+
 async def balance_after_estimate(
     conn: asyncpg.Connection, user_id: str, estimate: Decimal
 ) -> Decimal:

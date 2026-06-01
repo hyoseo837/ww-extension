@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.account.routes import router as account_router
 from app.admin.routes import router as admin_router
 from app.auth.routes import router as auth_router
 from app.billing import db as billing_db
@@ -42,3 +43,4 @@ app.include_router(billing_router)
 app.include_router(profile_router)
 app.include_router(scoring_router)
 app.include_router(admin_router)
+app.include_router(account_router)

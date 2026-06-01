@@ -291,6 +291,13 @@
           Grants write a <code>kind='admin_grant'</code> ledger row with
           audit columns <code>created_by</code> (the admin) + <code>note</code>
           (reason) added in migration 0009.</li>
+        <li><code>GET /account/export</code> (v6.14, <code>app.account</code>) —
+          the data-subject access / portability export: all of the caller's
+          stored data (account identity, balance, full ledger, all scans, full
+          profile) as one JSON object, no credit cost. <code>app.account</code>
+          is the home for data-subject rights; account deletion (v6.9, erasure)
+          is intended to live here too. Reuses <code>billing.db.export_user</code>
+          + <code>profile.db.get_profile</code> rather than its own queries.</li>
       </ul>
       <p>
         Auth: <code>Authorization: Bearer &lt;jwt&gt;</code> on
