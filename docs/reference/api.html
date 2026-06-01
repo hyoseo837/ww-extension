@@ -107,6 +107,25 @@
           <code>404</code> if the auth user no longer exists.</p>
       </dd>
 
+      <dt id="delete-account"><code>DELETE /account</code></dt>
+      <dd>
+        <p>Authenticated. The data-subject erasure right (v6.9, ADR 0027):
+          hard-deletes the caller's account. Keyed on the JWT <code>sub</code>, so
+          a user can only delete their own account. The backend records a one-way
+          SHA-256 hash of the email in <code>signup_bonus_block</code> (ADR 0029
+          — so a re-register can't re-grab the signup bonus), then deletes the
+          Supabase auth user via the service-role admin API
+          (<code>DELETE {supabase_url}/auth/v1/admin/users/{sub}</code>). FK
+          cascade on <code>auth.users(id)</code> clears
+          <code>user_profile</code>, <code>credit_ledger_entry</code>, and
+          <code>scan</code> atomically. The retained email hash is the only thing
+          that survives. Financial history is unaffected — it lives in Stripe.</p>
+        <p><strong>Response:</strong> <code>204 No Content</code></p>
+        <p><strong>Errors:</strong> <code>401</code> (missing/invalid token);
+          <code>502</code> if the upstream Supabase admin delete fails (the block
+          hash may already be recorded — harmless, the account still exists).</p>
+      </dd>
+
       <dt id="get-credits-balance"><code>GET /credits/balance</code></dt>
       <dd>
         <p>Authenticated. Returns the signed-in user's current credit

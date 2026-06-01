@@ -294,11 +294,23 @@
         <li><code>GET /account/export</code> (v6.14, <code>app.account</code>) —
           the data-subject access / portability export: all of the caller's
           stored data (account identity, balance, full ledger, all scans, full
-          profile) as one JSON object, no credit cost. <code>app.account</code>
-          is the home for data-subject rights; account deletion (v6.9, erasure)
-          is intended to live here too. Reuses <code>billing.db.export_user</code>
-          + <code>profile.db.get_profile</code> rather than its own queries.</li>
+          profile) as one JSON object, no credit cost. Reuses
+          <code>billing.db.export_user</code> + <code>profile.db.get_profile</code>
+          rather than its own queries.</li>
+        <li><code>DELETE /account</code> (v6.9, <code>app.account</code>) — the
+          erasure right: hard-deletes the caller's Supabase auth user via the
+          service-role admin API (ADR 0027); FK cascade on
+          <code>auth.users(id)</code> clears <code>user_profile</code>,
+          <code>credit_ledger_entry</code>, and <code>scan</code>. Before
+          deleting, it writes a one-way email hash to <code>signup_bonus_block</code>
+          (migration 0010) that the <code>grant_signup_bonus</code> trigger checks,
+          so a delete + re-register can't re-grab the signup bonus (ADR 0029).
+          Financial history persists in Stripe.</li>
       </ul>
+      <p>
+        <code>app.account</code> is the home for data-subject rights (export +
+        deletion).
+      </p>
       <p>
         Auth: <code>Authorization: Bearer &lt;jwt&gt;</code> on
         authenticated routes. Backend verifies JWTs against Supabase
