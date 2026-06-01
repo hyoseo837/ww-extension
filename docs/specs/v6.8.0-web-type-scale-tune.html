@@ -47,13 +47,40 @@
       <li>The full email shows in the left sidebar (no "…" clipping).</li>
     </ol>
 
+    <h2>v6.8.1 — further tune-down + spacing + sidebar nav</h2>
+    <p>
+      Follow-up after review: still felt a touch large and too airy, and the
+      sidebar was missing two useful links.
+    </p>
+    <ul>
+      <li><code>web/tailwind.config.js</code> — <code>fontSize</code> reduced
+        again (display-lg 34→30, display-lg-mobile 26→24, headline-lg 24→21,
+        headline-md 19→17, body-lg 16→15, body-md 14→13, label-md 13→12,
+        label-sm 11). <strong>Spacing</strong> tightened ~0.75 (xs 8→6, sm
+        12→9, md 16→12, lg 24→18, xl 32→24, xxl 48→36, gutter 24→18);
+        <code>base</code> (4px) and <code>max-width</code> (960px) kept. The
+        sidebar width uses Tailwind's built-in <code>w-64</code>/<code>ml-64</code>/
+        <code>left-64</code>, not these tokens, so alignment is unaffected.</li>
+      <li><code>web/src/Layout.tsx</code> — desktop sidebar nav gains
+        <strong>Preferences</strong> (<code>/preferences</code>, icon
+        <code>tune</code>) and an external <strong>WaterlooWorks</strong> link
+        (the jobs page where the extension runs, opens in a new tab). Mobile top
+        bar unchanged (space-constrained).</li>
+      <li><code>ext/manifest.json</code> — version bump to 6.8.1.</li>
+    </ul>
+
     <h2>Notes</h2>
     <p>
-      Spacing tokens (4px scale, card padding, the 256px sidebar / 960px content
-      width) are unchanged — the complaint was font size, and smaller text in
-      the same generous spacing keeps the airy design. The Stitch export docs
-      (<code>web/design/.../DESIGN.md</code>) still list the original sizes as a
-      historical record; <code>tailwind.config.js</code> is the live source.
+      <strong>Revises ADR 0024.</strong> That ADR decided Preferences would
+      <em>not</em> be a top-level nav item (reached only from the dashboard
+      snapshot / Profile). v6.8.1 adds it to the sidebar at user request — a
+      minor IA change, recorded here rather than as a superseding ADR; promote
+      to one if the nav set is re-litigated.
+    </p>
+    <p>
+      The Stitch export docs (<code>web/design/.../DESIGN.md</code>) still list
+      the original sizes/spacing as a historical record;
+      <code>tailwind.config.js</code> is the live source.
     </p>
   </body>
 </html>

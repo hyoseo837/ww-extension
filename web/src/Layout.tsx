@@ -15,7 +15,11 @@ const NAV = [
   { to: "/buy", label: "Credits", icon: "payments", end: false },
   { to: "/billing", label: "History", icon: "history", end: false },
   { to: "/profile", label: "Profile", icon: "person", end: false },
+  { to: "/preferences", label: "Preferences", icon: "tune", end: false },
 ];
+
+// The WaterlooWorks jobs page — where the extension actually runs.
+const WW_URL = "https://waterlooworks.uwaterloo.ca/myAccount/co-op/full/jobs.htm";
 
 const sideLink = ({ isActive }: { isActive: boolean }) =>
   [
@@ -80,6 +84,15 @@ export default function Layout({ email }: { email: string }) {
               {n.label}
             </NavLink>
           ))}
+          <a
+            href={WW_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-sm rounded-lg px-sm py-sm font-label-md text-label-md text-on-surface-variant transition-colors hover:bg-surface-container-highest"
+          >
+            <Icon name="open_in_new" />
+            WaterlooWorks
+          </a>
         </nav>
 
         <div className="mt-auto space-y-base border-t border-border pt-xl">

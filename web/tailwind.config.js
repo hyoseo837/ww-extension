@@ -45,15 +45,19 @@ export default {
         xl: "0.75rem",
         full: "9999px",
       },
+      // Spacing tightened ~0.75 at v6.8.1 (denser layout). base kept at 4px
+      // (the atom); max-width kept (content measure, not spacing). The sidebar
+      // width uses Tailwind's built-in scale (w-64/ml-64/left-64), not these
+      // tokens, so it is unaffected.
       spacing: {
         base: "4px",
-        xs: "8px",
-        sm: "12px",
-        md: "16px",
-        lg: "24px",
-        xl: "32px",
-        xxl: "48px",
-        gutter: "24px",
+        xs: "6px",
+        sm: "9px",
+        md: "12px",
+        lg: "18px",
+        xl: "24px",
+        xxl: "36px",
+        gutter: "18px",
         "max-width": "960px",
       },
       fontFamily: {
@@ -70,13 +74,13 @@ export default {
       // real screens; headings hit hardest). Single source — every page uses
       // these tokens. Original Stitch sizes are in web/design/.../DESIGN.md.
       fontSize: {
-        "display-lg": ["34px", { lineHeight: "42px", letterSpacing: "-0.01em", fontWeight: "600" }],
-        "display-lg-mobile": ["26px", { lineHeight: "32px", fontWeight: "600" }],
-        "headline-lg": ["24px", { lineHeight: "30px", fontWeight: "600" }],
-        "headline-md": ["19px", { lineHeight: "26px", fontWeight: "500" }],
-        "body-lg": ["16px", { lineHeight: "24px", fontWeight: "400" }],
-        "body-md": ["14px", { lineHeight: "20px", fontWeight: "400" }],
-        "label-md": ["13px", { lineHeight: "18px", letterSpacing: "0.02em", fontWeight: "500" }],
+        "display-lg": ["30px", { lineHeight: "38px", letterSpacing: "-0.01em", fontWeight: "600" }],
+        "display-lg-mobile": ["24px", { lineHeight: "30px", fontWeight: "600" }],
+        "headline-lg": ["21px", { lineHeight: "28px", fontWeight: "600" }],
+        "headline-md": ["17px", { lineHeight: "24px", fontWeight: "500" }],
+        "body-lg": ["15px", { lineHeight: "22px", fontWeight: "400" }],
+        "body-md": ["13px", { lineHeight: "19px", fontWeight: "400" }],
+        "label-md": ["12px", { lineHeight: "16px", letterSpacing: "0.02em", fontWeight: "500" }],
         "label-sm": ["11px", { lineHeight: "14px", letterSpacing: "0.04em", fontWeight: "600" }],
       },
       maxWidth: { "max-width": "960px" },
