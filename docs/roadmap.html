@@ -368,12 +368,20 @@
           <strong>consent-at-signup</strong> line. Spec:
           <code>docs/specs/v6.12.0-legal-trust-pages.html</code>.</dd>
 
-        <dt>v6.13 — data export</dt>
+        <dt>v6.13 — confirm before spending credits</dt>
+        <dd>A confirmation step before <strong>Scan All Jobs</strong> spends
+          credits (whiteboard: "confirmation button for any credit uses") — an
+          exact-count dialog ("Scan N jobs? You have X credits") that always
+          shows, so a stray click can't burn the balance. Built on the current
+          extension ahead of the v7 rework. Spec:
+          <code>docs/specs/v6.13.0-credit-use-confirmation.html</code>.</dd>
+
+        <dt>v6.14 — data export</dt>
         <dd>"Download my data" — the data-subject <em>access/portability</em>
           right, companion to v6.9 deletion. Server already holds it all
           (profile, ledger, scans); export as JSON. Pairs with the deletion ADR.</dd>
 
-        <dt>v6.14 — landing &amp; UX polish</dt>
+        <dt>v6.15 — landing &amp; UX polish</dt>
         <dd><strong>Pricing visible to logged-out users</strong> on the landing
           (today prices only show after sign-in at <code>/buy</code>);
           <strong>error / empty / loading states</strong> across pages and a real

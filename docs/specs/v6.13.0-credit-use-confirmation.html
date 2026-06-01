@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v6.13.0" />
+    <meta name="status" content="planned" />
+    <meta name="last-updated" content="2026-06-01" />
+    <title>v6.13.0 — Confirm before spending credits (Scan All Jobs)</title>
+  </head>
+  <body>
+    <h1>v6.13.0 — Confirm before spending credits</h1>
+
+    <h2>Goal</h2>
+    <p>
+      Add a confirmation step before any action that spends credits, so a stray
+      click can't burn the user's balance. From the whiteboard ("fixes needed:
+      confirmation button for any credit uses"). Today the
+      <strong>Scan All Jobs</strong> button (<code>#ww-ext-scan</code>,
+      <code>content.js:795</code>) runs <code>scanAllJobs()</code> immediately and
+      each unscored posting hits <code>/scan</code>, debiting credits with no
+      prompt.
+    </p>
+
+    <h2>Scope — where credits are actually spent</h2>
+    <p>
+      The only credit-spending action in the product today is the extension's
+      <strong>Scan All Jobs</strong> batch (each posting scored = one
+      <code>/scan</code> debit). Buying credits is the web app (not a "use"), and
+      re-score is a future whiteboard item. So a single gate on Scan All Jobs
+      covers all current credit use.
+    </p>
+
+    <h2>Decisions (confirmed with owner 2026-06-01)</h2>
+    <ul>
+      <li><strong>Build now</strong> on the current extension as v6.13 — a small
+        money-safety gate worth having before the v7 extension rework. (Roadmap:
+        data export → v6.14, landing/UX polish → v6.15.)</li>
+      <li><strong>Exact-count dialog.</strong> Load the job list first (free — no
+        credits), then confirm: "Scan N unscored jobs? This uses credits — you
+        have X." Buttons: <em>Cancel</em> / <em>Scan N</em>.</li>
+      <li><strong>Always confirm.</strong> No "don't ask again" toggle — it's a
+        money action and scanning a page is infrequent enough that a prompt each
+        time is fine.</li>
+    </ul>
+
+    <h2>Flow</h2>
+    <ol>
+      <li>Click Scan All Jobs → <code>scanAllJobs()</code> runs as today through
+        fetching the posting list and computing <code>toScore</code>
+        (<code>content.js:301</code>) — all free, no credits spent yet.</li>
+      <li>If <code>toScore.length === 0</code>: existing "All jobs already
+        scored." path, <strong>no dialog</strong>.</li>
+      <li>Else show the confirmation (count = <code>toScore.length</code>,
+        balance from <code>chrome.storage.local.creditBalance</code>, same source
+        as the credits chip).</li>
+      <li><strong>Cancel</strong> (or backdrop click / Esc): reset the buttons
+        (re-enable Scan, disable Stop) and return — nothing scanned.</li>
+      <li><strong>Scan N</strong>: proceed into the existing scan loop unchanged.</li>
+    </ol>
+    <p>
+      The confirmation is inserted right after the <code>toScore</code> empty
+      check (<code>content.js:305</code>), so no <code>/scan</code> call has
+      happened when the user decides. Note the hard-exclusion pre-filter (ADR
+      0018) may skip some of the N for free, so "Scan N" is an upper bound — fine
+      for a confirmation.
+    </p>
+
+    <h2>UI</h2>
+    <p>
+      An overlay rendered <strong>inside <code>#ww-ext-sidebar</code></strong> (a
+      DOM child) so it inherits the sidebar's <code>--s-*</code> theme variables
+      and the <code>.ww-light</code> override for free. The sidebar slides via
+      <code>transform</code> (<code>sidebar.css:148</code>), which would trap a
+      <code>position: fixed</code> child inside the 340px panel — so the overlay
+      uses <code>position: absolute; inset: 0</code> within the (positioned)
+      sidebar: a dimmed backdrop over the panel with a centered card. The
+      "Scan N" button mirrors <code>#ww-ext-scan</code> (primary); "Cancel" is
+      neutral/bordered.
+    </p>
+
+    <h2>Files</h2>
+    <ul>
+      <li><code>ext/src/content.js</code> — add <code>confirmScan(count,
+        balance)</code> returning a <code>Promise&lt;boolean&gt;</code> (builds
+        the overlay, wires Cancel/Scan/backdrop/Esc, resolves, removes itself);
+        restructure <code>scanAllJobs()</code> to <code>await</code> it after the
+        <code>toScore</code> check and bail cleanly on cancel.</li>
+      <li><code>ext/src/sidebar.css</code> — <code>.ww-ext-confirm-*</code>
+        classes (backdrop, card, title, message, actions, buttons) using the
+        existing tokens.</li>
+      <li><code>ext/manifest.json</code> — version bump.</li>
+    </ul>
+
+    <h2>Slices</h2>
+    <ol>
+      <li><strong>v6.13.0</strong> — this spec + roadmap renumber (docs). (this commit)</li>
+      <li><strong>v6.13.1</strong> — implementation (content.js + sidebar.css).</li>
+    </ol>
+
+    <h2>Verify</h2>
+    <ol>
+      <li>Load <code>ext/</code> unpacked; open the WaterlooWorks jobs list.</li>
+      <li>Click Scan All Jobs with unscored jobs present → dialog shows the
+        correct unscored count and current balance.</li>
+      <li><em>Cancel</em> → nothing scanned, balance unchanged, buttons reset.</li>
+      <li><em>Scan N</em> → scanning proceeds as before.</li>
+      <li>With everything already scored → "All jobs already scored.", no dialog.</li>
+      <li>Dark and light themes both render correctly. <code>node --check
+        ext/src/content.js</code> passes.</li>
+    </ol>
+  </body>
+</html>
