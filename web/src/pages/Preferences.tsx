@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { apiGet, apiPut } from "../api";
 import { emptyMatchCriteria } from "../types";
 import type { MatchCriteria, Profile, Tier, Weight, WeightedCriterion, WorkAuth } from "../types";
@@ -32,10 +32,13 @@ const WORK_AUTH: { value: string; label: string }[] = [
 
 const INPUT = "rounded-lg border border-border bg-surface px-sm py-base font-label-md text-label-md";
 
-function TagInput({ values, onChange, placeholder }: {
+// Input row (with an optional `trailing` slot, used for the weight select) on
+// top; the added-keyword chips wrap onto their own line below it.
+function TagInput({ values, onChange, placeholder, trailing }: {
   values: string[];
   onChange: (v: string[]) => void;
   placeholder: string;
+  trailing?: ReactNode;
 }) {
   const [draft, setDraft] = useState("");
   const commit = () => {
@@ -44,28 +47,35 @@ function TagInput({ values, onChange, placeholder }: {
     setDraft("");
   };
   return (
-    <div className="flex flex-wrap items-center gap-xs rounded-lg border border-border bg-surface px-sm py-xs">
-      {values.map((v) => (
-        <span key={v} className="flex items-center gap-base rounded-full bg-accent-soft px-sm py-base font-label-sm text-label-sm text-primary">
-          {v}
-          <button type="button" onClick={() => onChange(values.filter((x) => x !== v))} className="leading-none text-primary/60 hover:text-primary">
-            ×
-          </button>
-        </span>
-      ))}
-      <input
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === ",") {
-            e.preventDefault();
-            commit();
-          }
-        }}
-        onBlur={commit}
-        placeholder={placeholder}
-        className="min-w-[140px] flex-grow bg-transparent py-base font-body-md text-body-md outline-none"
-      />
+    <div className="flex flex-col gap-xs">
+      <div className="flex items-center gap-sm">
+        <input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === ",") {
+              e.preventDefault();
+              commit();
+            }
+          }}
+          onBlur={commit}
+          placeholder={placeholder}
+          className="min-w-0 flex-grow rounded-lg border border-border bg-surface px-sm py-xs font-body-md text-body-md outline-none focus:border-primary"
+        />
+        {trailing}
+      </div>
+      {values.length > 0 && (
+        <div className="flex flex-wrap gap-xs">
+          {values.map((v) => (
+            <span key={v} className="flex items-center gap-base rounded-full bg-accent-soft px-sm py-base font-label-sm text-label-sm text-primary">
+              {v}
+              <button type="button" onClick={() => onChange(values.filter((x) => x !== v))} className="leading-none text-primary/60 hover:text-primary">
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -77,9 +87,23 @@ function CriterionEditor({ label, placeholder, value, onChange }: {
   onChange: (c: WeightedCriterion) => void;
 }) {
   const hasMore =
-    value.acceptable.length > 0 || value.avoid.length > 0 || value.excluded.length > 0 || value.weight !== "nice-to-have";
+    value.acceptable.length > 0 || value.avoid.length > 0 || value.excluded.length > 0;
   const [more, setMore] = useState(hasMore);
   const set = (patch: Partial<WeightedCriterion>) => onChange({ ...value, ...patch });
+
+  // Weight now lives on the input line (out of "More options"), always visible.
+  const weightSelect = (
+    <select
+      value={value.weight}
+      onChange={(e) => set({ weight: e.target.value as Weight })}
+      className={`${INPUT} shrink-0`}
+      aria-label={`${label} weight`}
+    >
+      {WEIGHTS.map((w) => (
+        <option key={w} value={w}>{w}</option>
+      ))}
+    </select>
+  );
 
   return (
     <div className="flex flex-col gap-sm border-b border-border py-md last:border-0">
@@ -91,18 +115,10 @@ function CriterionEditor({ label, placeholder, value, onChange }: {
       </div>
       <div>
         <label className="mb-base block font-label-sm text-label-sm text-text-muted">{TIER_HINTS.preferred}</label>
-        <TagInput values={value.preferred} onChange={(v) => set({ preferred: v })} placeholder={placeholder} />
+        <TagInput values={value.preferred} onChange={(v) => set({ preferred: v })} placeholder={placeholder} trailing={weightSelect} />
       </div>
       {more && (
         <>
-          <div>
-            <label className="mb-base block font-label-sm text-label-sm text-text-muted">Weight</label>
-            <select value={value.weight} onChange={(e) => set({ weight: e.target.value as Weight })} className={INPUT}>
-              {WEIGHTS.map((w) => (
-                <option key={w} value={w}>{w}</option>
-              ))}
-            </select>
-          </div>
           {(["acceptable", "avoid", "excluded"] as Tier[]).map((t) => (
             <div key={t}>
               <label className="mb-base block font-label-sm text-label-sm text-text-muted">{TIER_HINTS[t]}</label>
@@ -184,7 +200,7 @@ export default function Preferences() {
       <section className={CARD}>
         <h2 className="mb-xs font-headline-md text-headline-md text-on-surface">Preferences</h2>
         <p className="mb-sm font-label-sm text-label-sm text-text-muted">
-          List values per tier. "More options" reveals weight and the acceptable / avoid / excluded tiers.
+          Add values and set a weight per criterion. "More options" reveals the acceptable / avoid / excluded tiers.
         </p>
         {CRITERIA.map((f) => (
           <CriterionEditor
