@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v6.9.0" />
+    <meta name="status" content="planned" />
+    <meta name="last-updated" content="2026-05-31" />
+    <title>v6.9.0 — Self-serve account deletion</title>
+  </head>
+  <body>
+    <h1>v6.9.0 — Self-serve account deletion</h1>
+
+    <h2>Goal</h2>
+    <p>
+      Let a signed-in user delete their own account and all associated data
+      (the data-subject right to erasure). The deletion policy — hard delete,
+      relying on Stripe as the financial system-of-record — is in
+      <a href="../decisions/0027-account-deletion-policy.html">ADR 0027</a>
+      (<strong>proposed</strong>: confirm the retain-financials question before
+      implementing). This phase is <strong>specced, not yet built</strong>.
+    </p>
+
+    <h2>Mechanism</h2>
+    <p>
+      Every app table is <code>ON DELETE CASCADE</code> on
+      <code>auth.users(id)</code> — <code>user_profile</code> (mig 0003),
+      <code>credit_ledger_entry</code> (mig 0001), <code>scan</code> (mig 0002).
+      So deleting the Supabase <strong>auth user</strong> atomically removes all
+      app data; no per-table delete is needed. Deletion happens via the Supabase
+      Auth <em>admin</em> API, which requires the service-role key the backend
+      already holds (<code>SUPABASE_SECRET_KEY</code>) — the browser can't do
+      this itself.
+    </p>
+
+    <h2>Files (planned)</h2>
+    <h3>Server</h3>
+    <ul>
+      <li><code>app/auth/routes.py</code> (or a new <code>app/account/</code>) —
+        authenticated <code>DELETE /me</code> (or <code>POST /account/delete</code>):
+        verify the JWT, then call the Supabase admin delete for
+        <code>user["sub"]</code> via <code>httpx</code>
+        (<code>DELETE {SUPABASE_URL}/auth/v1/admin/users/{id}</code> with the
+        service-role key — no new dependency; matches the existing httpx use).
+        Cascade clears app rows. Returns <code>204</code>.</li>
+      <li><code>pyproject.toml</code> — version bump (server touched, ADR 0010).</li>
+    </ul>
+    <h3>Web</h3>
+    <ul>
+      <li>An account/"Danger zone" section (on <code>/account</code> or a new
+        <code>/settings</code>) with a <strong>Delete account</strong> action →
+        a confirm modal that states what is removed and is irreversible, and
+        requires a deliberate confirmation (type the email or the word DELETE) →
+        calls the endpoint → <code>signOut()</code> + redirect to the landing.</li>
+      <li><code>src/api.ts</code> — add a <code>DELETE</code> helper if needed.</li>
+    </ul>
+    <h3>Docs</h3>
+    <ul>
+      <li><code>docs/reference/api.html</code> — document the delete endpoint
+        (auth, cascade scope, 204, errors).</li>
+      <li><code>docs/architecture.html</code> — note the deletion path.</li>
+    </ul>
+
+    <h2>Verify</h2>
+    <ol>
+      <li>A test user deletes their account → the <code>auth.users</code> row is
+        gone and (by cascade) their <code>user_profile</code>,
+        <code>credit_ledger_entry</code>, and <code>scan</code> rows are gone.</li>
+      <li>The user is signed out and lands on the logged-out page; the deleted
+        session can no longer call authenticated endpoints (401).</li>
+      <li>Signing in again with the same Google account creates a <em>fresh</em>
+        user (new signup bonus, empty profile) — no resurrected data.</li>
+      <li>Only the authenticated user can delete their own account
+        (no cross-user deletion); admins may also delete via the admin surface
+        if wired.</li>
+    </ol>
+
+    <h2>Notes / open questions</h2>
+    <p>
+      <strong>Blocked on ADR 0027 sign-off.</strong> If the user decides any
+      financial records must persist <em>in our DB</em> (not just in Stripe),
+      the mechanism changes from hard-delete to <em>anonymize-in-place</em>
+      (scrub PII: email/CV/profile; keep de-identified ledger rows) — a larger
+      build. The current spec assumes hard delete.
+    </p>
+    <p>
+      <strong>Stripe customer.</strong> Deleting our user does not touch Stripe;
+      whether to also delete/anonymize the Stripe customer is an implementation
+      detail decided alongside ADR 0027.
+    </p>
+    <p>
+      <strong>Companion: data export.</strong> The "download my data" right
+      (v6.10) pairs naturally with deletion; out of scope here.
+    </p>
+  </body>
+</html>

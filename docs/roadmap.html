@@ -313,6 +313,33 @@
           credit-mutating endpoints locked to admins server-side, not just hidden
           in the UI), plus a who/what/when/why audit trail; admin UI a gated
           route in the same web app. Its own ADR at that phase.</dd>
+
+        <dt>v6.7 — extension into <code>ext/</code> <em>(done)</em></dt>
+        <dd>Collect the Chrome extension source into a dedicated
+          <code>ext/</code> folder, a symmetric peer of <code>web/</code> and
+          <code>server/</code> (ADR 0026). Pure restructure, no behavior change.</dd>
+
+        <dt>v6.8 — web visual tune <em>(done)</em></dt>
+        <dd>Shrink the Stitch type scale (it ran large on real screens), tighten
+          the spacing tokens, show the full sidebar email, and add Preferences +
+          a WaterlooWorks link to the sidebar nav (revises an ADR 0024 nav call).</dd>
+
+        <dt>v6.9 — account deletion</dt>
+        <dd>Self-serve "delete my account" (data-subject erasure). Backend
+          deletes the Supabase auth user (service-role admin call); the app
+          tables (<code>user_profile</code>, <code>credit_ledger_entry</code>,
+          <code>scan</code>) all <code>ON DELETE CASCADE</code> on
+          <code>auth.users</code>, so they clear atomically. Double-confirm UX,
+          sign-out + redirect. Data-deletion policy (hard delete vs. retain
+          financials) in its own ADR.</dd>
+
+        <dt>v6.10 — legal &amp; support pages</dt>
+        <dd>Wire the footer links: a Terms of Service page (content user-supplied),
+          the Privacy link pointed at the existing
+          <code>hyoseo.dev/privacy-policy/ww-extension/</code>, and a real
+          support/contact path (currently <code>#</code>). Likely paired with a
+          <strong>data export</strong> ("download my data") as the companion
+          data-subject right to deletion.</dd>
       </dl>
       <p>
         <strong>Out of scope for v6</strong> (stay on the whiteboard): re-score

@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="proposed" />
+    <meta name="date" content="2026-05-31" />
+    <title>ADR 0027 — Account deletion: hard delete, Stripe as financial record</title>
+  </head>
+  <body>
+    <h1>ADR 0027 — Account deletion: hard delete, Stripe as financial record</h1>
+
+    <p><strong>Status: proposed.</strong> The retain-financials question below
+      is a money/legal call for the owner to confirm before this is accepted and
+      v6.9 is implemented.</p>
+
+    <section id="context">
+      <h2>Context</h2>
+      <p>
+        v6.9 adds self-serve account deletion. All app tables FK
+        <code>auth.users(id)</code> with <code>ON DELETE CASCADE</code>
+        (<code>user_profile</code>, <code>credit_ledger_entry</code>,
+        <code>scan</code>), so deleting the Supabase auth user removes every app
+        row atomically. The one real decision: <strong>do we preserve the user's
+        purchase/financial records in our own database?</strong> The credit
+        ledger holds <code>kind='purchase'</code> rows; a hard delete cascades
+        them away. Some businesses must retain transaction records for tax /
+        accounting / chargeback windows.
+      </p>
+      <p>
+        Key fact: <strong>Stripe is the system-of-record for payments.</strong>
+        Every checkout/charge/refund lives in Stripe, which retains it
+        independently for its own compliance window. Our
+        <code>credit_ledger_entry</code> is a <em>derived balance</em> (a sum of
+        deltas), not the authoritative books — the purchase rows are a
+        convenience mirror of what Stripe already holds.
+      </p>
+    </section>
+
+    <section id="decision">
+      <h2>Decision (proposed)</h2>
+      <ul>
+        <li><strong>Hard delete.</strong> The backend deletes the Supabase auth
+          user via the service-role admin API; FK cascade removes
+          <code>user_profile</code>, <code>credit_ledger_entry</code> (including
+          purchase rows), and <code>scan</code>. No in-DB financial record is
+          preserved.</li>
+        <li><strong>Stripe is the retained financial record.</strong> Because
+          Stripe independently keeps all transactions, cascading away our mirror
+          rows is acceptable — financial history remains reconstructable from
+          Stripe. The Stripe customer object is left intact (or PII-minimized) so
+          that history stays linkable; this is an implementation detail.</li>
+        <li><strong>Self-serve + irreversible.</strong> The authenticated user
+          deletes their own account behind a deliberate double-confirmation;
+          admins may also delete via the admin surface. There is no soft-delete /
+          undo.</li>
+      </ul>
+    </section>
+
+    <section id="consequences">
+      <h2>Consequences</h2>
+      <ul>
+        <li><strong>+</strong> Simple and complete: one admin call + the existing
+          cascade fully satisfies erasure. No bespoke per-table teardown.</li>
+        <li><strong>+</strong> Financial history is not lost — it persists in
+          Stripe, the actual source of truth.</li>
+        <li><strong>−</strong> Our DB can no longer answer "what did this
+          (now-deleted) user buy?" — that query moves to the Stripe dashboard.</li>
+        <li><strong>−</strong> Irreversible by design; a mistaken deletion can't
+          be undone from our side. Mitigated by the confirm UX.</li>
+        <li><strong>Alternative if rejected:</strong> if financials must stay in
+          our DB, switch to <em>anonymize-in-place</em> — keep the
+          <code>auth.users</code> row but scrub PII (email) and delete
+          <code>user_profile</code> + CV, retaining de-identified ledger rows.
+          More code and a fuzzier "deletion." Documented here so the trade-off is
+          explicit; not chosen unless the owner requires in-DB retention.</li>
+      </ul>
+    </section>
+  </body>
+</html>
