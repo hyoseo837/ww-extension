@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { signInWithGoogle } from "../supabase";
 import { SUPPORT_EMAIL } from "../support";
 import Icon from "../Icon";
@@ -83,8 +84,8 @@ export default function Landing() {
         <div className="mx-auto flex max-w-max-width flex-col items-center justify-between gap-sm px-gutter md:flex-row md:gap-0">
           <p className="font-label-sm text-label-sm text-text-muted">© 2024 WW Scorer. Built for Waterloo Students.</p>
           <div className="flex items-center gap-md">
-            <a href="#" className="font-label-sm text-label-sm text-text-muted transition-colors hover:text-text-secondary hover:underline">Terms</a>
-            <a href="#" className="font-label-sm text-label-sm text-text-muted transition-colors hover:text-text-secondary hover:underline">Privacy</a>
+            <Link to="/terms" className="font-label-sm text-label-sm text-text-muted transition-colors hover:text-text-secondary hover:underline">Terms</Link>
+            <Link to="/privacy" className="font-label-sm text-label-sm text-text-muted transition-colors hover:text-text-secondary hover:underline">Privacy</Link>
             <a href={`mailto:${SUPPORT_EMAIL}`} className="font-label-sm text-label-sm text-text-muted transition-colors hover:text-text-secondary hover:underline">Contact</a>
           </div>
         </div>
