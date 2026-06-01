@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-05-31" />
+    <title>ADR 0026 — Extension lives in its own ext/ folder</title>
+  </head>
+  <body>
+    <h1>ADR 0026 — Extension lives in its own ext/ folder</h1>
+
+    <section id="context">
+      <h2>Context</h2>
+      <p>
+        The repo grew into a monorepo: the backend lives in
+        <code>server/</code> (<a href="0010-monorepo-with-server-folder.html">ADR 0010</a>)
+        and the web app in <code>web/</code>
+        (<a href="0020-web-app-in-monorepo.html">ADR 0020</a>). The Chrome
+        extension, however, still lived <em>implicitly at the repo root</em> —
+        <code>manifest.json</code>, <code>src/</code>, <code>icons/</code>,
+        <code>options.html</code>, <code>welcome.html</code> sat alongside
+        repo-level files (<code>docs/</code>, <code>package.sh</code>,
+        <code>dist/</code>, <code>CLAUDE.md</code>, the two sibling folders).
+      </p>
+      <p>
+        That asymmetry made "the extension" the ill-defined leftover at the
+        root rather than a named unit, and it collided with a plain
+        <code>src/</code> in <code>web/</code> (two different <code>src/</code>
+        trees, only one of them at the top level). Collecting the extension into
+        its own peer folder makes all three deployables symmetric and the
+        Chrome <em>load-unpacked</em> target unambiguous.
+      </p>
+    </section>
+
+    <section id="decision">
+      <h2>Decision</h2>
+      <ul>
+        <li>Move the extension's source into <code>ext/</code>:
+          <code>manifest.json</code>, <code>src/</code>, <code>icons/</code>,
+          <code>options.html</code>, <code>welcome.html</code>, plus the
+          extension's design mockups (<code>design/</code>) and Web Store
+          listing assets (<code>screenshots/</code>). Chrome now loads
+          <code>ext/</code> as the unpacked extension.</li>
+        <li><strong>Internal manifest paths are unchanged.</strong>
+          <code>manifest.json</code>, <code>src/</code>, and <code>icons/</code>
+          move together, so the manifest's relative references
+          (<code>src/content.js</code>, <code>icons/icon16.png</code>, …) still
+          resolve — Chrome resolves them relative to the manifest's directory.</li>
+        <li><strong>Release tooling stays at the repo root.</strong>
+          <code>package.sh</code> and the <code>dist/</code> output remain at the
+          top level (repo-level release tooling, not per-folder build config).
+          <code>package.sh</code> now <code>cd</code>s into <code>ext/</code>
+          before zipping so the archive keeps <code>manifest.json</code> at its
+          root, and writes the zip up to the root <code>dist/</code>.</li>
+        <li>The Web Store packaging allowlist (the boundary from
+          <a href="0010-monorepo-with-server-folder.html">ADR 0010</a> that keeps
+          <code>server/</code> and <code>web/</code> out of the bundle) is
+          unchanged in spirit — it now enumerates files under <code>ext/</code>.</li>
+      </ul>
+      <p>
+        This <strong>extends</strong> ADR 0010 / 0020 (it completes the monorepo
+        layout) and does not supersede them — <code>server/</code> and
+        <code>web/</code> are untouched.
+      </p>
+    </section>
+
+    <section id="consequences">
+      <h2>Consequences</h2>
+      <ul>
+        <li><strong>+</strong> Three symmetric peers (<code>ext/</code>,
+          <code>web/</code>, <code>server/</code>); "the extension" is a named
+          folder, not the root leftover. No more ambiguous top-level
+          <code>src/</code>.</li>
+        <li><strong>+</strong> The load-unpacked target is now exactly
+          <code>ext/</code> (previously the whole repo root, which also
+          contained <code>web/</code>, <code>server/</code>, <code>docs/</code> —
+          loading it as an extension was always a slight abuse).</li>
+        <li><strong>−</strong> The dev-load instruction changes (load
+          <code>ext/</code>, not the repo root). <code>CLAUDE.md</code>,
+          <code>README.md</code>, <code>docs/architecture.html</code>, and the
+          dev-load memory are updated; archived docs and past per-phase specs
+          keep their original root-relative paths as frozen history.</li>
+        <li><strong>−</strong> <code>package.sh</code> can no longer zip from its
+          own directory; it must <code>cd ext</code> first (one extra line).
+          Failing to do so would store paths as <code>ext/manifest.json</code>
+          inside the zip and break the install.</li>
+        <li>The <code>vX.Y.Z</code> version source moves to
+          <code>ext/manifest.json</code>; the versioning rule
+          (<a href="0002-versioning-vXYZ.html">ADR 0002</a>) is otherwise
+          unchanged.</li>
+      </ul>
+    </section>
+  </body>
+</html>

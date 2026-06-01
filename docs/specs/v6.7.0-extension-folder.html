@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v6.7.0" />
+    <meta name="status" content="done" />
+    <meta name="last-updated" content="2026-05-31" />
+    <title>v6.7.0 — Collect the extension into ext/</title>
+  </head>
+  <body>
+    <h1>v6.7.0 — Collect the extension into ext/</h1>
+
+    <h2>Goal</h2>
+    <p>
+      Move the Chrome extension's source out of the implicit repo root and into
+      a dedicated <code>ext/</code> folder, so it is a symmetric peer of
+      <code>web/</code> and <code>server/</code>
+      (<a href="../decisions/0026-extension-in-ext-folder.html">ADR 0026</a>).
+      Pure restructure — <strong>no extension code or behavior changes</strong>.
+      Internal manifest references survive untouched because
+      <code>manifest.json</code>, <code>src/</code>, and <code>icons/</code> move
+      together (Chrome resolves them relative to the manifest). Release tooling
+      (<code>package.sh</code>) and output (<code>dist/</code>) stay at the repo
+      root, repointed at <code>ext/</code>.
+    </p>
+
+    <h2>Files</h2>
+    <h3>Moved (git mv) — into <code>ext/</code></h3>
+    <ul>
+      <li><code>manifest.json</code> → <code>ext/manifest.json</code></li>
+      <li><code>options.html</code> → <code>ext/options.html</code></li>
+      <li><code>welcome.html</code> → <code>ext/welcome.html</code></li>
+      <li><code>src/</code> → <code>ext/src/</code> (content, background,
+        page-bridge, options, welcome, sidebar.css)</li>
+      <li><code>icons/</code> → <code>ext/icons/</code></li>
+      <li><code>design/</code> → <code>ext/design/</code> (extension UI mockups —
+        distinct from <code>web/design/</code>)</li>
+      <li><code>screenshots/</code> → <code>ext/screenshots/</code> (Web Store
+        listing assets)</li>
+    </ul>
+    <h3>Changed</h3>
+    <ul>
+      <li><code>package.sh</code> (stays at root) — read version from
+        <code>ext/manifest.json</code>; <code>cd ext</code> before
+        <code>zip</code> so the archive keeps <code>manifest.json</code> at its
+        root; write the zip to the root <code>dist/</code> (same allowlist:
+        manifest, options.html, src/, the three icons).</li>
+      <li><code>ext/manifest.json</code> — version bump to <code>6.7.0</code>.</li>
+      <li><code>docs/architecture.html</code> — Client section: paths noted as
+        relative to <code>ext/</code>; link to ADR 0026.</li>
+      <li><code>CLAUDE.md</code> — Build/package + orientation: load
+        <code>ext/</code> as unpacked; <code>ext/manifest.json</code> is the
+        version source.</li>
+      <li><code>README.md</code> — icon/screenshot image paths, the architecture
+        file tree, and the "Load unpacked → select the <code>ext/</code> folder"
+        step.</li>
+      <li>Dev-load memory — updated to "load <code>ext/</code>".</li>
+    </ul>
+    <h3>Not changed (deliberately)</h3>
+    <ul>
+      <li><code>dist/</code> location, <code>.gitignore</code> (its
+        <code>dist/</code> and <code>*.zip</code> rules still hold).</li>
+      <li><code>docs/archive/**</code> and past per-phase specs — frozen history;
+        their root-relative paths were correct at the time.</li>
+      <li>The zip allowlist contents (<code>welcome.html</code> remains out of
+        the zip exactly as before — packaging behavior is preserved, not
+        "fixed" here).</li>
+      <li><code>web/</code>, <code>server/</code> — untouched, so no Vercel/DO
+        rebuild is triggered by this commit.</li>
+    </ul>
+
+    <h2>Verify</h2>
+    <ol>
+      <li><code>./package.sh</code> builds
+        <code>dist/ww-extension-v6.7.0.zip</code>; <code>unzip -l</code> shows
+        <code>manifest.json</code>, <code>options.html</code>,
+        <code>src/*</code>, and the three icons <strong>at the archive root</strong>
+        (no <code>ext/</code> prefix) — i.e. a Chrome-loadable zip.</li>
+      <li><code>chrome://extensions</code> → Load unpacked → select
+        <code>ext/</code> loads and scans exactly as before.</li>
+      <li><code>git mv</code> preserved history (<code>git log --follow</code> on
+        a moved file walks past the move).</li>
+      <li>No living doc still tells a reader to load the repo root; archived docs
+        are unchanged.</li>
+    </ol>
+  </body>
+</html>

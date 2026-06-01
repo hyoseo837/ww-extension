@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="icons/icon128.png" width="96" alt="WW Extension" />
+<img src="ext/icons/icon128.png" width="96" alt="WW Extension" />
 
 # WW Extension
 
@@ -16,11 +16,11 @@ Score every co-op posting against your CV in seconds. See which jobs are worth a
 
 ---
 
-![Demo](screenshots/demoVideo.gif)
+![Demo](ext/screenshots/demoVideo.gif)
 
 [▶ Full walkthrough on YouTube](https://www.youtube.com/watch?v=YURcZTqKS5U)
 
-![Sidebar in action on WaterlooWorks](screenshots/wwextsidebar.png)
+![Sidebar in action on WaterlooWorks](ext/screenshots/wwextsidebar.png)
 
 ## What it does
 
@@ -49,8 +49,8 @@ Scores appear as inline badges directly in the WaterlooWorks job table and persi
 
 <table>
 <tr>
-<td width="50%"><b>Profile & CV setup</b><br/><img src="screenshots/wwextprofile.png" alt="Profile and context settings" /></td>
-<td width="50%"><b>API key & token usage</b><br/><img src="screenshots/wwextoption.png" alt="API configuration and token counter" /></td>
+<td width="50%"><b>Profile & CV setup</b><br/><img src="ext/screenshots/wwextprofile.png" alt="Profile and context settings" /></td>
+<td width="50%"><b>API key & token usage</b><br/><img src="ext/screenshots/wwextoption.png" alt="API configuration and token counter" /></td>
 </tr>
 </table>
 
@@ -64,7 +64,7 @@ git clone https://github.com/hyoseo837/ww-extension.git
 
 1. Open `chrome://extensions`
 2. Enable **Developer mode** (top-right toggle)
-3. Click **Load unpacked** and select the cloned folder
+3. Click **Load unpacked** and select the `ext/` folder inside the cloned repo
 4. The extension icon will appear in your toolbar
 
 ## Setup
@@ -106,18 +106,19 @@ Full policy: <https://hyoseo.dev/privacy-policy/ww-extension/>
 
 ## Architecture
 
-Plain JS, no build step, no dependencies.
+Plain JS, no build step, no dependencies. The extension lives in `ext/`.
 
 ```
-manifest.json             Manifest V3 config
-src/
-├── content.js            Sidebar UI, table badge injection, pagination
-├── background.js         Gemini API calls (service worker), token counter
-├── page-bridge.js        Injected page script — extracts WW auth tokens,
-│                         fetches posting HTML with the page's session cookies
-├── options.js            Options page logic (CV upload, settings, theme)
-└── sidebar.css           Sidebar + badge styles
-options.html              Options page (API key, CV, preferences, theme)
+ext/
+├── manifest.json         Manifest V3 config
+├── options.html          Options page (API key, CV, preferences, theme)
+└── src/
+    ├── content.js        Sidebar UI, table badge injection, pagination
+    ├── background.js     Gemini API calls (service worker), token counter
+    ├── page-bridge.js    Injected page script — extracts WW auth tokens,
+    │                     fetches posting HTML with the page's session cookies
+    ├── options.js        Options page logic (CV upload, settings, theme)
+    └── sidebar.css       Sidebar + badge styles
 ```
 
 Why a page bridge? WaterlooWorks gates posting detail requests behind dynamic CSRF-style tokens embedded in the page. The bridge runs in the page's JS context so it can read those tokens and reuse the user's session cookies — the content script alone can't.

@@ -46,6 +46,9 @@ This order is load-bearing — follow it for every phase, not just when asked:
   authoritative backend API contract)
 - `docs/archive/` — frozen old major versions (v01, v02, v03 used the
   older plan/impl/history shape)
+- `ext/` — the Chrome extension source (manifest, src/, icons/,
+  options.html, welcome.html, design/, screenshots/); ADR 0026
+- `web/` — Vite+React web app (account/profile/payments + admin)
 - `server/` — FastAPI backend (created at v4.1 bootstrap; excluded
   from Web Store zip by `package.sh`)
 - `docs/whiteboard.md` — user's personal scratchpad for raw ideas.
@@ -53,9 +56,10 @@ This order is load-bearing — follow it for every phase, not just when asked:
 
 ## Build / package
 
-No build step. Load the **repo root** as unpacked in Chrome for dev
-(`manifest.json` is at the root and references `src/`). `dist/` holds only
-the packaged Web Store zips — it is not a loadable unpacked directory.
-`./package.sh` produces the Web Store zip into `dist/`.
+No build step. The extension source lives in `ext/` (ADR 0026). Load the
+**`ext/` folder** as unpacked in Chrome for dev (`ext/manifest.json`
+references `ext/src/`). `dist/` (repo root) holds only the packaged Web Store
+zips — it is not a loadable unpacked directory. `./package.sh` (repo root)
+zips from `ext/` into `dist/`.
 
-Version is in `manifest.json` and MUST match the commit-message version.
+Version is in `ext/manifest.json` and MUST match the commit-message version.

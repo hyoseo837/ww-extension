@@ -28,7 +28,16 @@
     <h2>Components</h2>
 
     <section id="client">
-      <h3>Client — this repo (Chrome MV3 extension)</h3>
+      <h3>Client — <code>ext/</code> (Chrome MV3 extension)</h3>
+
+      <p>
+        The extension source lives in <code>ext/</code> — a peer of
+        <code>web/</code> and <code>server/</code>
+        (<a href="decisions/0026-extension-in-ext-folder.html">ADR 0026</a>);
+        Chrome loads <code>ext/</code> as the unpacked extension. The file
+        paths below are relative to <code>ext/</code> (e.g.
+        <code>src/content.js</code> is <code>ext/src/content.js</code>).
+      </p>
 
       <h4>Files</h4>
       <dl>
