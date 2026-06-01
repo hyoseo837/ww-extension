@@ -15,6 +15,8 @@ export default function Billing() {
 
   const [entries, setEntries] = useState<Entry[]>([]);
   const [done, setDone] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   const load = useCallback(async (reset: boolean) => {
     const offset = reset ? 0 : entries.length;
@@ -24,7 +26,9 @@ export default function Billing() {
   }, [entries.length]);
 
   useEffect(() => {
-    load(true).catch(() => setDone(true));
+    load(true)
+      .catch(() => setError(true))
+      .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -69,16 +73,24 @@ export default function Billing() {
 
       <section className={CARD}>
         <h2 className="mb-md font-headline-md text-headline-md text-on-surface">Credit history</h2>
-        <HistoryList entries={entries} />
-        {!done && entries.length > 0 && (
-          <div className="mt-lg flex justify-center">
-            <button
-              onClick={() => load(false).catch(() => setDone(true))}
-              className="rounded-lg border border-border px-lg py-sm font-label-md text-label-md text-primary transition-colors hover:bg-surface-alt"
-            >
-              Load more
-            </button>
-          </div>
+        {loading ? (
+          <p className="font-body-md text-body-md text-text-muted">Loading…</p>
+        ) : error ? (
+          <p className="font-body-md text-body-md text-negative">Couldn't load your credit history. Refresh to try again.</p>
+        ) : (
+          <>
+            <HistoryList entries={entries} />
+            {!done && entries.length > 0 && (
+              <div className="mt-lg flex justify-center">
+                <button
+                  onClick={() => load(false).catch(() => setDone(true))}
+                  className="rounded-lg border border-border px-lg py-sm font-label-md text-label-md text-primary transition-colors hover:bg-surface-alt"
+                >
+                  Load more
+                </button>
+              </div>
+            )}
+          </>
         )}
       </section>
     </div>

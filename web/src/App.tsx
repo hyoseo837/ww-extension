@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 import { useSession } from "./useSession";
 import Layout from "./Layout";
 import Landing from "./pages/Landing";
@@ -8,6 +8,7 @@ import Buy from "./pages/Buy";
 import Profile from "./pages/Profile";
 import Preferences from "./pages/Preferences";
 import Admin from "./pages/Admin";
+import NotFound from "./pages/NotFound";
 import Privacy from "./pages/legal/Privacy";
 import Terms from "./pages/legal/Terms";
 
@@ -49,7 +50,8 @@ export default function App() {
         <Route path="/buy" element={<Buy />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/preferences" element={<Preferences />} />
-        <Route path="*" element={<Navigate to="/account" replace />} />
+        {/* Real 404 (v6.15) — was a silent redirect to /account. */}
+        <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>
   );

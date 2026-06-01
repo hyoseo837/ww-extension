@@ -25,11 +25,16 @@ export default function Account() {
   const { balance, email } = useDashboard();
   const [recent, setRecent] = useState<Entry[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [loadingRecent, setLoadingRecent] = useState(true);
+  const [recentError, setRecentError] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [dataError, setDataError] = useState<string | null>(null);
 
   useEffect(() => {
-    apiGet<{ entries: Entry[] }>("/credits/history?limit=25").then((d) => setRecent(d.entries)).catch(() => {});
+    apiGet<{ entries: Entry[] }>("/credits/history?limit=25")
+      .then((d) => setRecent(d.entries))
+      .catch(() => setRecentError(true))
+      .finally(() => setLoadingRecent(false));
     apiGet<Profile>("/profile").then(setProfile).catch(() => {});
   }, []);
 
@@ -126,7 +131,13 @@ export default function Account() {
             <h3 className="font-headline-md text-headline-md text-on-surface">Recent activity</h3>
             <Link to="/billing" className="font-label-md text-label-md text-primary hover:text-accent-hover">View all</Link>
           </div>
-          <HistoryList entries={recent} limitRows={6} />
+          {loadingRecent ? (
+            <p className="font-body-md text-body-md text-text-muted">Loading…</p>
+          ) : recentError ? (
+            <p className="font-body-md text-body-md text-negative">Couldn't load recent activity. Refresh to try again.</p>
+          ) : (
+            <HistoryList entries={recent} limitRows={6} />
+          )}
         </div>
       </div>
 
