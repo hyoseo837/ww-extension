@@ -1,4 +1,5 @@
 import { signInWithGoogle } from "../supabase";
+import { SUPPORT_EMAIL } from "../support";
 import Icon from "../Icon";
 
 const FEATURES = [
@@ -84,7 +85,7 @@ export default function Landing() {
           <div className="flex items-center gap-md">
             <a href="#" className="font-label-sm text-label-sm text-text-muted transition-colors hover:text-text-secondary hover:underline">Terms</a>
             <a href="#" className="font-label-sm text-label-sm text-text-muted transition-colors hover:text-text-secondary hover:underline">Privacy</a>
-            <a href="#" className="font-label-sm text-label-sm text-text-muted transition-colors hover:text-text-secondary hover:underline">Feedback</a>
+            <a href={`mailto:${SUPPORT_EMAIL}`} className="font-label-sm text-label-sm text-text-muted transition-colors hover:text-text-secondary hover:underline">Contact</a>
           </div>
         </div>
       </footer>

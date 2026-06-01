@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v6.10.0" />
+    <meta name="status" content="done" />
+    <meta name="last-updated" content="2026-05-31" />
+    <title>v6.10.0 — Support contact (sidebar + footer)</title>
+  </head>
+  <body>
+    <h1>v6.10.0 — Support contact (sidebar + footer)</h1>
+
+    <h2>Goal</h2>
+    <p>
+      Open the v6.10 <em>legal, trust &amp; support</em> phase with its first
+      slice: surface the real support address. The owner set up
+      <code>support@hyoseo.dev</code> (received via Cloudflare Email Routing on
+      <code>hyoseo.dev</code>, forwarded to the dev inbox). Wire it into the web
+      app so users have a working contact path — the logged-in sidebar and the
+      logged-out landing footer (whose link was a dead <code>#</code>).
+    </p>
+
+    <h2>Files</h2>
+    <ul>
+      <li><code>web/src/support.ts</code> (new) — <code>SUPPORT_EMAIL =
+        "support@hyoseo.dev"</code>. Single source so the sidebar, footer, and
+        the later legal/contact pages stay consistent.</li>
+      <li><code>web/src/Layout.tsx</code> — a <strong>Support</strong> link
+        (<code>mailto:</code>, <code>help</code> icon) in the desktop sidebar
+        bottom, between Buy Credits and Sign out (matches the Stitch
+        account_dashboard sidebar's Support/Logout pair).</li>
+      <li><code>web/src/pages/Landing.tsx</code> — footer link relabeled
+        <code>Feedback</code> → <code>Contact</code>, pointed at
+        <code>mailto:${SUPPORT_EMAIL}</code> instead of <code>#</code>.</li>
+      <li><code>ext/manifest.json</code> — version bump to 6.10.0.</li>
+    </ul>
+
+    <h2>Verify</h2>
+    <ol>
+      <li><code>cd web &amp;&amp; npm run build</code> clean.</li>
+      <li>Logged in: the sidebar shows Support above Sign out; clicking it opens
+        the mail client to <code>support@hyoseo.dev</code>.</li>
+      <li>Logged out: the landing footer "Contact" opens the same mail client.</li>
+    </ol>
+
+    <h2>Notes</h2>
+    <p>
+      <strong>Remaining v6.10 slices</strong> (later commits): Terms of Service
+      page (content user-supplied), Privacy link → existing
+      <code>hyoseo.dev/privacy-policy/ww-extension/</code>, a stated refund
+      policy, the "not affiliated with UW / WaterlooWorks" footer disclaimer, and
+      a consent-at-signup line — all reusing <code>SUPPORT_EMAIL</code> /
+      these footer slots. Mobile top bar left unchanged (space-constrained); the
+      admin sidebar isn't given a Support link (the operator is the support).
+    </p>
+  </body>
+</html>

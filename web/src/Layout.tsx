@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useOutletContext } from "react-router-dom";
 import { apiGet } from "./api";
 import { signOut } from "./supabase";
+import { SUPPORT_EMAIL } from "./support";
 import Icon from "./Icon";
 
 type DashboardContext = { balance: number | null; refetchBalance: () => void; email: string };
@@ -103,6 +104,13 @@ export default function Layout({ email }: { email: string }) {
             <Icon name="add_circle" className="text-[18px]" />
             Buy Credits
           </Link>
+          <a
+            href={`mailto:${SUPPORT_EMAIL}`}
+            className="flex w-full items-center gap-sm rounded-lg px-sm py-sm font-label-md text-label-md text-on-surface-variant transition-colors hover:bg-surface-container-highest"
+          >
+            <Icon name="help" />
+            Support
+          </a>
           <button
             onClick={() => signOut()}
             className="flex w-full items-center gap-sm rounded-lg px-sm py-sm font-label-md text-label-md text-on-surface-variant transition-colors hover:bg-surface-container-highest"
