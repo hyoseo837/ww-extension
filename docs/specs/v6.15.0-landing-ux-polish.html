@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v6.15.0" />
+    <meta name="status" content="in-progress" />
+    <meta name="last-updated" content="2026-06-01" />
+    <title>v6.15.0 — Landing &amp; UX polish</title>
+  </head>
+  <body>
+    <h1>v6.15.0 — Landing &amp; UX polish</h1>
+
+    <h2>Goal</h2>
+    <p>
+      The last v6 web pass before the v7 extension work: make pricing visible to
+      logged-out visitors, give the data pages honest loading / error states, and
+      serve a real 404 instead of a silent redirect. Three independent fixes,
+      grouped because each is small.
+    </p>
+
+    <h2>1. Pricing visible to logged-out users</h2>
+    <p>
+      Today the price tiers live only in <code>Buy.tsx</code>, behind sign-in, so
+      a visitor can't see what scanning costs before committing a Google login.
+      The package list is a hard-coded constant mirroring the server's
+      <code>CREDIT_PACKAGES</code> (<code>payments.py</code>).
+    </p>
+    <ul>
+      <li>Extract the tiers into a shared <code>src/packages.ts</code> (single
+        source for both pages; still mirrors the server constant — the comment
+        moves with it).</li>
+      <li>Add a <strong>Pricing</strong> section to <code>Landing.tsx</code>
+        rendering the same tiers, <em>display-only</em>: the CTA is "Sign in to
+        buy" (checkout needs an authenticated session and a Stripe call), not a
+        live purchase button. Keeps the one-decision landing — sign in — intact
+        while answering "what does it cost?".</li>
+      <li><code>Buy.tsx</code> imports the shared list instead of its local copy.</li>
+    </ul>
+
+    <h2>2. Real 404</h2>
+    <p>
+      Today the authenticated catch-all <code>*</code> does
+      <code>&lt;Navigate to="/account"&gt;</code> — a stray/mistyped URL silently
+      teleports to the dashboard, hiding the mistake. Add
+      <code>src/pages/NotFound.tsx</code> (a plain 404 card with a link back to
+      the dashboard) and point the authenticated <code>*</code> at it.
+    </p>
+    <p>
+      <strong>Logged-out <code>*</code> stays the landing.</strong> The only valid
+      logged-out paths are <code>/</code>, <code>/privacy</code>,
+      <code>/terms</code>; an unknown path there is most often a deep link to an
+      app page the visitor must sign in to reach, so falling back to the landing
+      (which prompts sign-in) is the right call — a 404 would be worse UX. So the
+      real-404 fix targets the authenticated catch-all, where "this page doesn't
+      exist" is unambiguous.
+    </p>
+
+    <h2>3. Loading / error / empty states</h2>
+    <p>
+      Audit of the data-driven pages — most already handle these; two swallow
+      errors. Scope is just closing those gaps, not a redesign.
+    </p>
+    <ul>
+      <li><strong>Profile, Preferences</strong> — already show "Loading…" and a
+        load/save error line. No change.</li>
+      <li><strong>HistoryList</strong> — already renders "No activity yet." when
+        empty. No change.</li>
+      <li><strong>Account</strong> — the history/profile fetches
+        <code>.catch(() =&gt; {})</code> silently. Add a <code>loading</code> flag
+        (so "Recent activity" doesn't flash the empty state before data lands)
+        and an inline error line when the history fetch fails.</li>
+      <li><strong>Billing</strong> — the history load swallows errors and shows no
+        loading indicator. Add <code>loading</code> + <code>error</code> states:
+        a loading line on first load, an inline error if it fails.</li>
+    </ul>
+    <p>
+      Kept inline per the minimal-code rule (two pages, a few lines each) rather
+      than introducing a shared status-banner abstraction.
+    </p>
+
+    <h2>Files</h2>
+    <ul>
+      <li><code>web/src/packages.ts</code> — new shared credit-package tiers.</li>
+      <li><code>web/src/pages/Buy.tsx</code> — import the shared tiers.</li>
+      <li><code>web/src/pages/Landing.tsx</code> — display-only pricing section.</li>
+      <li><code>web/src/pages/NotFound.tsx</code> — new 404 page.</li>
+      <li><code>web/src/App.tsx</code> — authenticated <code>*</code> → NotFound.</li>
+      <li><code>web/src/pages/Account.tsx</code>,
+        <code>web/src/pages/Billing.tsx</code> — loading + error states.</li>
+    </ul>
+
+    <h2>Notes</h2>
+    <p>
+      <strong>No cookie/analytics banner.</strong> Still none by design — Supabase
+      auth uses localStorage, there are no trackers, so there's nothing to
+      consent to. Recorded here so a future agent doesn't "add the missing
+      banner."
+    </p>
+
+    <h2>Slices</h2>
+    <ol>
+      <li><strong>v6.15.0</strong> — this spec (docs). (this commit)</li>
+      <li><strong>v6.15.1</strong> — logged-out pricing (packages.ts + Landing +
+        Buy).</li>
+      <li><strong>v6.15.2</strong> — real 404 + Account/Billing states.</li>
+    </ol>
+
+    <h2>Verify</h2>
+    <ol>
+      <li>Logged out, visit <code>/</code> → a pricing section shows the three
+        tiers and a "Sign in to buy" CTA; prices match <code>Buy.tsx</code> /
+        the server packages.</li>
+      <li>Signed in, visit a nonsense path → the 404 page (not a silent jump to
+        the dashboard); its link returns to <code>/account</code>.</li>
+      <li>Force a history fetch failure (offline) on Account and Billing → an
+        inline error appears instead of a blank/empty list; on success the lists
+        render and empty accounts show the empty state.</li>
+      <li><code>npm run build</code> passes.</li>
+    </ol>
+  </body>
+</html>
