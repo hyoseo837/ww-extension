@@ -3,8 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { SUPPORT_EMAIL } from "../../support";
 
 // Auth-agnostic shell for the public legal pages (/privacy, /terms). Renders
-// the same whether signed in or out — no app sidebar. The DRAFT banner stays
-// until the owner supplies final copy (v6.12 copy drop).
+// the same whether signed in or out — no app sidebar.
 export default function LegalLayout({ title, children }: { title: string; children: ReactNode }) {
   const navigate = useNavigate();
   const goBack = () => (window.history.length > 1 ? navigate(-1) : navigate("/"));
@@ -26,10 +25,6 @@ export default function LegalLayout({ title, children }: { title: string; childr
       </header>
 
       <main className="mx-auto w-full max-w-[760px] px-gutter py-xl">
-        <div className="mb-lg rounded-lg border border-border bg-accent-soft px-md py-sm font-body-md text-body-md text-primary">
-          <strong>Draft.</strong> This is a non-binding draft; the final wording is pending review.
-        </div>
-
         <h1 className="mb-lg font-display-lg-mobile text-display-lg-mobile text-on-surface md:font-display-lg md:text-display-lg">
           {title}
         </h1>

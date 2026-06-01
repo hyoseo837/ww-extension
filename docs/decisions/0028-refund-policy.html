@@ -4,17 +4,19 @@
     <meta charset="UTF-8" />
     <meta name="project" content="ww-extension" />
     <meta name="type" content="adr" />
-    <meta name="status" content="proposed" />
+    <meta name="status" content="accepted" />
     <meta name="date" content="2026-06-01" />
     <title>ADR 0028 — Refund policy for purchased credits</title>
   </head>
   <body>
     <h1>ADR 0028 — Refund policy for purchased credits</h1>
 
-    <p><strong>Status: proposed.</strong> This is a money / consumer-law call for
-      the owner to confirm before the Terms refund section (v6.12) is written.
-      <em>Not legal advice</em> — verify the chosen stance against the
-      consumer-protection law that applies to your users before publishing.</p>
+    <p><strong>Status: accepted (2026-06-01).</strong> The owner confirmed
+      <strong>Option A</strong> via the v6.12 legal intake: Canada-only users
+      (PIPEDA), Ontario/Canada governing law, paid Gemini tier. The wording is in
+      the Terms "Refunds" section (<code>web/src/pages/legal/Terms.tsx</code>).
+      <em>Not legal advice</em> — verify against applicable consumer-protection
+      law before relying on it.</p>
 
     <section id="context">
       <h2>Context</h2>
@@ -84,14 +86,16 @@
       </ul>
     </section>
 
-    <section id="owner-todo">
-      <h2>Needs owner confirmation</h2>
+    <section id="owner-decision">
+      <h2>Owner decision (confirmed 2026-06-01)</h2>
       <ul>
-        <li>Pick A, B, or C (default proposed: A).</li>
-        <li>Confirm where your users are, to know which consumer-protection
-          regime(s) apply (PIPEDA/Canada at minimum; EU/UK/other?).</li>
-        <li>Whether to add an explicit "immediate performance / waiver" consent
-          at checkout if statutory withdrawal rights are in play.</li>
+        <li><strong>Option A</strong> chosen.</li>
+        <li><strong>Users: Canada only</strong> — PIPEDA applies; no EU/UK
+          statutory-withdrawal handling needed at this time.</li>
+        <li><strong>No checkout waiver line</strong> required (would only be
+          needed for EU/UK users).</li>
+        <li>Revisit if the user base expands beyond Canada (EU/UK withdrawal
+          rights may then require the "immediate performance / waiver" consent).</li>
       </ul>
     </section>
   </body>

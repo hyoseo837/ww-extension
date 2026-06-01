@@ -1,16 +1,17 @@
 import { Link } from "react-router-dom";
 import LegalLayout from "./LegalLayout";
 
-// Draft content derived from docs/reference/legal-pages-scaffold.html (§B).
-// Bracketed [..] items are owner-supplied and resolved at the v6.12 copy drop.
+// Final copy. Inputs captured from the v6.12 legal intake (2026-06-01):
+// operator Hyoseo Lee, Canada-only users (PIPEDA), paid Gemini tier.
 export default function Privacy() {
   return (
     <LegalLayout title="Privacy Policy">
       <p>
-        <strong>Effective date: [date].</strong> This Privacy Policy explains what
-        WW Scorer (operated by [operator name]) collects, how we use it, and your
-        choices. We are not affiliated with the University of Waterloo or
-        WaterlooWorks. See also our <Link to="/terms">Terms of Service</Link>.
+        <strong>Effective date: June 1, 2026.</strong> This Privacy Policy
+        explains what WW Scorer (operated by Hyoseo Lee, "we") collects, how we
+        use it, and your choices. We are not affiliated with the University of
+        Waterloo or WaterlooWorks. See also our <Link to="/terms">Terms of
+        Service</Link>.
       </p>
 
       <h2>1. What we collect</h2>
@@ -23,16 +24,17 @@ export default function Privacy() {
 
       <h2>2. How we use it</h2>
       <p>
-        To provide AI scoring, run your account, process payments, and respond to
-        support requests. [Confirm: we do not use your data for any secondary
-        purpose, such as training our own models.]
+        We use your data only to provide AI scoring, run your account, process
+        payments, and respond to support requests. We do not sell your data, use
+        it for advertising, or use it to train our own models.
       </p>
 
       <h2>3. AI processing</h2>
       <p>
         To score a posting, your profile and the job description are sent to
-        Google's Gemini API. [Link Google's data terms; confirm whether content is
-        used to improve Google's models on the API tier in use.]
+        Google's Gemini API to generate the result. We use a paid Gemini API
+        tier; under Google's API terms for paid services, Google does not use the
+        content we submit to train or improve its models.
       </p>
 
       <h2>4. Sharing &amp; sub-processors</h2>
@@ -48,23 +50,25 @@ export default function Privacy() {
 
       <h2>5. Data location</h2>
       <p>
-        Your account and profile data are stored in Canada. Some providers
-        (Google, Stripe, Vercel, Cloudflare) may process data elsewhere. [Specify
-        jurisdictions if desired.]
+        Your account and profile data are stored in Canada. Some of the providers
+        above (such as Google, Stripe, Vercel, and Cloudflare) may process data in
+        other countries, where it can be subject to the laws of those
+        jurisdictions.
       </p>
 
       <h2>6. Retention</h2>
       <p>
         We keep your data while your account is active. Deleting your account
         removes it (see Your rights). Stripe retains payment records independently
-        for its own compliance.
+        for its own legal and compliance purposes.
       </p>
 
       <h2>7. Your rights</h2>
       <p>
-        You can access and export your data, correct it, or delete your account at
-        any time — in the app or by emailing us. [Tailor to applicable law, e.g.
-        PIPEDA or GDPR.]
+        Under Canada's <abbr title="Personal Information Protection and Electronic Documents Act">PIPEDA</abbr>,
+        you can access the personal information we hold about you, ask us to
+        correct it, withdraw your consent, and delete your account — in the app or
+        by emailing us. You can also request an export of your data.
       </p>
 
       <h2>8. Security</h2>
@@ -81,7 +85,10 @@ export default function Privacy() {
       </p>
 
       <h2>10. Eligibility</h2>
-      <p>[Minimum age; intended for post-secondary co-op students.]</p>
+      <p>
+        WW Scorer is intended for enrolled post-secondary co-op students aged 16
+        or older.
+      </p>
 
       <h2>11. Changes</h2>
       <p>We may update this policy; the new version will be posted here with a revised effective date.</p>

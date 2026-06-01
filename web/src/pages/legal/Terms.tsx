@@ -1,15 +1,14 @@
 import { Link } from "react-router-dom";
 import LegalLayout from "./LegalLayout";
 
-// Draft content derived from docs/reference/legal-pages-scaffold.html (§C).
-// Bracketed [..] items are owner-supplied; the refund section is gated on
-// ADR 0028 and resolved at the v6.12 copy drop.
+// Final copy. Inputs captured from the v6.12 legal intake (2026-06-01):
+// operator Hyoseo Lee, governing law Ontario/Canada, refund Option A (ADR 0028).
 export default function Terms() {
   return (
     <LegalLayout title="Terms of Service">
       <p>
-        <strong>Effective date: [date].</strong> These terms govern your use of
-        WW Scorer, operated by [operator name].
+        <strong>Effective date: June 1, 2026.</strong> These terms govern your
+        use of WW Scorer, operated by Hyoseo Lee ("we").
       </p>
 
       <h2>1. Acceptance</h2>
@@ -27,8 +26,9 @@ export default function Terms() {
 
       <h2>3. Eligibility &amp; accounts</h2>
       <p>
+        WW Scorer is for enrolled post-secondary co-op students aged 16 or older.
         You need a Google account to sign in, and you are responsible for activity
-        on your account. [Age / student requirement.]
+        on your account.
       </p>
 
       <h2>4. Credits &amp; payment</h2>
@@ -40,10 +40,11 @@ export default function Terms() {
 
       <h2>5. Refunds</h2>
       <p>
-        [Refund policy — pending ADR 0028. Proposed: purchased credits are
-        non-refundable except where the law requires; a scan that fails is not
-        charged (the credit is returned automatically); unused balances may be
-        refunded at our discretion.]
+        Purchased credits are non-refundable once bought, except where applicable
+        law requires otherwise. You are only charged for completed scans: if a
+        scan fails after a credit has been deducted, that credit is automatically
+        returned to your balance. We may, at our discretion, refund an unused
+        credit balance on request — contact us using the address below.
       </p>
 
       <h2>6. Acceptable use</h2>
@@ -68,8 +69,9 @@ export default function Terms() {
 
       <h2>9. Disclaimers &amp; liability</h2>
       <p>
-        The service is provided "as is", without warranties. [Limitation of
-        liability — finalize with legal review.]
+        To the extent permitted by law, the service is provided "as is" without
+        warranties of any kind, and our total liability to you for any claim is
+        limited to the amount you paid us in the 12 months before the claim.
       </p>
 
       <h2>10. Termination</h2>
@@ -82,7 +84,11 @@ export default function Terms() {
       <p>We may update these terms; continued use after a change means you accept the updated terms.</p>
 
       <h2>12. Governing law</h2>
-      <p>[Governing law — e.g. Ontario, Canada.]</p>
+      <p>
+        These terms are governed by the laws of the Province of Ontario and the
+        federal laws of Canada applicable there, and any disputes are subject to
+        the courts located in Ontario.
+      </p>
 
       <h2>13. Contact</h2>
       <p>Questions about these terms? Email us using the address below.</p>
