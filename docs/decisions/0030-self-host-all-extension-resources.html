@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-06-01" />
+    <title>ADR 0030 — Self-host all extension page resources (no remote fonts / CSS / CDN)</title>
+  </head>
+  <body>
+    <h1>ADR 0030 — Self-host all extension page resources</h1>
+
+    <h2>Context</h2>
+    <p>
+      The last Chrome Web Store submission was rejected under Content Policies
+      for <em>"Including remotely hosted code in a Manifest V3 item."</em> That
+      rejected artifact was an early build (labelled <code>0.1.0</code> because
+      the manifest predates strict versioning) — effectively the old
+      <strong>v03</strong> public extension, not the current <code>ext/</code>.
+    </p>
+    <p>
+      An audit of the current <code>ext/</code> (v7.0.0) found <strong>no remote
+      JavaScript or Wasm</strong>: no remote <code>&lt;script src&gt;</code>, no
+      <code>eval</code> / <code>new Function</code> / <code>importScripts</code> /
+      dynamic <code>import()</code>. The one script injection in
+      <code>content.js</code> uses
+      <code>chrome.runtime.getURL('src/page-bridge.js')</code> — a locally
+      packaged web-accessible resource, the correct MV3 pattern.
+    </p>
+    <p>
+      The only remaining remote resource in a <em>shipped</em> page is
+      <strong>Google Fonts</strong>, loaded via <code>&lt;link&gt;</code> in
+      <code>options.html</code> (Hanken Grotesk, Inter, JetBrains Mono) and
+      <code>welcome.html</code> (Hanken Grotesk, Inter). Remote <em>fonts/CSS</em>
+      are arguably not "code" under the policy (which targets JS/Wasm), but the
+      ambiguity is not worth carrying into a review we need to pass — and a
+      remote font <code>&lt;link&gt;</code> also leaks the user's IP to a third
+      party on every page open and adds a runtime network dependency.
+    </p>
+    <p>
+      Looking ahead: the redesign phase intends to adopt the Stitch sidebar
+      design (<code>ext/design/extension_sidebar_job_scan/</code>), whose export
+      pulls <strong>Tailwind via CDN</strong>, <strong>Google Fonts</strong>, and
+      <strong>Material Symbols</strong> remotely. Adopting that verbatim would
+      re-introduce exactly the violation class we are fixing. A standing rule is
+      needed so the redesign cannot regress it.
+    </p>
+
+    <h2>Decision</h2>
+    <p>
+      Every resource referenced by a shipped extension page must be
+      <strong>packaged locally</strong>. Specifically, in any page that ships to
+      the Web Store (allowlisted in <code>package.sh</code>):
+    </p>
+    <ul>
+      <li>No remote <code>&lt;link&gt;</code> to fonts or stylesheets. Fonts are
+        vendored as local <code>woff2</code> files with local
+        <code>@font-face</code> declarations.</li>
+      <li>No CDN <code>&lt;script&gt;</code> (e.g. <code>cdn.tailwindcss.com</code>).
+        Any utility CSS must be a locally built/checked-in stylesheet, not a
+        runtime CDN.</li>
+      <li>No remote icon fonts (e.g. Material Symbols) — vendor the glyphs/font
+        locally or use packaged SVGs.</li>
+      <li>No remote JS/Wasm of any kind (already true; restated to keep it true).</li>
+    </ul>
+
+    <h2>Consequences</h2>
+    <ul>
+      <li><strong>Easier:</strong> unambiguous MV3 / Web Store compliance; no
+        third-party requests at runtime (privacy); extension pages work offline.</li>
+      <li><strong>Harder:</strong> fonts and icon glyphs must be vendored into the
+        repo and updated by hand; the redesign phase cannot drop in the Tailwind
+        CDN — it must check in a locally produced CSS file instead.</li>
+      <li><strong>Constrains:</strong> all future extension pages, and explicitly
+        the redesign phase's adoption of the Stitch design (Tailwind output,
+        fonts, and Material Symbols all self-hosted).</li>
+      <li>The <code>design/</code> export keeps its CDN links — it is a reference
+        artifact, never in the <code>package.sh</code> allowlist, so it does not
+        ship. This ADR governs <em>shipped</em> pages only.</li>
+    </ul>
+  </body>
+</html>

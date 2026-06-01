@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v7.1.0" />
+    <meta name="status" content="done" />
+    <meta name="last-updated" content="2026-06-01" />
+    <title>v7.1.0 — MV3 / Web Store compliance: self-host fonts + fix welcome packaging</title>
+  </head>
+  <body>
+    <h1>v7.1.0 — MV3 / Web Store compliance</h1>
+
+    <h2>Goal</h2>
+    <p>
+      Make the extension unambiguously Manifest-V3 / Web-Store compliant so it
+      can be resubmitted. Two concrete changes, both pure compliance — no
+      redesign:
+    </p>
+    <ol>
+      <li><strong>Self-host fonts.</strong> Remove the remote Google Fonts
+        <code>&lt;link&gt;</code>s from <code>options.html</code> and
+        <code>welcome.html</code> — the only remote resource left in a shipped
+        page — and serve the fonts from local <code>woff2</code> files. This is
+        the standing rule from
+        <a href="../decisions/0030-self-host-all-extension-resources.html">ADR
+        0030</a>.</li>
+      <li><strong>Fix a packaging bug.</strong> <code>welcome.html</code> is
+        opened by <code>background.js</code> (first-run + action) and
+        <code>options.js</code> via <code>chrome.runtime.getURL</code>, but it is
+        <em>not</em> in the <code>package.sh</code> allowlist. It works in the
+        unpacked dev load (all files present) but <strong>404s in the published
+        build</strong> — visible to a reviewer on install. Add it (and the fonts)
+        to the allowlist.</li>
+    </ol>
+    <p>
+      Context for the resubmission: the rejected <code>0.1.0</code> artifact was
+      the old v03 public build (manifest predated strict versioning), not the
+      current code — see
+      <a href="../decisions/0030-self-host-all-extension-resources.html">ADR
+      0030</a>. The audit confirmed no remote JS/Wasm in <code>ext/</code>; fonts
+      are the only fix needed on the code side.
+    </p>
+
+    <h2>Files</h2>
+
+    <h3>Added</h3>
+    <ul>
+      <li><code>ext/fonts/</code> — vendored <code>woff2</code> files: Hanken
+        Grotesk (600, 700), Inter (400, 500), JetBrains Mono (400, 600). The
+        union of what <code>options.html</code> and <code>welcome.html</code>
+        use.</li>
+      <li><code>ext/src/fonts.css</code> — local <code>@font-face</code>
+        declarations pointing at <code>ext/fonts/</code>, linked by both pages.</li>
+    </ul>
+
+    <h3>Changed</h3>
+    <ul>
+      <li><code>ext/options.html</code> — drop the three Google Fonts
+        <code>&lt;link&gt;</code>s (2 preconnect + 1 stylesheet); link
+        <code>src/fonts.css</code> instead.</li>
+      <li><code>ext/welcome.html</code> — same swap (uses Hanken Grotesk + Inter).</li>
+      <li><code>package.sh</code> — add <code>welcome.html</code> and
+        <code>fonts/</code> to the allowlist. (<code>src/fonts.css</code> is
+        already covered by the existing <code>src/</code> entry.)</li>
+      <li><code>ext/manifest.json</code> — version <code>7.0.0</code> →
+        <code>7.1.0</code>.</li>
+    </ul>
+
+    <h3>Not changed (deferred)</h3>
+    <ul>
+      <li><code>welcome.html</code> content/redesign — staying functionally
+        as-is. The "thin launcher" rework (big <em>Set up your profile →</em>
+        button to the web app; detailed how-to stays in the sidebar) belongs to
+        the later redesign phase, not here.</li>
+      <li>The <code>design/</code> export keeps its CDN/remote links — it never
+        ships (not in the allowlist).</li>
+    </ul>
+
+    <h2>Verify</h2>
+    <ol>
+      <li><code>grep -rn "fonts.googleapis.com\|fonts.gstatic.com" ext/options.html
+        ext/welcome.html</code> → no matches.</li>
+      <li><code>./package.sh</code> builds; <code>unzip -l</code> on the result
+        lists <code>welcome.html</code> and the <code>fonts/*.woff2</code>
+        files.</li>
+      <li>Load <code>ext/</code> unpacked: the options and welcome pages render
+        with the correct fonts and make <strong>no network request</strong> to
+        <code>fonts.googleapis.com</code> / <code>fonts.gstatic.com</code> (check
+        DevTools Network).</li>
+      <li>First-run (or the options-page "open welcome" path) opens
+        <code>welcome.html</code> with no 404 — and would not 404 from the
+        packaged zip either (file is in the allowlist).</li>
+      <li><code>grep version ext/manifest.json</code> → <code>"7.1.0"</code>.</li>
+    </ol>
+
+    <h2>Notes</h2>
+    <p>
+      Font weights to vendor, by page:
+    </p>
+    <ul>
+      <li><code>welcome.html</code>: Hanken Grotesk 600/700, Inter 400/500.</li>
+      <li><code>options.html</code>: the above + JetBrains Mono 400/600.</li>
+    </ul>
+    <p>
+      A single shared <code>src/fonts.css</code> declaring all six faces (both
+      pages link it) is simpler than per-page font CSS and costs nothing — unused
+      faces aren't fetched. Fonts are OFL-licensed; bundling is permitted.
+    </p>
+  </body>
+</html>

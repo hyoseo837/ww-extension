@@ -24,7 +24,9 @@ rm -f "$OUT_FILE"
 ( cd ext && zip -r "../$OUT_FILE" \
   manifest.json \
   options.html \
+  welcome.html \
   src/ \
+  fonts/ \
   icons/icon16.png \
   icons/icon48.png \
   icons/icon128.png )
