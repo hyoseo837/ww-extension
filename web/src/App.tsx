@@ -7,6 +7,7 @@ import Billing from "./pages/Billing";
 import Buy from "./pages/Buy";
 import Profile from "./pages/Profile";
 import Preferences from "./pages/Preferences";
+import Admin from "./pages/Admin";
 
 export default function App() {
   const { session, loading } = useSession();
@@ -22,6 +23,8 @@ export default function App() {
 
   return (
     <Routes>
+      {/* Admin console — its own shell, gated server-side (403 → access denied). */}
+      <Route path="/admin" element={<Admin />} />
       <Route element={<Layout email={session.user.email ?? ""} />}>
         <Route path="/account" element={<Account />} />
         <Route path="/billing" element={<Billing />} />
