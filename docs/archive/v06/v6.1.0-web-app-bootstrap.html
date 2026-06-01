@@ -5,7 +5,7 @@
     <meta name="project" content="ww-extension" />
     <meta name="type" content="spec" />
     <meta name="version" content="v6.1.0" />
-    <meta name="status" content="planned" />
+    <meta name="status" content="done" />
     <meta name="last-updated" content="2026-05-30" />
     <title>v6.1.0 — Web app bootstrap</title>
   </head>
@@ -17,13 +17,13 @@
       Stand up the web app skeleton and prove the end-to-end auth round-trip
       before any account/profile features are built on it. Scaffold
       <code>web/</code> as a Vite + React + TypeScript SPA
-      (<a href="../decisions/0019-web-app-stack-vite-react-ts.html">ADR 0019</a>),
+      (<a href="../../decisions/0019-web-app-stack-vite-react-ts.html">ADR 0019</a>),
       wire Supabase Google sign-in
-      (<a href="../decisions/0021-independent-auth-sessions.html">ADR 0021</a>),
+      (<a href="../../decisions/0021-independent-auth-sessions.html">ADR 0021</a>),
       and ship a deliberately minimal <strong>signed-in shell</strong> that
       makes one authenticated backend call. Deploy it to
       <code>ww-extension.hyoseo.dev</code> on Vercel
-      (<a href="../decisions/0022-web-app-hosting-vercel.html">ADR 0022</a>) and
+      (<a href="../../decisions/0022-web-app-hosting-vercel.html">ADR 0022</a>) and
       open the backend's CORS to the new origin.
     </p>
     <p>
@@ -100,8 +100,8 @@
       <li><code>manifest.json</code> — version <code>6.0.0</code> →
         <code>6.1.0</code>. The extension code does not change this phase; the
         bump keeps the single monorepo version line in step
-        (<a href="../decisions/0002-versioning-vXYZ.html">ADR 0002</a>,
-        <a href="../decisions/0010-monorepo-with-server-folder.html">ADR 0010</a>),
+        (<a href="../../decisions/0002-versioning-vXYZ.html">ADR 0002</a>,
+        <a href="../../decisions/0010-monorepo-with-server-folder.html">ADR 0010</a>),
         as v4.1's backend bootstrap did.</li>
     </ul>
 

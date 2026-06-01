@@ -4,8 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="project" content="ww-extension" />
     <meta name="type" content="roadmap" />
-    <meta name="active-major-version" content="v06" />
-    <meta name="last-updated" content="2026-05-30" />
+    <meta name="active-major-version" content="v07" />
+    <meta name="last-updated" content="2026-06-01" />
     <title>Roadmap — ww-extension</title>
   </head>
   <body>
@@ -225,8 +225,17 @@
       </ul>
     </section>
 
-    <section id="active" data-status="in-progress">
-      <h2>v6 — UI transition to a web app + admin surface (active)</h2>
+    <section id="v6" data-status="done">
+      <h2>v6 — UI transition to a web app + admin surface (shipped)</h2>
+      <p>
+        <strong>Shipped and frozen.</strong> All v6 phase specs (v6.0–v6.15) are
+        archived under <code>docs/archive/v06/</code> (kept in spec format — see
+        <a href="decisions/0014-archive-shipped-major-version-specs.html">ADR
+        0014</a>). v6 delivered the web app (account, profile/CV, match criteria,
+        Stripe credit purchase), the admin surface, the legal/trust + support
+        pages, and the data-subject rights (export + account deletion). Closed
+        2026-06-01 as v7 opened.
+      </p>
       <p>
         <strong>Direction locked 2026-05-30 (v6.0).</strong> v5 made scoring
         trustworthy; the remaining weak spot is the <em>UI</em>. The extension's
@@ -266,7 +275,7 @@
       <p><strong>Phases</strong> (one line each; per-phase detail in
         <code>docs/specs/</code> when written):</p>
       <dl>
-        <dt><a href="specs/v6.0.0-open-v6.html">v6.0</a> — open v6 (docs only)</dt>
+        <dt><a href="archive/v06/v6.0.0-open-v6.html">v6.0</a> — open v6 (docs only)</dt>
         <dd>Archive v5, flip this roadmap, write the four locked-decision ADRs
           (0019–0022). No code.</dd>
 
@@ -339,7 +348,7 @@
           one-way email hash that the bonus trigger checks
           (<a href="decisions/0029-signup-bonus-suppression-on-deletion.html">ADR
           0029</a>). Spec:
-          <code>docs/specs/v6.9.0-account-deletion.html</code>.</dd>
+          <code>docs/archive/v06/v6.9.0-account-deletion.html</code>.</dd>
 
         <dt>v6.10 — legal, trust &amp; support</dt>
         <dd>Wire the footer/trust surface: a <strong>Terms of Service</strong>
@@ -374,7 +383,7 @@
           owner-supplied), a stated <strong>refund policy</strong> (ADR 0028),
           the "not affiliated with UW / WaterlooWorks" footer disclaimer, and a
           <strong>consent-at-signup</strong> line. Spec:
-          <code>docs/specs/v6.12.0-legal-trust-pages.html</code>.</dd>
+          <code>docs/archive/v06/v6.12.0-legal-trust-pages.html</code>.</dd>
 
         <dt>v6.13 — confirm before spending credits</dt>
         <dd>A confirmation step before <strong>any</strong> credit-spending
@@ -384,7 +393,7 @@
           web app's <strong>application-package extraction</strong> — now
           stage-the-file-then-press-Extract behind a confirm dialog, instead of
           extracting the instant a PDF is picked (v6.13.2). Spec:
-          <code>docs/specs/v6.13.0-credit-use-confirmation.html</code>.</dd>
+          <code>docs/archive/v06/v6.13.0-credit-use-confirmation.html</code>.</dd>
 
         <dt>v6.14 — data export</dt>
         <dd>"Download my data" — the data-subject <em>access/portability</em>
@@ -392,7 +401,7 @@
           (profile, ledger, scans); export as JSON via a new
           <code>GET /account/export</code> (new <code>app/account/</code> module,
           where deletion will also live). Pairs with the deletion ADR. Spec:
-          <code>docs/specs/v6.14.0-data-export.html</code>.</dd>
+          <code>docs/archive/v06/v6.14.0-data-export.html</code>.</dd>
 
         <dt>v6.15 — landing &amp; UX polish</dt>
         <dd><strong>Pricing visible to logged-out users</strong> on the landing
@@ -401,7 +410,7 @@
           404 (today <code>*</code> silently redirects). <em>Cookies/analytics:
           none by design</em> — Supabase auth uses localStorage, no trackers, so
           no consent banner unless that changes. Spec:
-          <code>docs/specs/v6.15.0-landing-ux-polish.html</code>.</dd>
+          <code>docs/archive/v06/v6.15.0-landing-ux-polish.html</code>.</dd>
       </dl>
       <p>
         <strong>Out of scope for v6</strong> (stay on the whiteboard): re-score
@@ -410,8 +419,15 @@
       </p>
     </section>
 
-    <section id="v7" data-status="planned">
-      <h2>v7 — Extension fix: website integration + Web Store approval (planned)</h2>
+    <section id="active" data-status="in-progress">
+      <h2>v7 — Extension fix: website integration + Web Store approval (active)</h2>
+      <p>
+        <strong>Opened 2026-06-01 (v7.0).</strong> Phase detail and the
+        integration / compliance ADR land per-phase as they open; see
+        <code>docs/specs/v7.0.0-open-v7.html</code> for the provisional phase
+        sketch (v7.1 compliance → v7.2 integration polish → v7.3 resubmit +
+        launch).
+      </p>
       <p>
         v6 rebuilt the account/profile/payment surface as the web app; v7 turns
         back to the Chrome extension so it (a) works cleanly against that web app
@@ -423,7 +439,7 @@
           Violation: <em>"Including remotely hosted code in a Manifest V3 item."</em></li>
       </ul>
       <p>
-        <strong>Diagnosis of current <code>ext/</code> (manifest 6.12.3):</strong>
+        <strong>Diagnosis of current <code>ext/</code>:</strong>
         the hard blocker (remote JS/Wasm) is not present now — no remote
         <code>&lt;script src&gt;</code>, no <code>eval</code> /
         <code>new Function</code> / <code>importScripts</code> / dynamic import;

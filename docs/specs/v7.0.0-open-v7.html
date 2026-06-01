@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v7.0.0" />
+    <meta name="status" content="done" />
+    <meta name="last-updated" content="2026-06-01" />
+    <title>v7.0.0 — Open v7: archive v6, extension/Web-Store direction locked</title>
+  </head>
+  <body>
+    <h1>v7.0.0 — Open v7: archive v6, extension/Web-Store direction</h1>
+
+    <h2>Goal</h2>
+    <p>
+      Open major version 7. v6 shipped the <strong>UI transition</strong> — the
+      account / profile / payment surface rebuilt as a web app, plus the admin
+      surface, legal/trust pages, and the data-subject rights (export + deletion).
+      It is feature-complete and frozen. v7 turns back to the <strong>Chrome
+      extension</strong>: make it (a) work cleanly against that web app
+      (<em>website integration</em>) and (b) <strong>pass Chrome Web Store
+      review</strong> so it can be re-published — the gate before going live on
+      Stripe and actually monetizing.
+    </p>
+    <p>
+      This phase is <strong>pure docs</strong>, following the v6.0.0 precedent:
+      archive v6 per <a href="../decisions/0014-archive-shipped-major-version-specs.html">ADR
+      0014</a>, flip the roadmap, and open v7. The detailed scope — the
+      extension↔web integration model and the specific compliance fixes — lands
+      in the per-phase specs (and an ADR) when each phase opens, not here.
+    </p>
+
+    <h2>Files</h2>
+
+    <h3>Added</h3>
+    <ul>
+      <li><code>docs/specs/v7.0.0-open-v7.html</code> — this file.</li>
+    </ul>
+
+    <h3>Moved (git mv preserves history)</h3>
+    <p>All sixteen v6 phase specs relocate to <code>docs/archive/v06/</code>,
+      kept in spec format (ADR 0014); their <code>../decisions/</code> up-links
+      are repointed to <code>../../decisions/</code>:</p>
+    <ul>
+      <li><code>v6.0.0-open-v6.html</code> … <code>v6.15.0-landing-ux-polish.html</code>
+        (v6.0–v6.15) → <code>docs/archive/v06/</code>.</li>
+    </ul>
+
+    <h3>Changed</h3>
+    <ul>
+      <li><code>docs/roadmap.html</code> — <code>active-major-version</code> meta
+        <code>v06</code> → <code>v07</code>; the v6 section flipped from
+        <em>active</em> to <em>shipped/frozen</em> (spec code-refs and the one
+        inbound link repointed to <code>archive/v06/</code>); the v7 section
+        promoted to the active major.</li>
+      <li>Five v6 specs whose <code>status</code> meta was stale
+        (<code>v6.0/6.1/6.2/6.3/6.4</code>, left at planned/in-progress though
+        long shipped) flipped to <code>done</code> on archival.</li>
+      <li><code>ext/manifest.json</code> — version <code>6.15.5</code> →
+        <code>7.0.0</code>.</li>
+    </ul>
+
+    <h3>Not changed this phase (deferred to the phase that introduces it)</h3>
+    <ul>
+      <li><code>docs/architecture.html</code> — the extension's shape doesn't
+        change until v7.1 (compliance) touches it; it stays the living
+        current-state doc.</li>
+      <li><code>docs/reference/api.html</code> — no new endpoints this phase.</li>
+      <li>No v7 design ADR yet — the integration model and the compliance
+        approach are decided when their phase opens.</li>
+    </ul>
+
+    <h2>Verify</h2>
+    <ol>
+      <li><code>git status</code> shows the sixteen v6 spec moves as renames (R),
+        not delete+add.</li>
+      <li><code>ls docs/specs/</code> contains only
+        <code>v7.0.0-open-v7.html</code>; <code>docs/archive/v06/</code> contains
+        the sixteen v6 specs, all <code>status=done</code>.</li>
+      <li>No broken links: no <code>href</code> to <code>docs/specs/v6.*</code>
+        remains, and the archived specs' decision up-links resolve
+        (<code>../../decisions/</code>).</li>
+      <li><code>grep version ext/manifest.json</code> → <code>"7.0.0"</code>.</li>
+      <li><code>docs/roadmap.html</code> shows v6 under shipped/frozen and v7 as
+        the active major.</li>
+    </ol>
+
+    <h2>Notes — provisional v7 phase sketch</h2>
+    <p>
+      Tentative, to be detailed (and an ADR written) when each phase opens — not
+      locked here:
+    </p>
+    <dl>
+      <dt>v7.1 — MV3 / Web Store compliance</dt>
+      <dd>Remove the last remote dependency: self-host the Google Fonts currently
+        linked in <code>welcome.html</code> + <code>options.html</code>. Re-audit
+        <code>ext/</code> against the rejection reason ("remotely hosted code");
+        the prior hard blockers (remote <code>&lt;script&gt;</code>,
+        <code>eval</code>, dynamic import) are already absent — the page-bridge
+        injection uses a locally packaged web-accessible resource.</dd>
+
+      <dt>v7.2 — website integration polish</dt>
+      <dd>Confirm the slimmed extension (v6.4) flows cleanly to the now-complete
+        web app: sign-in deep links, buy-credits / out-of-credits nudges,
+        <code>profile_not_set</code> routing, and the credits/balance read.
+        Tighten rough edges surfaced now that the web surface is done.</dd>
+
+      <dt>v7.3 — resubmit + launch</dt>
+      <dd>Package and resubmit to the Web Store; address review. Once approved
+        and installable, run the Stripe live-mode checklist (live key + live
+        webhook + a real-card smoke test) and open monetization.</dd>
+    </dl>
+    <p>
+      <strong>Open question carried from the roadmap:</strong> the rejected build
+      was version 0.1.0 while the dev manifest is 6.x/7.x — confirm what artifact
+      was actually uploaded before resubmitting.
+    </p>
+  </body>
+</html>
