@@ -5,8 +5,8 @@
     <meta name="project" content="ww-extension" />
     <meta name="type" content="spec" />
     <meta name="version" content="v6.9.0" />
-    <meta name="status" content="planned" />
-    <meta name="last-updated" content="2026-05-31" />
+    <meta name="status" content="in-progress" />
+    <meta name="last-updated" content="2026-06-01" />
     <title>v6.9.0 — Self-serve account deletion</title>
   </head>
   <body>
@@ -14,12 +14,15 @@
 
     <h2>Goal</h2>
     <p>
-      Let a signed-in user delete their own account and all associated data
-      (the data-subject right to erasure). The deletion policy — hard delete,
-      relying on Stripe as the financial system-of-record — is in
-      <a href="../decisions/0027-account-deletion-policy.html">ADR 0027</a>
-      (<strong>proposed</strong>: confirm the retain-financials question before
-      implementing). This phase is <strong>specced, not yet built</strong>.
+      Let a signed-in user delete their own account and all associated data (the
+      data-subject right to erasure) — the companion to the v6.14 export
+      (access/portability). <strong>Unblocked 2026-06-01:</strong>
+      <a href="../decisions/0027-account-deletion-policy.html">ADR 0027</a> is
+      accepted (hard delete, Stripe as financial record), and the coupled
+      signup-bonus farming concern is resolved by
+      <a href="../decisions/0029-signup-bonus-suppression-on-deletion.html">ADR
+      0029</a> (a retained one-way email hash). Implemented under the v6.9 phase
+      (commits v6.9.1 server / v6.9.2 web).
     </p>
 
     <h2>Mechanism</h2>
@@ -30,68 +33,112 @@
       So deleting the Supabase <strong>auth user</strong> atomically removes all
       app data; no per-table delete is needed. Deletion happens via the Supabase
       Auth <em>admin</em> API, which requires the service-role key the backend
-      already holds (<code>SUPABASE_SECRET_KEY</code>) — the browser can't do
+      already holds (<code>supabase_secret_key</code>) — the browser can't do
       this itself.
     </p>
 
-    <h2>Files (planned)</h2>
+    <h2>Signup-bonus suppression (ADR 0029)</h2>
+    <p>
+      The 100-credit bonus is granted by a trigger on <code>auth.users</code>
+      insert, keyed per auth-row — so a hard delete + re-register would re-grant
+      it. To make the bonus once-per-person:
+    </p>
+    <ul>
+      <li>New table <code>signup_bonus_block (email_hash text primary key,
+        created_at)</code> — migration 0010.</li>
+      <li><strong>Before</strong> deleting the auth user, the backend inserts
+        <code>encode(digest(lower(email), 'sha256'), 'hex')</code> (email from the
+        verified JWT) into <code>signup_bonus_block</code>
+        (<code>on conflict do nothing</code>). Only the hash is stored — no
+        plaintext email.</li>
+      <li>Migration 0010 amends <code>grant_signup_bonus()</code> to
+        <code>return new</code> (skip the grant) when
+        <code>sha256(lower(new.email))</code> is already in the block table. The
+        100-credit constant (mig 0005) is preserved.</li>
+      <li>pgcrypto provides <code>digest</code>; <code>create extension if not
+        exists pgcrypto</code> in the migration.</li>
+    </ul>
+    <p>
+      Ordering matters: insert the block row first, then delete the auth user
+      (afterward the email is gone). If the Supabase delete then fails, the user
+      isn't deleted but a block row exists — harmless (they keep their existing
+      bonus; a future re-register, which can't happen without deleting, would be
+      suppressed). Acceptable for a rare, retryable action.
+    </p>
+
+    <h2>Files</h2>
     <h3>Server</h3>
     <ul>
-      <li><code>app/auth/routes.py</code> (or a new <code>app/account/</code>) —
-        authenticated <code>DELETE /me</code> (or <code>POST /account/delete</code>):
-        verify the JWT, then call the Supabase admin delete for
-        <code>user["sub"]</code> via <code>httpx</code>
-        (<code>DELETE {SUPABASE_URL}/auth/v1/admin/users/{id}</code> with the
-        service-role key — no new dependency; matches the existing httpx use).
-        Cascade clears app rows. Returns <code>204</code>.</li>
+      <li><code>migrations/0010_signup_bonus_block.sql</code> — the block table +
+        amended trigger function + pgcrypto.</li>
+      <li><code>app/account/routes.py</code> — authenticated
+        <code>DELETE /account</code>: read <code>sub</code> + <code>email</code>
+        from the JWT, insert the block hash, then call the Supabase admin delete
+        (<code>DELETE {supabase_url}/auth/v1/admin/users/{sub}</code> with the
+        service-role key via a one-off <code>httpx</code> request — httpx is
+        already a dependency). Returns <code>204</code>.</li>
+      <li><code>app/account/db.py</code> — <code>block_signup_bonus(email)</code>
+        (insert the hash). Keeps the route free of raw SQL; reuses
+        <code>billing.db.pool</code>.</li>
       <li><code>pyproject.toml</code> — version bump (server touched, ADR 0010).</li>
     </ul>
     <h3>Web</h3>
     <ul>
-      <li>An account/"Danger zone" section (on <code>/account</code> or a new
-        <code>/settings</code>) with a <strong>Delete account</strong> action →
-        a confirm modal that states what is removed and is irreversible, and
-        requires a deliberate confirmation (type the email or the word DELETE) →
-        calls the endpoint → <code>signOut()</code> + redirect to the landing.</li>
-      <li><code>src/api.ts</code> — add a <code>DELETE</code> helper if needed.</li>
+      <li><code>src/pages/Account.tsx</code> — a "Danger zone" section with a
+        <strong>Delete account</strong> action → a confirm modal that states what
+        is removed and is irreversible, and requires typing
+        <code>DELETE</code> to enable the button → calls the endpoint →
+        <code>signOut()</code> (the session re-render drops the user to the
+        landing).</li>
+      <li><code>src/api.ts</code> — add an <code>apiDelete</code> helper (no JSON
+        body, tolerates a 204/empty response).</li>
+      <li><code>src/pages/legal/Privacy.tsx</code> — disclose the retained
+        email hash (ADR 0029): on deletion we erase everything except a one-way
+        hash of the email kept solely to prevent repeat signup bonuses.</li>
     </ul>
     <h3>Docs</h3>
     <ul>
-      <li><code>docs/reference/api.html</code> — document the delete endpoint
-        (auth, cascade scope, 204, errors).</li>
-      <li><code>docs/architecture.html</code> — note the deletion path.</li>
+      <li><code>docs/reference/api.html</code> — document
+        <code>DELETE /account</code> (auth, cascade scope, block-hash, 204,
+        errors).</li>
+      <li><code>docs/architecture.html</code> — note the deletion path + block
+        table.</li>
     </ul>
+
+    <h2>Slices</h2>
+    <ol>
+      <li><strong>v6.9.0</strong> — open spec + ADR 0027/0028 (earlier);
+        now unblocked: accept ADR 0027, add ADR 0029, revise this spec (docs).
+        (this commit)</li>
+      <li><strong>v6.9.1</strong> — server: migration 0010 + DELETE /account
+        + block insert (+ pyproject, api/architecture docs).</li>
+      <li><strong>v6.9.2</strong> — web: Danger zone + confirm modal +
+        apiDelete + privacy-policy disclosure.</li>
+    </ol>
 
     <h2>Verify</h2>
     <ol>
       <li>A test user deletes their account → the <code>auth.users</code> row is
         gone and (by cascade) their <code>user_profile</code>,
-        <code>credit_ledger_entry</code>, and <code>scan</code> rows are gone.</li>
+        <code>credit_ledger_entry</code>, and <code>scan</code> rows are gone; a
+        <code>signup_bonus_block</code> row (hash only) remains.</li>
       <li>The user is signed out and lands on the logged-out page; the deleted
         session can no longer call authenticated endpoints (401).</li>
-      <li>Signing in again with the same Google account creates a <em>fresh</em>
-        user (new signup bonus, empty profile) — no resurrected data.</li>
-      <li>Only the authenticated user can delete their own account
-        (no cross-user deletion); admins may also delete via the admin surface
-        if wired.</li>
+      <li>Signing in again with the <em>same</em> Google account creates a fresh
+        user with an <strong>empty profile and NO signup bonus</strong> (the
+        block hash matched) — farming closed.</li>
+      <li>A brand-new, never-deleted account still receives its 100-credit bonus
+        exactly once.</li>
+      <li>Only the authenticated user can delete their own account (the endpoint
+        keys on <code>sub</code>; no cross-user deletion).
+        <code>npm run build</code> and a server import check pass.</li>
     </ol>
 
-    <h2>Notes / open questions</h2>
-    <p>
-      <strong>Blocked on ADR 0027 sign-off.</strong> If the user decides any
-      financial records must persist <em>in our DB</em> (not just in Stripe),
-      the mechanism changes from hard-delete to <em>anonymize-in-place</em>
-      (scrub PII: email/CV/profile; keep de-identified ledger rows) — a larger
-      build. The current spec assumes hard delete.
-    </p>
+    <h2>Notes</h2>
     <p>
       <strong>Stripe customer.</strong> Deleting our user does not touch Stripe;
-      whether to also delete/anonymize the Stripe customer is an implementation
-      detail decided alongside ADR 0027.
-    </p>
-    <p>
-      <strong>Companion: data export.</strong> The "download my data" right
-      (v6.10) pairs naturally with deletion; out of scope here.
+      financial history persists there (ADR 0027). Leaving / PII-minimizing the
+      Stripe customer object is an implementation detail, not done in this phase.
     </p>
   </body>
 </html>

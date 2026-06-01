@@ -4,16 +4,22 @@
     <meta charset="UTF-8" />
     <meta name="project" content="ww-extension" />
     <meta name="type" content="adr" />
-    <meta name="status" content="proposed" />
+    <meta name="status" content="accepted" />
     <meta name="date" content="2026-05-31" />
+    <meta name="accepted" content="2026-06-01" />
     <title>ADR 0027 — Account deletion: hard delete, Stripe as financial record</title>
   </head>
   <body>
     <h1>ADR 0027 — Account deletion: hard delete, Stripe as financial record</h1>
 
-    <p><strong>Status: proposed.</strong> The retain-financials question below
-      is a money/legal call for the owner to confirm before this is accepted and
-      v6.9 is implemented.</p>
+    <p><strong>Status: accepted (2026-06-01).</strong> The owner confirmed hard
+      delete: financial history lives in Stripe, so cascading away our derived
+      mirror rows is acceptable. Implemented in the v6.9 phase. One coupled
+      concern — a hard delete would otherwise let a user re-register for a fresh
+      signup bonus — is handled by
+      <a href="0029-signup-bonus-suppression-on-deletion.html">ADR 0029</a>
+      (a retained one-way identity hash), so this ADR stays scoped to the
+      data/financial-records question.</p>
 
     <section id="context">
       <h2>Context</h2>

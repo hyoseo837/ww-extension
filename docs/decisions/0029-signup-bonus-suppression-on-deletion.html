@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-06-01" />
+    <title>ADR 0029 — Suppress repeat signup bonuses after account deletion</title>
+  </head>
+  <body>
+    <h1>ADR 0029 — Suppress repeat signup bonuses after account deletion</h1>
+
+    <p><strong>Status: accepted (2026-06-01).</strong> Companion to
+      <a href="0027-account-deletion-policy.html">ADR 0027</a> (hard delete) and
+      part of the v6.9 phase.</p>
+
+    <section id="context">
+      <h2>Context</h2>
+      <p>
+        The 100-credit signup bonus is granted by a database trigger
+        (<code>grant_signup_bonus_trigger</code>, migration 0001) that fires on
+        every <code>auth.users</code> insert. The "one bonus per user, ever"
+        unique index is keyed on <code>user_id</code> — the <em>auth row's</em>
+        id, which is brand new on each signup. So the guarantee is really "once
+        per auth row," not "once per person."
+      </p>
+      <p>
+        ADR 0027 chose <strong>hard delete</strong>: deletion removes the
+        <code>auth.users</code> row and cascades the ledger (including the
+        signup-bonus row). That reopens the farming path: delete → sign in again
+        with the same Google account → new <code>auth.users</code> row → trigger
+        grants another 100 credits. With the bonus worth ~200 Flash scans
+        (pricing.py), this is a cheap, repeatable abuse. Erasure and anti-farming
+        are therefore coupled and must be decided together.
+      </p>
+    </section>
+
+    <section id="decision">
+      <h2>Decision</h2>
+      <ul>
+        <li><strong>Keep a minimal suppression record.</strong> On deletion, the
+          backend writes one row to a new <code>signup_bonus_block</code> table
+          containing only a <strong>one-way SHA-256 hash of the lowercased
+          email</strong> (no plaintext email, no other PII) — written
+          <em>before</em> the auth user is deleted, while the email is still
+          available from the verified JWT.</li>
+        <li><strong>The trigger checks it.</strong>
+          <code>grant_signup_bonus()</code> is amended (migration 0010) to skip
+          the grant when <code>sha256(lower(new.email))</code> is present in
+          <code>signup_bonus_block</code>. Both sides compute the hash with the
+          same SQL expression (<code>encode(digest(lower(...),'sha256'),'hex')</code>,
+          pgcrypto), so they always agree. Everyone else still gets the bonus
+          exactly once.</li>
+        <li><strong>This is a deliberate, disclosed retention.</strong> The hash
+          is the one piece of data that survives a hard delete. It is disclosed
+          in the privacy policy as a fraud-prevention measure (legitimate
+          interest); it cannot be reversed to an email and is not used for any
+          other purpose.</li>
+      </ul>
+    </section>
+
+    <section id="consequences">
+      <h2>Consequences</h2>
+      <ul>
+        <li><strong>+</strong> Signup bonus becomes once-per-person regardless of
+          delete/re-register, closing the farming hole while preserving real
+          erasure of all <em>personal</em> data.</li>
+        <li><strong>+</strong> Tiny surface: one table, one trigger tweak, one
+          insert in the delete path. No change to the normal signup flow.</li>
+        <li><strong>−</strong> We retain a permanent fingerprint (hash) of every
+          deleted account's email. It is one-way and disclosed, but it is a
+          retention — a stricter "delete everything, no trace" reading would
+          reject it. Accepted as a proportionate fraud-prevention trade-off for a
+          credit-granting product.</li>
+        <li><strong>−</strong> Hash keys on email, not the Google subject id. If a
+          user deletes, then changes their Google account's email and
+          re-registers, they'd get the bonus again. Acceptable: that's a high-
+          effort edge, and the stable email covers the common case. Could later
+          switch to the OAuth <code>sub</code> if needed.</li>
+        <li><strong>Alternative considered:</strong> anonymize-in-place (keep a
+          scrubbed <code>auth.users</code> row so a returning login maps to the
+          same id and gets no new bonus). Rejected — it makes "deletion" fuzzier
+          and is more code than a single hash row. See ADR 0027's alternative.</li>
+      </ul>
+    </section>
+  </body>
+</html>

@@ -325,13 +325,21 @@
           a WaterlooWorks link to the sidebar nav (revises an ADR 0024 nav call).</dd>
 
         <dt>v6.9 — account deletion</dt>
-        <dd>Self-serve "delete my account" (data-subject erasure). Backend
-          deletes the Supabase auth user (service-role admin call); the app
-          tables (<code>user_profile</code>, <code>credit_ledger_entry</code>,
-          <code>scan</code>) all <code>ON DELETE CASCADE</code> on
-          <code>auth.users</code>, so they clear atomically. Double-confirm UX,
-          sign-out + redirect. Data-deletion policy (hard delete vs. retain
-          financials) in its own ADR.</dd>
+        <dd>Self-serve "delete my account" (data-subject erasure; companion to
+          v6.14 export). Backend deletes the Supabase auth user (service-role
+          admin call); the app tables (<code>user_profile</code>,
+          <code>credit_ledger_entry</code>, <code>scan</code>) all
+          <code>ON DELETE CASCADE</code> on <code>auth.users</code>, so they
+          clear atomically. Type-DELETE confirm UX, sign-out + redirect.
+          <strong>Specced early, deferred, built 2026-06-01</strong> after
+          accepting the hard-delete policy
+          (<a href="decisions/0027-account-deletion-policy.html">ADR 0027</a>);
+          to keep the 100-credit signup bonus once-per-person (a hard delete
+          would otherwise let a re-register re-grab it), deletion also records a
+          one-way email hash that the bonus trigger checks
+          (<a href="decisions/0029-signup-bonus-suppression-on-deletion.html">ADR
+          0029</a>). Spec:
+          <code>docs/specs/v6.9.0-account-deletion.html</code>.</dd>
 
         <dt>v6.10 — legal, trust &amp; support</dt>
         <dd>Wire the footer/trust surface: a <strong>Terms of Service</strong>
