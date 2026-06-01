@@ -62,6 +62,11 @@ export default function Landing() {
             <GoogleMark />
             Sign in with Google
           </button>
+          <p className="mt-md max-w-[420px] font-label-sm text-label-sm text-text-muted">
+            By continuing, you agree to our{" "}
+            <Link to="/terms" className="underline transition-colors hover:text-text-secondary">Terms</Link> and{" "}
+            <Link to="/privacy" className="underline transition-colors hover:text-text-secondary">Privacy Policy</Link>.
+          </p>
         </section>
 
         {/* Features */}
@@ -81,13 +86,18 @@ export default function Landing() {
       </main>
 
       <footer className="mt-xxl w-full border-t border-border py-xl">
-        <div className="mx-auto flex max-w-max-width flex-col items-center justify-between gap-sm px-gutter md:flex-row md:gap-0">
-          <p className="font-label-sm text-label-sm text-text-muted">© 2024 WW Scorer. Built for Waterloo Students.</p>
-          <div className="flex items-center gap-md">
-            <Link to="/terms" className="font-label-sm text-label-sm text-text-muted transition-colors hover:text-text-secondary hover:underline">Terms</Link>
-            <Link to="/privacy" className="font-label-sm text-label-sm text-text-muted transition-colors hover:text-text-secondary hover:underline">Privacy</Link>
-            <a href={`mailto:${SUPPORT_EMAIL}`} className="font-label-sm text-label-sm text-text-muted transition-colors hover:text-text-secondary hover:underline">Contact</a>
+        <div className="mx-auto flex max-w-max-width flex-col gap-sm px-gutter">
+          <div className="flex flex-col items-center justify-between gap-sm md:flex-row md:gap-0">
+            <p className="font-label-sm text-label-sm text-text-muted">© 2026 WW Scorer. Built for Waterloo Students.</p>
+            <div className="flex items-center gap-md">
+              <Link to="/terms" className="font-label-sm text-label-sm text-text-muted transition-colors hover:text-text-secondary hover:underline">Terms</Link>
+              <Link to="/privacy" className="font-label-sm text-label-sm text-text-muted transition-colors hover:text-text-secondary hover:underline">Privacy</Link>
+              <a href={`mailto:${SUPPORT_EMAIL}`} className="font-label-sm text-label-sm text-text-muted transition-colors hover:text-text-secondary hover:underline">Contact</a>
+            </div>
           </div>
+          <p className="text-center font-label-sm text-label-sm text-text-muted md:text-left">
+            Not affiliated with, endorsed by, or connected to the University of Waterloo or WaterlooWorks.
+          </p>
         </div>
       </footer>
     </div>

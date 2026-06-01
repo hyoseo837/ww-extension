@@ -123,9 +123,12 @@ export default function Layout({ email }: { email: string }) {
 
       <main className="pb-xxl md:ml-64">
         <Outlet context={{ balance, refetchBalance, email } satisfies DashboardContext} />
-        <footer className="mx-auto flex max-w-max-width justify-center gap-md px-gutter pb-lg font-label-sm text-label-sm text-text-muted">
-          <Link to="/terms" className="transition-colors hover:text-text-secondary hover:underline">Terms</Link>
-          <Link to="/privacy" className="transition-colors hover:text-text-secondary hover:underline">Privacy</Link>
+        <footer className="mx-auto flex max-w-max-width flex-col items-center gap-xs px-gutter pb-lg font-label-sm text-label-sm text-text-muted">
+          <div className="flex justify-center gap-md">
+            <Link to="/terms" className="transition-colors hover:text-text-secondary hover:underline">Terms</Link>
+            <Link to="/privacy" className="transition-colors hover:text-text-secondary hover:underline">Privacy</Link>
+          </div>
+          <p className="text-center">Not affiliated with the University of Waterloo or WaterlooWorks.</p>
         </footer>
       </main>
     </div>
