@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { signInWithGoogle } from "../supabase";
 import { SUPPORT_EMAIL } from "../support";
+import { PACKAGES } from "../packages";
 import Icon from "../Icon";
 
 const FEATURES = [
@@ -81,6 +82,67 @@ export default function Landing() {
                 <p className="font-body-md text-body-md text-text-secondary">{f.body}</p>
               </div>
             ))}
+          </div>
+        </section>
+
+        {/* Pricing — visible before sign-in. Display-only: buying needs an
+            authenticated session, so the CTA is sign-in, not checkout. */}
+        <section className="mx-auto w-full max-w-max-width px-gutter pb-[120px]">
+          <div className="mb-xl flex flex-col items-center gap-sm text-center">
+            <h2 className="font-display-lg-mobile text-display-lg-mobile text-on-surface md:font-display-lg md:text-display-lg">
+              Pay only for what you scan
+            </h2>
+            <p className="max-w-[600px] font-body-lg text-body-lg text-text-secondary">
+              Credits power AI scans — 1 credit = $0.01 CAD, no subscription. Top up whenever you need to.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 gap-lg md:grid-cols-3">
+            {PACKAGES.map((p) => {
+              const highlighted = !!p.popular;
+              return (
+                <article
+                  key={p.id}
+                  className={[
+                    "relative flex flex-col gap-lg rounded-xl bg-surface p-lg",
+                    highlighted
+                      ? "border border-primary shadow-[0_8px_24px_rgba(143,72,48,0.08)] md:scale-105"
+                      : "border border-border shadow-[0_2px_8px_rgba(0,0,0,0.02)]",
+                  ].join(" ")}
+                >
+                  {highlighted && (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-accent-soft px-md py-base font-label-sm text-label-sm text-primary">
+                      Most popular
+                    </div>
+                  )}
+                  <div className="flex flex-col gap-xs pt-sm">
+                    <h3 className={`font-headline-lg text-headline-lg ${highlighted ? "text-primary" : "text-on-surface"}`}>
+                      {p.credits.toLocaleString()}
+                    </h3>
+                    <span className="font-label-md text-label-md uppercase tracking-wider text-text-muted">Credits</span>
+                  </div>
+                  <div className="flex items-baseline gap-xs">
+                    <span className="font-headline-md text-headline-md text-on-surface">{p.price}</span>
+                    <span className="font-body-md text-body-md text-text-secondary">CAD</span>
+                  </div>
+                  <p className="border-b border-border pb-md font-body-md text-body-md text-text-secondary">{p.note}</p>
+                  <button
+                    onClick={() => signInWithGoogle()}
+                    className={[
+                      "mt-auto w-full rounded-lg px-lg py-sm font-label-md text-label-md transition-colors",
+                      highlighted
+                        ? "bg-primary text-on-primary hover:bg-accent-hover shadow-[0_2px_8px_rgba(143,72,48,0.2)]"
+                        : "border border-border bg-surface text-primary hover:bg-surface-alt",
+                    ].join(" ")}
+                  >
+                    Sign in to buy
+                  </button>
+                </article>
+              );
+            })}
+          </div>
+          <div className="mt-lg flex items-center justify-center gap-xs text-text-muted">
+            <Icon name="lock" className="text-[18px]" />
+            <span className="font-label-sm text-label-sm">Secure checkout via Stripe</span>
           </div>
         </section>
       </main>
