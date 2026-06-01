@@ -11,9 +11,10 @@ export function useDashboard() {
   return useOutletContext<DashboardContext>();
 }
 
+// No "Credits" entry — the Buy Credits button at the sidebar bottom already
+// routes to /buy, so a nav item would be redundant.
 const NAV = [
   { to: "/account", label: "Dashboard", icon: "dashboard", end: true },
-  { to: "/buy", label: "Credits", icon: "payments", end: false },
   { to: "/billing", label: "History", icon: "history", end: false },
   { to: "/profile", label: "Profile", icon: "person", end: false },
   { to: "/preferences", label: "Preferences", icon: "tune", end: false },
@@ -59,7 +60,6 @@ export default function Layout({ email }: { email: string }) {
           <span className="font-headline-md text-headline-md font-semibold text-primary">WW Scorer</span>
           <nav className="flex gap-md">
             <NavLink to="/account" end className={topLink}>Dashboard</NavLink>
-            <NavLink to="/buy" className={topLink}>Credits</NavLink>
             <NavLink to="/billing" className={topLink}>History</NavLink>
             <NavLink to="/profile" className={topLink}>Profile</NavLink>
           </nav>

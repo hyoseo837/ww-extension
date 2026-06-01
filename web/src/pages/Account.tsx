@@ -4,6 +4,7 @@ import { apiGet } from "../api";
 import { useDashboard } from "../Layout";
 import HistoryList, { type Entry } from "../HistoryList";
 import Icon from "../Icon";
+import { creditUnit, fmtBalance } from "../format";
 import type { Profile } from "../types";
 
 const CARD = "rounded-xl border border-border bg-surface p-lg shadow-[0_2px_8px_rgba(0,0,0,0.02)]";
@@ -53,7 +54,14 @@ export default function Account() {
           </div>
           <div>
             <h3 className="mb-sm font-label-md text-label-md uppercase tracking-widest text-text-muted">Available credits</h3>
-            <div className="mb-xs font-display-lg text-display-lg text-on-surface">{balance === null ? "…" : balance}</div>
+            <div className="mb-xs font-display-lg text-display-lg text-on-surface">
+              {balance === null ? "…" : (
+                <>
+                  {fmtBalance(balance)}
+                  <span className="ml-xs font-body-md text-body-md text-text-secondary">{creditUnit(balance)}</span>
+                </>
+              )}
+            </div>
             <p className="mb-xl font-body-md text-body-md text-text-secondary">1 credit ≈ $0.01 CAD.</p>
           </div>
           <Link

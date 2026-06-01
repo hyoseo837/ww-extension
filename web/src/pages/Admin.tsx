@@ -4,6 +4,7 @@ import { apiGet, apiPost } from "../api";
 import { signOut } from "../supabase";
 import Icon from "../Icon";
 import HistoryList, { type Entry } from "../HistoryList";
+import { fmtBalance } from "../format";
 
 type Stats = { total_users: number; total_credits_issued: number; credits_used_24h: number };
 type AdminUser = { user_id: string; email: string | null; created_at: string; balance: number };
@@ -49,7 +50,7 @@ function InspectModal({ detail, onClose }: { detail: Detail; onClose: () => void
         </div>
 
         <div className="mb-lg flex items-baseline gap-xs">
-          <span className="font-headline-lg text-headline-lg text-on-surface">{detail.balance.toLocaleString()}</span>
+          <span className="font-headline-lg text-headline-lg text-on-surface">{fmtBalance(detail.balance)}</span>
           <span className="font-body-md text-body-md text-text-secondary">credits</span>
         </div>
 
@@ -136,7 +137,7 @@ export default function Admin() {
         credits: Number(giftAmount),
         reason: giftReason.trim() || null,
       });
-      setGiftMsg({ ok: true, text: `Granted ${giftAmount} credits — new balance ${res.balance.toLocaleString()}.` });
+      setGiftMsg({ ok: true, text: `Granted ${giftAmount} credits — new balance ${fmtBalance(res.balance)}.` });
       setGiftAmount("");
       setGiftReason("");
       await Promise.all([loadStats(), loadUsers(search)]);
@@ -261,7 +262,7 @@ export default function Admin() {
                       <tr key={u.user_id} className="border-b border-border transition-colors last:border-0 hover:bg-surface-alt">
                         <td className="py-sm font-body-md text-body-md text-on-surface">{u.email ?? "—"}</td>
                         <td className="py-sm font-body-md text-body-md text-text-secondary">{fmtDate(u.created_at)}</td>
-                        <td className="py-sm font-body-md text-body-md text-on-surface">{u.balance.toLocaleString()}</td>
+                        <td className="py-sm font-body-md text-body-md text-on-surface">{fmtBalance(u.balance)}</td>
                         <td className="py-sm">
                           <div className="flex items-center justify-end gap-md">
                             <button onClick={() => view(u.user_id)} className="font-label-md text-label-md text-text-secondary hover:text-primary">View</button>

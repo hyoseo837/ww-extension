@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { apiGet } from "../api";
 import { useDashboard } from "../Layout";
 import HistoryList, { type Entry } from "../HistoryList";
+import { fmtBalance } from "../format";
 
 const CARD = "rounded-xl border border-border bg-surface p-lg shadow-[0_2px_8px_rgba(41,38,31,0.04)]";
 const PAGE = 25;
@@ -54,7 +55,7 @@ export default function Billing() {
 
       <section className={`${CARD} flex flex-col gap-sm`}>
         <div className="font-headline-lg text-headline-lg text-on-surface">
-          {balance === null ? "…" : balance}
+          {balance === null ? "…" : fmtBalance(balance)}
         </div>
         <span className="font-body-md text-body-md text-text-secondary">credits available</span>
         <span className="font-label-sm text-label-sm text-text-muted">1 credit = $0.01 CAD</span>

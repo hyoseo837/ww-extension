@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v6.11.0" />
+    <meta name="status" content="in-progress" />
+    <meta name="last-updated" content="2026-05-31" />
+    <title>v6.11.0 — Web UI refinements (nav, credit display, preferences input)</title>
+  </head>
+  <body>
+    <h1>v6.11.0 — Web UI refinements (nav, credit display, preferences input)</h1>
+
+    <h2>Goal</h2>
+    <p>
+      Three user-requested UI fixes to the web app, sliced into two commits.
+      No backend or behavior change.
+    </p>
+
+    <h2>v6.11.0 — nav cleanup + credit display</h2>
+    <ul>
+      <li><strong>Drop "Credits" from the nav</strong> (<code>Layout.tsx</code>,
+        desktop sidebar + mobile top bar). The sidebar's bottom <em>Buy Credits</em>
+        button already routes to <code>/buy</code>, so the nav item was a
+        redundant duplicate. <code>/buy</code> route is unchanged.</li>
+      <li><strong>Readable credit numbers</strong>
+        (<code>format.ts</code> + the balance displays). The balance is a
+        <code>NUMERIC(14,6)</code>, so raw it renders like
+        <code>4559.289506</code> — noise. New <code>fmtBalance(n)</code>
+        (thousands-separated, ≤2 decimals) and <code>creditUnit(n)</code>
+        ("credit"/"credits"). Applied to the dashboard balance card (number +
+        a "credits" unit), the Billing balance, and the Admin user
+        table / inspect modal / grant confirmation.</li>
+    </ul>
+
+    <h2>v6.11.1 — preferences input layout</h2>
+    <ul>
+      <li><code>Preferences.tsx</code> (<code>TagInput</code> /
+        <code>CriterionEditor</code>): the text input and the added-keyword
+        chips move to <strong>separate lines</strong> (input row on top, chips
+        below) instead of sharing one wrapping box. The <strong>weight</strong>
+        selector moves <strong>out of "More options"</strong> and onto the same
+        line as the input box (always visible). "More options" now reveals only
+        the acceptable / avoid / excluded tiers.</li>
+    </ul>
+
+    <h2>Verify</h2>
+    <ol>
+      <li><code>cd web &amp;&amp; npm run build</code> clean.</li>
+      <li>Sidebar (desktop + mobile) shows Dashboard / History / Profile /
+        Preferences — no "Credits"; Buy Credits still reachable from the bottom
+        button and the dashboard.</li>
+      <li>Balances read like "142 credits" / "4,559.29" — never 6-decimal noise —
+        on the dashboard, Billing, and Admin.</li>
+      <li>On Preferences, each criterion shows an input box with the weight
+        selector beside it, the chips on the line below, and "More options"
+        toggles only the other tiers.</li>
+    </ol>
+
+    <h2>Notes</h2>
+    <p>
+      <code>fmtCredits</code> (signed deltas in the history list) already capped
+      at 2 decimals — unchanged. Stat cards on Admin keep <code>fmtCompact</code>
+      ("128.5k") — that is intentional for big aggregates, distinct from a
+      user's balance.
+    </p>
+  </body>
+</html>

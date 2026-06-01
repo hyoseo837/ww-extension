@@ -335,9 +335,10 @@
 
         <dt>v6.10 — legal, trust &amp; support</dt>
         <dd>Wire the footer/trust surface: a <strong>Terms of Service</strong>
-          page (content user-supplied), the <strong>Privacy</strong> link
-          pointed at the existing
-          <code>hyoseo.dev/privacy-policy/ww-extension/</code>, a stated
+          page (content user-supplied), a <strong>Privacy</strong> page — note
+          the previous external policy at
+          <code>hyoseo.dev/privacy-policy/ww-extension/</code> is being removed,
+          so host it in-app and repoint the README + extension links — a stated
           <strong>refund policy</strong> (real money via Stripe → consumer-law
           expectation), a real <strong>support/contact</strong> path (currently
           <code>#</code> — uses the support email, see below), a
@@ -346,12 +347,19 @@
           README + extension), and a <strong>consent-at-signup</strong> line on
           the sign-in screen linking Terms + Privacy.</dd>
 
-        <dt>v6.11 — data export</dt>
+        <dt>v6.11 — web UI refinements <em>(done)</em></dt>
+        <dd>Drop the redundant "Credits" nav item (the Buy Credits button covers
+          it); show balances at ≤2 decimals with a "credits" unit instead of raw
+          6-decimal NUMERIC; restructure the preferences input (keyword box +
+          chips on separate lines, weight selector out of "More options" onto the
+          input line).</dd>
+
+        <dt>v6.12 — data export</dt>
         <dd>"Download my data" — the data-subject <em>access/portability</em>
           right, companion to v6.9 deletion. Server already holds it all
           (profile, ledger, scans); export as JSON. Pairs with the deletion ADR.</dd>
 
-        <dt>v6.12 — landing &amp; UX polish</dt>
+        <dt>v6.13 — landing &amp; UX polish</dt>
         <dd><strong>Pricing visible to logged-out users</strong> on the landing
           (today prices only show after sign-in at <code>/buy</code>);
           <strong>error / empty / loading states</strong> across pages and a real
