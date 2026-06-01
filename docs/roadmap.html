@@ -422,11 +422,14 @@
     <section id="active" data-status="in-progress">
       <h2>v7 — Extension fix: website integration + Web Store approval (active)</h2>
       <p>
-        <strong>Opened 2026-06-01 (v7.0).</strong> Phase detail and the
-        integration / compliance ADR land per-phase as they open; see
-        <code>docs/specs/v7.0.0-open-v7.html</code> for the provisional phase
-        sketch (v7.1 compliance → v7.2 integration polish → v7.3 resubmit +
-        launch).
+        <strong>Opened 2026-06-01 (v7.0).</strong> <strong>Sequencing locked
+        2026-06-01:</strong> ship the essential compliance fix first, then
+        <em>resubmit and get approved</em>, and only <em>then</em> do the
+        redesign and feature upgrades — the Web Store approval gate (and going
+        live on Stripe) stays ahead of the riskier rewrite. The JavaScript→
+        TypeScript migration is pulled out of v7 and scheduled as its own major,
+        <strong>v8</strong> (below). Phases are listed at the end of this
+        section; per-phase specs/ADRs land as each opens.
       </p>
       <p>
         v6 rebuilt the account/profile/payment surface as the web app; v7 turns
@@ -448,25 +451,72 @@
         packaged web-accessible resource (the correct MV3 pattern). The only
         remote dependency left is <strong>Google Fonts</strong>
         (<code>&lt;link href="https://fonts.googleapis.com/…"&gt;</code> in
-        <code>welcome.html</code> + <code>options.html</code>) — self-host the
-        fonts to be unambiguously compliant.
+        <code>welcome.html</code> + <code>options.html</code>) — self-hosted in
+        v7.1 (<a href="decisions/0030-self-host-all-extension-resources.html">ADR
+        0030</a>), so no remote resource remains in a shipped page.
       </p>
       <p>
-        <strong>Open question:</strong> the rejected build was version 0.1.0 but
-        the dev manifest is 6.x — confirm what was actually uploaded, since the
-        rejected artifact likely predates the current code. Detailed scope (the
-        website-integration model + the compliance fixes) lands in the v7 spec +
-        an ADR when the phase opens.
+        <strong>Resolved:</strong> the rejected <code>0.1.0</code> artifact was
+        the old v03 public build (its manifest predated strict versioning), not
+        the current code — so the rejection was not against today's
+        <code>ext/</code> (see
+        <a href="decisions/0030-self-host-all-extension-resources.html">ADR
+        0030</a>).
+      </p>
+      <p><strong>Phases:</strong></p>
+      <dl>
+        <dt><a href="specs/v7.1.0-mv3-compliance.html">v7.1</a> — MV3 / Web Store compliance <em>(done)</em></dt>
+        <dd>Self-host the Google Fonts in <code>options.html</code> +
+          <code>welcome.html</code> as local woff2 — the only remote resource in
+          a shipped page — and fix a packaging bug where <code>welcome.html</code>
+          was opened on first-run but missing from the <code>package.sh</code>
+          allowlist (would 404 in the published build). Rule set in
+          <a href="decisions/0030-self-host-all-extension-resources.html">ADR
+          0030</a> (self-host all resources; binds the later redesign so it can't
+          re-introduce the Tailwind / Material-Symbols CDNs).</dd>
+
+        <dt>v7.2 — resubmit + launch</dt>
+        <dd>Package and resubmit to the Web Store with a reviewed listing
+          (privacy-practices form, per-permission justification, screenshots,
+          description); address review. On approval, run the Stripe live-mode
+          checklist (live key + live webhook + a real-card smoke test) and open
+          monetization. Resubmits with the <em>current</em> design — by the
+          sequencing call, redesign comes after approval.</dd>
+
+        <dt>v7.3 — redesign + integration polish</dt>
+        <dd>Post-approval. Match the sidebar design sheet
+          (<code>ext/design/extension_sidebar_job_scan/</code>), light-mode only
+          (drop the dark toggle), a minimal options page (auto-skip toggle +
+          sign-in + model switch only), the toolbar popup/icon redirecting to the
+          web app, <code>welcome.html</code> reduced to a thin launcher (big
+          <em>Set up your profile →</em>, how-to stays in the sidebar), and
+          removing score-selected / rescore. Tighten the extension↔web flows
+          (sign-in deep links, buy / out-of-credits nudges,
+          <code>profile_not_set</code> routing). Its own ADR(s) at that phase.
+          (Multi-model isn't built server-side yet — don't build the model-switch
+          UI until it ships.)</dd>
+      </dl>
+    </section>
+
+    <section id="v8">
+      <h2>v8 — JavaScript → TypeScript migration (planned)</h2>
+      <p>
+        Scheduled 2026-06-01 as its own major (pulled out of v7). Migrate the
+        extension from JS to TS for parity with the web app
+        (<a href="decisions/0019-web-app-stack-vite-react-ts.html">ADR 0019</a>).
+        It adds a build step and supersedes the no-build packaging of
+        <a href="decisions/0026-extension-in-ext-folder.html">ADR 0026</a>, with
+        zero Web-Store-review benefit — so it deliberately follows approval and
+        monetization rather than blocking them. Detail lands when v8 opens.
       </p>
     </section>
 
     <section id="future">
       <h2>Further out (uncommitted)</h2>
       <p>
-        Candidates still on the table beyond v6, no commitment yet — revisit at
+        Candidates still on the table, no commitment yet — revisit at
         phase-planning time: non-Gemini provider / multi-model support,
-        cover-letter generation, re-score on demand, the extension JS→TS
-        migration, and team / recruiter views.
+        cover-letter generation, re-score on demand, and team / recruiter views.
       </p>
     </section>
   </body>
