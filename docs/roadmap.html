@@ -333,13 +333,31 @@
           sign-out + redirect. Data-deletion policy (hard delete vs. retain
           financials) in its own ADR.</dd>
 
-        <dt>v6.10 — legal &amp; support pages</dt>
-        <dd>Wire the footer links: a Terms of Service page (content user-supplied),
-          the Privacy link pointed at the existing
-          <code>hyoseo.dev/privacy-policy/ww-extension/</code>, and a real
-          support/contact path (currently <code>#</code>). Likely paired with a
-          <strong>data export</strong> ("download my data") as the companion
-          data-subject right to deletion.</dd>
+        <dt>v6.10 — legal, trust &amp; support</dt>
+        <dd>Wire the footer/trust surface: a <strong>Terms of Service</strong>
+          page (content user-supplied), the <strong>Privacy</strong> link
+          pointed at the existing
+          <code>hyoseo.dev/privacy-policy/ww-extension/</code>, a stated
+          <strong>refund policy</strong> (real money via Stripe → consumer-law
+          expectation), a real <strong>support/contact</strong> path (currently
+          <code>#</code> — uses the support email, see below), a
+          <strong>"not affiliated with the University of Waterloo /
+          WaterlooWorks"</strong> disclaimer on the web footer (already in the
+          README + extension), and a <strong>consent-at-signup</strong> line on
+          the sign-in screen linking Terms + Privacy.</dd>
+
+        <dt>v6.11 — data export</dt>
+        <dd>"Download my data" — the data-subject <em>access/portability</em>
+          right, companion to v6.9 deletion. Server already holds it all
+          (profile, ledger, scans); export as JSON. Pairs with the deletion ADR.</dd>
+
+        <dt>v6.12 — landing &amp; UX polish</dt>
+        <dd><strong>Pricing visible to logged-out users</strong> on the landing
+          (today prices only show after sign-in at <code>/buy</code>);
+          <strong>error / empty / loading states</strong> across pages and a real
+          404 (today <code>*</code> silently redirects). <em>Cookies/analytics:
+          none by design</em> — Supabase auth uses localStorage, no trackers, so
+          no consent banner unless that changes.</dd>
       </dl>
       <p>
         <strong>Out of scope for v6</strong> (stay on the whiteboard): re-score
