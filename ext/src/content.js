@@ -251,6 +251,51 @@ function setActionPrompt(text, linkLabel, path) {
   el.appendChild(btn);
 }
 
+// Confirmation shown before a scan spends credits (v6.13). Rendered inside
+// #ww-ext-sidebar so it inherits the --s-* theme vars + light-theme override;
+// the sidebar uses transform, so a position:fixed child would be trapped in the
+// panel — the overlay is position:absolute within it. Resolves true on Scan,
+// false on Cancel / backdrop / Esc.
+function confirmScan(count, balance) {
+  return new Promise(resolve => {
+    const sidebar = document.getElementById('ww-ext-sidebar');
+    if (!sidebar) { resolve(true); return; } // no UI to host the prompt
+
+    const bal = Number.isFinite(balance) ? parseFloat(balance.toFixed(2)) : null;
+    const jobWord = count === 1 ? 'job' : 'jobs';
+
+    const backdrop = document.createElement('div');
+    backdrop.className = 'ww-ext-confirm-backdrop';
+    backdrop.innerHTML = `
+      <div class="ww-ext-confirm-card" role="dialog" aria-modal="true">
+        <div class="ww-ext-confirm-title">Scan ${count} unscored ${jobWord}?</div>
+        <div class="ww-ext-confirm-msg">This uses credits${bal != null ? ` — you have ${bal}` : ''}.</div>
+        <div class="ww-ext-confirm-actions">
+          <button class="ww-ext-confirm-cancel">Cancel</button>
+          <button class="ww-ext-confirm-go">Scan ${count}</button>
+        </div>
+      </div>`;
+
+    let settled = false;
+    const close = result => {
+      if (settled) return;
+      settled = true;
+      document.removeEventListener('keydown', onKey, true);
+      backdrop.remove();
+      resolve(result);
+    };
+    const onKey = e => { if (e.key === 'Escape') { e.preventDefault(); close(false); } };
+
+    backdrop.addEventListener('click', e => { if (e.target === backdrop) close(false); });
+    backdrop.querySelector('.ww-ext-confirm-cancel').addEventListener('click', () => close(false));
+    backdrop.querySelector('.ww-ext-confirm-go').addEventListener('click', () => close(true));
+    document.addEventListener('keydown', onKey, true);
+
+    sidebar.appendChild(backdrop);
+    backdrop.querySelector('.ww-ext-confirm-go').focus();
+  });
+}
+
 async function scanAllJobs() {
   const scanBtn = document.getElementById('ww-ext-scan');
   const stopBtn = document.getElementById('ww-ext-stop');
@@ -303,6 +348,18 @@ async function scanAllJobs() {
       setProgress('All jobs already scored.');
       return;
     }
+
+    // Confirm before spending credits (v6.13). The list fetch above is free —
+    // no /scan has run yet, so cancelling here costs nothing. The finally block
+    // resets the buttons on this early return.
+    const balance = await new Promise(res =>
+      chrome.storage.local.get('creditBalance', d => res(d.creditBalance))
+    );
+    if (!(await confirmScan(toScore.length, balance))) {
+      setProgress('Scan cancelled.');
+      return;
+    }
+
     const rowMeta = indexVisibleRows();
     const total   = toScore.length;
     let done = 0, failed = 0;
