@@ -20,6 +20,13 @@ create table if not exists public.signup_bonus_block (
   created_at  timestamptz not null default now()
 );
 
+-- No client ever touches this table: the backend writes it over its direct
+-- Postgres connection (table owner — bypasses RLS) and the security-definer
+-- trigger below reads it (runs as the function owner — also bypasses RLS).
+-- Enable RLS with NO policies so anon/authenticated keys are denied entirely.
+-- Defense-in-depth, matching 0001's credit_ledger_entry note.
+alter table public.signup_bonus_block enable row level security;
+
 -- Amend the bonus trigger to skip blocked identities. Behavior is otherwise
 -- identical to 0005 (still 100 credits, once per auth-row via the partial unique
 -- index). search_path includes `extensions` so digest() resolves whether
