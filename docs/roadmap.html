@@ -348,7 +348,9 @@
           the sign-in screen linking Terms + Privacy. Draft starting point:
           <code>docs/reference/legal-pages-scaffold.html</code> (non-binding
           section outlines for both pages, pre-filled with known data-handling
-          facts + <code>[FILL]</code> placeholders).</dd>
+          facts + <code>[FILL]</code> placeholders). <strong>Note:</strong> only
+          the support slice shipped here (v6.10.0); the legal pages were deferred
+          past v6.11 and ship at <strong>v6.12</strong> (see below).</dd>
 
         <dt>v6.11 — web UI refinements <em>(done)</em></dt>
         <dd>Drop the redundant "Credits" nav item (the Buy Credits button covers
@@ -357,12 +359,21 @@
           chips on separate lines, weight selector out of "More options" onto the
           input line).</dd>
 
-        <dt>v6.12 — data export</dt>
+        <dt>v6.12 — legal &amp; trust pages</dt>
+        <dd>The remaining slices of the v6.10 legal/trust phase, deferred past
+          v6.11 (so they take the next free minor — versioning is monotonic):
+          in-app <strong>Privacy</strong> + <strong>Terms</strong> pages (copy
+          owner-supplied), a stated <strong>refund policy</strong> (ADR 0028),
+          the "not affiliated with UW / WaterlooWorks" footer disclaimer, and a
+          <strong>consent-at-signup</strong> line. Spec:
+          <code>docs/specs/v6.12.0-legal-trust-pages.html</code>.</dd>
+
+        <dt>v6.13 — data export</dt>
         <dd>"Download my data" — the data-subject <em>access/portability</em>
           right, companion to v6.9 deletion. Server already holds it all
           (profile, ledger, scans); export as JSON. Pairs with the deletion ADR.</dd>
 
-        <dt>v6.13 — landing &amp; UX polish</dt>
+        <dt>v6.14 — landing &amp; UX polish</dt>
         <dd><strong>Pricing visible to logged-out users</strong> on the landing
           (today prices only show after sign-in at <code>/buy</code>);
           <strong>error / empty / loading states</strong> across pages and a real

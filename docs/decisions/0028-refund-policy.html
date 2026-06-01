@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="proposed" />
+    <meta name="date" content="2026-06-01" />
+    <title>ADR 0028 — Refund policy for purchased credits</title>
+  </head>
+  <body>
+    <h1>ADR 0028 — Refund policy for purchased credits</h1>
+
+    <p><strong>Status: proposed.</strong> This is a money / consumer-law call for
+      the owner to confirm before the Terms refund section (v6.12) is written.
+      <em>Not legal advice</em> — verify the chosen stance against the
+      consumer-protection law that applies to your users before publishing.</p>
+
+    <section id="context">
+      <h2>Context</h2>
+      <p>
+        The app sells credits via Stripe (1 credit = $0.01 CAD), as one-time
+        purchases — no subscription. Credits are <strong>consumable digital
+        goods</strong>: each scan debits the ledger. Taking real money creates a
+        consumer-law expectation of a <em>clearly stated</em> refund policy, and
+        the Terms page (v6.12) needs concrete wording for its refund section.
+      </p>
+      <p>
+        Relevant existing mechanic: the credit ledger already models
+        <code>kind='refund'</code> entries, so a scan that fails after a debit can
+        be auto-credited back (the user is not charged for a scan that did not
+        produce a result). That is an <em>operational</em> auto-credit, distinct
+        from a <em>commercial</em> refund of a purchase to the card.
+      </p>
+    </section>
+
+    <section id="decision">
+      <h2>Decision (proposed)</h2>
+      <p>Lean toward <strong>Option A</strong> below, pending owner confirmation:</p>
+      <ul>
+        <li><strong>Purchased credits are non-refundable</strong> once bought,
+          except where applicable consumer law requires otherwise.</li>
+        <li><strong>Failed scans are not charged</strong> — if a scan errors after
+          debiting, the credit is automatically returned to the balance (the
+          existing ledger refund mechanic). This is stated so users understand
+          they only pay for results.</li>
+        <li><strong>Discretionary goodwill</strong> — the operator may refund an
+          unused balance on request, at its discretion, but does not guarantee
+          it.</li>
+      </ul>
+    </section>
+
+    <section id="options">
+      <h2>Options considered</h2>
+      <ul>
+        <li><strong>A — Non-refundable + failed-scan auto-credit (proposed).</strong>
+          Standard for consumable digital credits; pairs with the ledger refund
+          mechanic; minimal ongoing operational burden.</li>
+        <li><strong>B — Time-boxed window on unused balance</strong> (e.g. refund
+          the <em>unspent</em> portion within N days of purchase). More
+          consumer-friendly; needs a small refund path (Stripe refund + ledger
+          reversal) and a rule for partially-spent purchases.</li>
+        <li><strong>C — Discretionary case-by-case</strong>, no stated rule.
+          Maximum flexibility but weakest from a consumer-law / trust standpoint;
+          "no clear policy" is itself a red flag for a paid product.</li>
+      </ul>
+    </section>
+
+    <section id="consequences">
+      <h2>Consequences</h2>
+      <ul>
+        <li><strong>+</strong> A is clear, conventional, and cheap to operate;
+          the only mandatory money-back path (failed scans) is already built.</li>
+        <li><strong>−</strong> Cross-border consumer law may override "non-
+          refundable": e.g. EU/UK statutory withdrawal rights for digital
+          content can apply unless the buyer expressly consents to immediate
+          performance and waives them at purchase. If you have such users, the
+          checkout copy and Terms must reflect that — A's "except where law
+          requires" clause is the hook, but confirm the specifics.</li>
+        <li><strong>−</strong> If B is later required, it adds a Stripe-refund +
+          ledger-reversal flow not currently built.</li>
+        <li>The accepted wording is transcribed into the Terms refund section
+          (v6.12 copy drop) and, if relevant, surfaced at checkout.</li>
+      </ul>
+    </section>
+
+    <section id="owner-todo">
+      <h2>Needs owner confirmation</h2>
+      <ul>
+        <li>Pick A, B, or C (default proposed: A).</li>
+        <li>Confirm where your users are, to know which consumer-protection
+          regime(s) apply (PIPEDA/Canada at minimum; EU/UK/other?).</li>
+        <li>Whether to add an explicit "immediate performance / waiver" consent
+          at checkout if statutory withdrawal rights are in play.</li>
+      </ul>
+    </section>
+  </body>
+</html>

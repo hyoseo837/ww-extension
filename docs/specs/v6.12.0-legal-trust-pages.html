@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v6.12.0" />
+    <meta name="status" content="planned" />
+    <meta name="last-updated" content="2026-06-01" />
+    <title>v6.12.0 — Legal &amp; trust pages (Privacy, Terms, refund, disclaimer, consent)</title>
+  </head>
+  <body>
+    <h1>v6.12.0 — Legal &amp; trust pages</h1>
+
+    <h2>Goal</h2>
+    <p>
+      Finish the <em>legal, trust &amp; support</em> work the roadmap opened as
+      the v6.10 phase. Its first slice — the support address — already shipped as
+      <a href="v6.10.0-support-contact.html">v6.10.0</a>. The remaining slices
+      ship here: in-app <code>/privacy</code> and <code>/terms</code> pages, a
+      stated refund policy, the "not affiliated with UW / WaterlooWorks" footer
+      disclaimer, and a consent-at-signup line.
+    </p>
+    <p>
+      <strong>Why v6.12 and not v6.10.x:</strong> versioning is monotonic and
+      matches <code>manifest.json</code> (ADR 0002). v6.11 shipped <em>ahead</em>
+      of this work, so HEAD is already 6.11.2 — the legal pages take the next
+      free minor, v6.12.0. Roadmap data-export shifts to v6.13 and polish to
+      v6.14 accordingly.
+    </p>
+
+    <h2>Inputs &amp; constraints</h2>
+    <ul>
+      <li><strong>Legal copy is owner-supplied.</strong> The owner provides the
+        final binding Privacy + Terms text (via a reputable policy generator or
+        legal review). Until then the pages render the scaffold-derived outline
+        behind a visible <strong>DRAFT</strong> banner. Source of structure +
+        known facts: <code>docs/reference/legal-pages-scaffold.html</code>.</li>
+      <li><strong>Refund policy is an open decision</strong> — see ADR 0028
+        (status: proposed). Real money via Stripe carries a consumer-law
+        expectation of a clear policy. The Terms "refund" section is blocked on
+        that ADR being accepted.</li>
+      <li><strong>Owner-supplied placeholders</strong> the copy needs:
+        operator/legal name, governing law (e.g. Ontario, Canada),
+        age/eligibility, effective date. Tracked as <code>[FILL]</code> in the
+        scaffold.</li>
+    </ul>
+
+    <h2>Routing change (the one real technical decision)</h2>
+    <p>
+      Today <code>App.tsx</code> does <code>if (!session) return &lt;Landing
+      /&gt;</code> — there is <em>no router at all</em> for logged-out visitors,
+      so a public <code>/privacy</code> URL can't resolve. The legal pages must
+      be reachable <strong>both</strong> logged out (footer + consent links on
+      the landing) and logged in. Restructure so the legal routes are public:
+    </p>
+    <ul>
+      <li><strong>Logged out:</strong> render a small <code>&lt;Routes&gt;</code>
+        — <code>/privacy</code> → Privacy, <code>/terms</code> → Terms, and
+        <code>*</code> → Landing (so the landing stays the default and any other
+        path falls back to it, preserving today's behaviour).</li>
+      <li><strong>Logged in:</strong> add <code>/privacy</code> and
+        <code>/terms</code> alongside the existing authed routes, rendered in a
+        plain public layout (not the app sidebar) so the page reads the same in
+        both states.</li>
+    </ul>
+    <p>
+      The pages themselves are auth-agnostic static content, so a single
+      <code>LegalPage</code>/<code>LegalLayout</code> wrapper renders them
+      identically regardless of session.
+    </p>
+
+    <h2>Files</h2>
+    <ul>
+      <li><code>web/src/pages/legal/LegalLayout.tsx</code> (new) — shared shell:
+        centered prose column, page title, "← Back" link, footer contact, and
+        the DRAFT banner toggle. Auth-agnostic.</li>
+      <li><code>web/src/pages/legal/Privacy.tsx</code>,
+        <code>web/src/pages/legal/Terms.tsx</code> (new) — render the
+        scaffold-derived sections; swapped for owner's final copy at the copy
+        drop.</li>
+      <li><code>web/src/App.tsx</code> — restructure routing per above so the
+        legal routes are public in both auth states.</li>
+      <li><code>web/src/pages/Landing.tsx</code> — footer <code>Terms</code> /
+        <code>Privacy</code> <code>href="#"</code> → <code>&lt;Link&gt;</code> to
+        the routes; add the "not affiliated…" disclaimer line to the footer; add
+        the consent-at-signup line under the Sign-in button ("By continuing you
+        agree to our Terms and Privacy Policy", links to both). Fix the stale
+        "© 2024".</li>
+      <li><code>web/src/Layout.tsx</code> — a small Terms / Privacy footer (or
+        sidebar-bottom links) so the legal pages are reachable while logged in
+        too. Reuse <code>SUPPORT_EMAIL</code> for any contact line.</li>
+      <li><code>README.md</code> (~line 105) — repoint the privacy link from
+        <code>hyoseo.dev/privacy-policy/ww-extension/</code> (being removed) to
+        the in-app <code>/privacy</code>.</li>
+      <li><code>ext/</code> options/welcome — grep for the external privacy URL;
+        repoint any extension privacy/terms link to the in-app pages.</li>
+      <li><code>ext/manifest.json</code> — version bump to 6.12.0.</li>
+    </ul>
+
+    <h2>Slices (one commit each)</h2>
+    <ol>
+      <li><strong>v6.12.0</strong> — open the phase: this spec + ADR 0028
+        (planned). Docs only. (this commit)</li>
+      <li><strong>v6.12.1</strong> — web: public routing restructure + Privacy /
+        Terms page shells (scaffold copy + DRAFT banner) + footer/landing links
+        wired.</li>
+      <li><strong>v6.12.2</strong> — web: consent-at-signup line + "not
+        affiliated" footer disclaimer.</li>
+      <li><strong>v6.12.3</strong> — docs/ext: repoint README + extension links
+        to the in-app pages; drop the external-policy URL dependence.</li>
+      <li><strong>copy drop</strong> (when owner supplies final text + ADR 0028
+        accepted) — replace placeholder copy, fill the refund section, remove the
+        DRAFT banner. Own commit (v6.12.4).</li>
+    </ol>
+
+    <h2>Verify</h2>
+    <ol>
+      <li><code>cd web &amp;&amp; npm run build</code> clean.</li>
+      <li>Logged out: landing footer "Terms"/"Privacy" open <code>/terms</code> /
+        <code>/privacy</code>; the consent line links resolve; refreshing those
+        URLs still renders the page (not the landing).</li>
+      <li>Logged in: the same routes resolve; the app shell still works and
+        unknown paths still redirect to <code>/account</code>.</li>
+      <li>The "not affiliated" disclaimer shows in the footer; README privacy
+        link resolves to the in-app page.</li>
+    </ol>
+
+    <h2>Blocked-on-owner (close-out gates)</h2>
+    <ul>
+      <li>Final Privacy + Terms copy.</li>
+      <li>Refund policy decision (ADR 0028 → accepted).</li>
+      <li>Operator/legal name, governing law, age/eligibility, effective date.</li>
+    </ul>
+  </body>
+</html>
