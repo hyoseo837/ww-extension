@@ -25,11 +25,34 @@ export default function Account() {
   const { balance, email } = useDashboard();
   const [recent, setRecent] = useState<Entry[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [downloading, setDownloading] = useState(false);
+  const [dataError, setDataError] = useState<string | null>(null);
 
   useEffect(() => {
     apiGet<{ entries: Entry[] }>("/credits/history?limit=25").then((d) => setRecent(d.entries)).catch(() => {});
     apiGet<Profile>("/profile").then(setProfile).catch(() => {});
   }, []);
+
+  async function downloadData() {
+    setDownloading(true);
+    setDataError(null);
+    try {
+      const data = await apiGet<unknown>("/account/export");
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `ww-scorer-data-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setDataError(`Could not export your data: ${e}`);
+    } finally {
+      setDownloading(false);
+    }
+  }
 
   const name = email ? email.split("@")[0] : "";
   const pj = profile?.profile_json;
@@ -106,6 +129,25 @@ export default function Account() {
           <HistoryList entries={recent} limitRows={6} />
         </div>
       </div>
+
+      {/* Your data */}
+      <section className={CARD}>
+        <h3 className="mb-xs font-headline-md text-headline-md text-on-surface">Your data</h3>
+        <p className="mb-md font-body-md text-body-md text-text-secondary">
+          Download everything we store about you — account, credit history, scans, and profile — as a JSON file.
+        </p>
+        <div className="flex items-center gap-md">
+          <button
+            onClick={downloadData}
+            disabled={downloading}
+            className="inline-flex items-center gap-xs rounded-lg border border-border bg-surface-bright px-lg py-sm font-label-md text-label-md text-primary transition-colors hover:bg-surface-container-low disabled:opacity-60"
+          >
+            <Icon name="download" className="text-[18px]" />
+            {downloading ? "Preparing…" : "Download my data"}
+          </button>
+          {dataError && <span className="font-label-sm text-label-sm text-negative">{dataError}</span>}
+        </div>
+      </section>
     </div>
   );
 }
