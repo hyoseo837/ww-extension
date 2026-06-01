@@ -388,6 +388,40 @@
       </p>
     </section>
 
+    <section id="v7" data-status="planned">
+      <h2>v7 — Extension fix: website integration + Web Store approval (planned)</h2>
+      <p>
+        v6 rebuilt the account/profile/payment surface as the web app; v7 turns
+        back to the Chrome extension so it (a) works cleanly against that web app
+        and (b) <strong>passes Chrome Web Store review</strong>. The last
+        submission was rejected:
+      </p>
+      <ul>
+        <li><strong>Version 0.1.0 — Rejection — 2026-05-26 — Content Policies.</strong>
+          Violation: <em>"Including remotely hosted code in a Manifest V3 item."</em></li>
+      </ul>
+      <p>
+        <strong>Diagnosis of current <code>ext/</code> (manifest 6.12.3):</strong>
+        the hard blocker (remote JS/Wasm) is not present now — no remote
+        <code>&lt;script src&gt;</code>, no <code>eval</code> /
+        <code>new Function</code> / <code>importScripts</code> / dynamic import;
+        the one script injection in <code>content.js</code> uses
+        <code>chrome.runtime.getURL('src/page-bridge.js')</code>, a locally
+        packaged web-accessible resource (the correct MV3 pattern). The only
+        remote dependency left is <strong>Google Fonts</strong>
+        (<code>&lt;link href="https://fonts.googleapis.com/…"&gt;</code> in
+        <code>welcome.html</code> + <code>options.html</code>) — self-host the
+        fonts to be unambiguously compliant.
+      </p>
+      <p>
+        <strong>Open question:</strong> the rejected build was version 0.1.0 but
+        the dev manifest is 6.x — confirm what was actually uploaded, since the
+        rejected artifact likely predates the current code. Detailed scope (the
+        website-integration model + the compliance fixes) lands in the v7 spec +
+        an ADR when the phase opens.
+      </p>
+    </section>
+
     <section id="future">
       <h2>Further out (uncommitted)</h2>
       <p>
