@@ -22,14 +22,23 @@ export default function Privacy() {
         <li><strong>Payment</strong> — handled by Stripe. We store ledger entries and a Stripe reference, not your card number.</li>
       </ul>
 
-      <h2>2. How we use it</h2>
+      <h2>2. What we don't collect</h2>
+      <ul>
+        <li>Your <strong>card or banking details</strong> — Stripe handles payment; we never see or store your full card number.</li>
+        <li>A <strong>password</strong> — sign-in is through Google, so we never create or hold one.</li>
+        <li>Your <strong>activity outside WW Scorer</strong> — we don't track your browsing; we only see the postings you choose to scan.</li>
+        <li><strong>Location, device fingerprints, or advertising identifiers.</strong></li>
+        <li>Personal data about you <strong>bought from or supplied by third parties</strong> — everything we hold comes from you or from your use of the service.</li>
+      </ul>
+
+      <h2>3. How we use it</h2>
       <p>
         We use your data only to provide AI scoring, run your account, process
         payments, and respond to support requests. We do not sell your data, use
         it for advertising, or use it to train our own models.
       </p>
 
-      <h2>3. AI processing</h2>
+      <h2>4. AI processing</h2>
       <p>
         To score a posting, your profile and the job description are sent to
         Google's Gemini API to generate the result. We use a paid Gemini API
@@ -37,7 +46,7 @@ export default function Privacy() {
         content we submit to train or improve its models.
       </p>
 
-      <h2>4. Sharing &amp; sub-processors</h2>
+      <h2>5. Sharing &amp; sub-processors</h2>
       <p>We do not sell your personal data. We share data only with the providers that run the service:</p>
       <ul>
         <li><strong>Supabase</strong> — authentication and database (Canada).</li>
@@ -48,7 +57,7 @@ export default function Privacy() {
         <li><strong>Cloudflare</strong> — DNS and support email routing.</li>
       </ul>
 
-      <h2>5. Data location</h2>
+      <h2>6. Data location</h2>
       <p>
         Your account and profile data are stored in Canada. Some of the providers
         above (such as Google, Stripe, Vercel, and Cloudflare) may process data in
@@ -56,14 +65,14 @@ export default function Privacy() {
         jurisdictions.
       </p>
 
-      <h2>6. Retention</h2>
+      <h2>7. Retention</h2>
       <p>
         We keep your data while your account is active. Deleting your account
         removes it (see Your rights). Stripe retains payment records independently
         for its own legal and compliance purposes.
       </p>
 
-      <h2>7. Your rights</h2>
+      <h2>8. Your rights</h2>
       <p>
         Under Canada's <abbr title="Personal Information Protection and Electronic Documents Act">PIPEDA</abbr>,
         you can access the personal information we hold about you, ask us to
@@ -71,29 +80,29 @@ export default function Privacy() {
         by emailing us. You can also request an export of your data.
       </p>
 
-      <h2>8. Security</h2>
+      <h2>9. Security</h2>
       <p>
         Access is protected by token-based authentication and row-level database
         security, and secrets are encrypted. No system is perfectly secure, but we
         work to protect your data.
       </p>
 
-      <h2>9. Cookies &amp; tracking</h2>
+      <h2>10. Cookies &amp; tracking</h2>
       <p>
         We use only the essential browser storage needed to keep you signed in.
         There are no third-party analytics or advertising trackers.
       </p>
 
-      <h2>10. Eligibility</h2>
+      <h2>11. Eligibility</h2>
       <p>
         WW Scorer is intended for enrolled post-secondary co-op students aged 16
         or older.
       </p>
 
-      <h2>11. Changes</h2>
+      <h2>12. Changes</h2>
       <p>We may update this policy; the new version will be posted here with a revised effective date.</p>
 
-      <h2>12. Contact</h2>
+      <h2>13. Contact</h2>
       <p>Questions about privacy? Email us using the address below.</p>
     </LegalLayout>
   );
