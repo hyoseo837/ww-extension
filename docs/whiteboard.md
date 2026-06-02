@@ -36,6 +36,7 @@ moved out or dropped.
 - JavaScript to TypeScript
 - upgrade prompt for job scan
 - upgrade prompt for upload application package (not just extracting text)
+- confirmation button for any credit uses
 
 ## Possible questions
 
