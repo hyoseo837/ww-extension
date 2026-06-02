@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-06-01" />
+    <title>ADR 0031 — Single scoring model (Gemini Flash); drop user-facing model selection</title>
+  </head>
+  <body>
+    <h1>ADR 0031 — Single scoring model (Gemini Flash), no model switch</h1>
+
+    <h2>Context</h2>
+    <p>
+      The extension currently lets the user pick the Gemini model used for
+      scoring. <code>options.html</code> has a <strong>Model</strong> tab with a
+      <code>&lt;select id="model"&gt;</code>; <code>options.js</code> persists the
+      choice to <code>chrome.storage.local</code>; <code>background.js</code>
+      (<code>scoreJob</code>) sends it on <code>POST /scan</code>, defaulting to
+      <code>gemini-2.5-flash</code>. Server-side, <code>ScanRequest.model</code>
+      is a required field validated against <code>pricing.supported_models()</code>,
+      and it drives cost estimation and the actual Gemini call. Pro is offered as
+      the higher-accuracy option at roughly <strong>10× the per-scan cost</strong>
+      of Flash (the options help text says as much).
+    </p>
+    <p>
+      In practice Flash is sufficient for the job-posting scoring task: the scan
+      reads one posting against a structured profile and returns a 1–20 score with
+      a per-aspect breakdown (ADR 0016/0017). Pro's extra capability is not worth
+      ~10× the credit cost for this workload, and a user-facing model choice adds
+      options-page surface, a pricing-explanation burden, and a support /
+      "why did my scan cost more?" question — all friction on the path to a clean
+      Web Store listing and a simple paid product.
+    </p>
+    <p>
+      The roadmap's <strong>v7.3</strong> redesign already planned a minimal
+      options page including a model switch, and carried a flag that multi-model
+      isn't built server-side. The owner has now decided to drop the model-switch
+      feature outright rather than carry it into the redesign.
+    </p>
+
+    <h2>Decision</h2>
+    <p>
+      Scoring standardizes on a <strong>single model, Gemini Flash</strong>
+      (<code>gemini-2.5-flash</code>). There is <strong>no user-facing model
+      selection</strong>. Concretely:
+    </p>
+    <ul>
+      <li>The options-page <strong>Model</strong> tab and its
+        <code>&lt;select&gt;</code> / save logic are removed; the
+        <code>model</code> storage key is no longer read or written by the
+        client.</li>
+      <li>The client no longer sends a user-chosen model; scoring always uses
+        Flash. (Whether the <code>model</code> field stays on the <code>/scan</code>
+        request as a fixed server default, or is dropped entirely, is a v7.3
+        implementation detail — the key point is that no end user picks it.)</li>
+      <li>The default model remains an <strong>operator-side constant</strong>
+        (the v4.7 tunable-constants pattern), so the single model can be changed
+        in one place without shipping a client release — it is just not exposed in
+        the UI.</li>
+    </ul>
+    <p>
+      This does not commit to <em>removing</em> Pro support from the backend
+      immediately; it commits to Flash being the only model the product uses for
+      scoring and to there being no UI to choose otherwise. Cleaning up Pro
+      pricing / <code>supported_models()</code> can follow if it proves to be dead
+      code.
+    </p>
+
+    <h2>Consequences</h2>
+    <ul>
+      <li><strong>Easier:</strong> a smaller options page (closer to the v7.3
+        "auto-skip toggle + sign-in only" target); one predictable per-scan price;
+        no "which model / why did it cost more" support load; one less thing to
+        explain in the Web Store listing.</li>
+      <li><strong>Harder / lost:</strong> users who would want maximum accuracy
+        can't opt into Pro. Accepted — Flash is judged good enough for this task,
+        and the cost ratio doesn't justify the option.</li>
+      <li><strong>Constrains:</strong> v7.3 no longer builds a model-switch UI.
+        The earlier "don't build the switch until multi-model ships server-side"
+        flag is moot. Multi-model / non-Gemini providers stay an uncommitted
+        "further out" idea, now explicitly <em>not</em> on the scoring path unless
+        a future ADR reopens it.</li>
+      <li>Supersedes the v7.3 roadmap line that listed a model switch in the
+        minimal options page.</li>
+    </ul>
+  </body>
+</html>

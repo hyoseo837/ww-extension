@@ -487,14 +487,14 @@
         <dd>Post-approval. Match the sidebar design sheet
           (<code>ext/design/extension_sidebar_job_scan/</code>), light-mode only
           (drop the dark toggle), a minimal options page (auto-skip toggle +
-          sign-in + model switch only), the toolbar popup/icon redirecting to the
-          web app, <code>welcome.html</code> reduced to a thin launcher (big
+          sign-in only — the <strong>Model</strong> tab is removed, scoring is
+          Flash-only, <a href="decisions/0031-single-model-gemini-flash.html">ADR
+          0031</a>), the toolbar popup/icon redirecting to the web app,
+          <code>welcome.html</code> reduced to a thin launcher (big
           <em>Set up your profile →</em>, how-to stays in the sidebar), and
           removing score-selected / rescore. Tighten the extension↔web flows
           (sign-in deep links, buy / out-of-credits nudges,
-          <code>profile_not_set</code> routing). Its own ADR(s) at that phase.
-          (Multi-model isn't built server-side yet — don't build the model-switch
-          UI until it ships.)</dd>
+          <code>profile_not_set</code> routing). Its own ADR(s) at that phase.</dd>
       </dl>
     </section>
 
@@ -515,8 +515,11 @@
       <h2>Further out (uncommitted)</h2>
       <p>
         Candidates still on the table, no commitment yet — revisit at
-        phase-planning time: non-Gemini provider / multi-model support,
-        cover-letter generation, re-score on demand, and team / recruiter views.
+        phase-planning time: cover-letter generation, re-score on demand, and
+        team / recruiter views. <em>Non-Gemini provider / multi-model support is
+        no longer on the scoring path</em> — scoring standardizes on Gemini Flash
+        (<a href="decisions/0031-single-model-gemini-flash.html">ADR 0031</a>); a
+        future ADR would have to reopen it.
       </p>
     </section>
   </body>
