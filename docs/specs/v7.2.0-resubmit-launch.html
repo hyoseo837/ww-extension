@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v7.2.0" />
+    <meta name="status" content="planned" />
+    <meta name="last-updated" content="2026-06-02" />
+    <title>v7.2.0 — Resubmit to the Web Store + go live on Stripe</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>v7.2.0 — Resubmit + launch</h1>
+
+    <h2>Goal</h2>
+    <p>
+      Get the extension <strong>approved on the Chrome Web Store</strong> and
+      <strong>open monetization</strong>. v7.1 closed the only code-side
+      compliance gap (self-hosted fonts; <code>welcome.html</code> packaging fix
+      — <a href="v7.1.0-mv3-compliance.html">v7.1 spec</a>,
+      <a href="../decisions/0030-self-host-all-extension-resources.html">ADR
+      0030</a>), so v7.2 is mostly <em>process</em>, not code: prepare a clean
+      store listing, package the current build, submit, and address review. On
+      approval, run the Stripe live-mode checklist so a real card can buy
+      credits. By the locked sequencing, this resubmits the <em>current</em>
+      design — the redesign is v7.3, after approval.
+    </p>
+    <p>
+      This phase produces almost no source change. The one likely code touch is
+      a version bump for a fresh upload (the Web Store wants a higher
+      <code>version</code> than any prior upload). Everything else is listing
+      copy, console configuration, and an env swap on the backend.
+    </p>
+
+    <h2>Files</h2>
+
+    <h3>Changed</h3>
+    <ul>
+      <li><code>ext/manifest.json</code> — version bump for the re-upload
+        (<code>7.1.x</code> → <code>7.2.0</code>). The Web Store rejects an
+        upload whose version is not strictly greater than the last uploaded
+        one; bump even though no behavior changes.</li>
+    </ul>
+
+    <h3>Added (docs / non-shipping listing assets)</h3>
+    <ul>
+      <li><code>docs/reference/web-store-listing.html</code> — the authoritative
+        listing copy + per-permission justifications + privacy-practices answers
+        (single source of truth so a future resubmit doesn't re-derive them).
+        Drafted below; promote to its own file when filled.</li>
+      <li><code>ext/screenshots/</code> — already exists (sidebar screenshot
+        refreshed at v7.1.3). Confirm the set matches the <em>current</em> UI and
+        the store's size requirements (1280×800 or 640×400).</li>
+    </ul>
+
+    <h3>Not changed</h3>
+    <ul>
+      <li>No UI/behavior change — that is v7.3. Resubmitting the current design
+        is the deliberate sequencing call (approval gate ahead of the rewrite).</li>
+    </ul>
+
+    <h2>Store listing — what review needs</h2>
+    <p>
+      The 0.1.0 rejection was "remote code in MV3" against the <em>old v03
+      artifact</em>, not today's code (ADR 0030). Beyond the code being clean,
+      the listing itself must satisfy review:
+    </p>
+    <dl>
+      <dt>Per-permission justification</dt>
+      <dd>Each permission needs a one-line "why" in the listing. Current
+        manifest:
+        <ul>
+          <li><code>storage</code> — persist settings, last-known credit
+            balance, per-posting scores, and the Supabase session locally.</li>
+          <li><code>identity</code> — Google sign-in via
+            <code>launchWebAuthFlow</code> (Supabase OAuth) so scores attach to
+            the user's account/credits.</li>
+          <li>host <code>waterlooworks.uwaterloo.ca</code> — the content script
+            runs only on the co-op jobs page; this is the product.</li>
+          <li>host <code>*.supabase.co</code> — auth (session/JWT).</li>
+          <li>host <code>…ondigitalocean.app</code> — the backend that scores
+            postings and holds the credit ledger.</li>
+        </ul>
+        No <code>&lt;all_urls&gt;</code>, no broad host match — keep it that way;
+        narrow host permissions are the easiest review path.</dd>
+
+      <dt>Privacy-practices form</dt>
+      <dd>Declare a single purpose (score WaterlooWorks postings for the signed-in
+        user). Data handled: account email + uploaded CV/profile + posting text
+        sent to the backend for scoring. Must link a privacy policy — the in-app
+        Privacy page shipped at v6.12 (<code>/privacy</code> on the web app);
+        point the listing and <code>README</code> at it (the old
+        <code>hyoseo.dev/privacy-policy/…</code> was removed in v6.10).
+        Confirm a "data is not sold / used only to provide the feature"
+        attestation matches reality.</dd>
+
+      <dt>Description + screenshots</dt>
+      <dd>Plain description of what it does and that it needs a (free-bonus or
+        paid) account; screenshots of the <em>current</em> sidebar (not the v7.3
+        redesign mockup). Add the "not affiliated with the University of Waterloo
+        / WaterlooWorks" disclaimer (already in README + extension + web footer).</dd>
+    </dl>
+
+    <h2>Stripe live-mode checklist (run on approval)</h2>
+    <p>
+      Test mode is verified end-to-end (v4.5). Going live is an env swap +
+      reconfiguration — <strong>no code change</strong> (ADR 0012). Run in order:
+    </p>
+    <ol>
+      <li><strong>Activate</strong> the Stripe account for live payments
+        (business details, bank payout) if not already done.</li>
+      <li><strong>Create a live webhook endpoint</strong> in the Stripe
+        Dashboard (live mode) pointing at
+        <code>POST /webhooks/stripe</code> on the DO backend, subscribed to
+        <code>checkout.session.completed</code>. Copy its
+        <strong>live</strong> signing secret.</li>
+      <li><strong>Swap the DO env vars</strong> (App Platform → Settings → env):
+        <ul>
+          <li><code>STRIPE_SECRET_KEY</code>: <code>sk_test_…</code> →
+            <code>sk_live_…</code> (encrypted).</li>
+          <li><code>STRIPE_WEBHOOK_SECRET</code>: test → the live signing secret
+            from step 2 (encrypted).</li>
+        </ul>
+        Confirm <code>WEB_APP_URL</code> / <code>PUBLIC_BASE_URL</code> point at
+        the production web app + backend (for the Stripe return URL). Redeploy.</li>
+      <li><strong>Real-card smoke test:</strong> from the web app
+        <code>/buy</code>, purchase the smallest package with a real card;
+        confirm Stripe shows a live payment, the webhook returns 200, and the
+        balance increases by exactly the package's credits (idempotent —
+        no double grant on Stripe retry; ADR 0012's partial-unique-index).</li>
+      <li><strong>Refund path:</strong> confirm the v6.12 refund policy
+        (<a href="../decisions/0028-refund-policy.html">ADR 0028</a>) text is
+        live, and that a Dashboard refund of the smoke-test charge works. (Credit
+        clawback on refund is out of scope unless the policy requires it — note
+        it, don't build it here.)</li>
+      <li><strong>Receipts/emails:</strong> verify Stripe emails a receipt
+        (hosted by Stripe per ADR 0012).</li>
+    </ol>
+
+    <h2>Verify</h2>
+    <ol>
+      <li><code>./package.sh</code> produces a zip whose <code>manifest.json</code>
+        version is <code>7.2.0</code> and which contains
+        <code>welcome.html</code> + <code>fonts/*.woff2</code> (the v7.1 fixes)
+        and <strong>no</strong> <code>server/</code> or <code>web/</code> files.</li>
+      <li>Web Store Developer Dashboard accepts the upload (version is higher than
+        any prior) and all listing fields validate (permissions justified,
+        privacy policy URL resolves, screenshots sized correctly).</li>
+      <li>Item reaches <strong>published</strong> (or, if rejected, the rejection
+        reason is captured here and addressed — re-run this phase).</li>
+      <li>Live Stripe smoke test: one real-card purchase credits the exact
+        package amount once; a manually replayed webhook does not double-grant.</li>
+      <li>A freshly installed published build: sign in, see balance, scan a
+        posting, buy credits with a real card end-to-end.</li>
+    </ol>
+
+    <h2>Notes</h2>
+    <ul>
+      <li>Touches no <code>server/</code> source, so it does <em>not</em> require
+        a <code>server/pyproject.toml</code> bump (ADR 0010) — the Stripe change
+        is config, not code. If anything in <code>server/</code> does change,
+        bump it.</li>
+      <li>Keep the rejected-version history list in
+        <code>docs/roadmap.html</code> updated with the outcome of this
+        submission (approved date, or new rejection reason) so the next agent has
+        the full review trail.</li>
+      <li>Going live on Stripe is an outward-facing, hard-to-reverse step
+        (real charges) — confirm with the owner before flipping the keys, even
+        once approval lands.</li>
+    </ul>
+  </body>
+</html>

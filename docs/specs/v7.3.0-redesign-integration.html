@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v7.3.0" />
+    <meta name="status" content="planned" />
+    <meta name="last-updated" content="2026-06-02" />
+    <title>v7.3.0 — Extension redesign + web-app integration polish</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>v7.3.0 — Redesign + integration polish</h1>
+
+    <h2>Goal</h2>
+    <p>
+      <strong>Post-approval only.</strong> With the extension published
+      (v7.2) and Stripe live, bring the extension UI up to the sidebar design
+      sheet and tighten how it hands users off to the web app. This is the
+      riskier rewrite the v7 sequencing deliberately put <em>after</em> the
+      Web Store gate — don't start it while v7.2 is in review, because it
+      changes the very artifact under review.
+    </p>
+    <p>
+      Five strands, all on the extension client (no <code>server/</code>
+      change expected):
+    </p>
+    <ol>
+      <li><strong>Sidebar redesign</strong> to match
+        <code>ext/design/extension_sidebar_job_scan/</code> (warm editorial,
+        card-per-posting with score chip + verdict + reason snippet + save-to-folder).</li>
+      <li><strong>Light-mode only</strong> — drop the dark/light theme toggle and
+        the dark tokens; one set of tokens in <code>sidebar.css</code>.</li>
+      <li><strong>Minimal options page</strong> — reduce to a sign-in/account
+        state + the auto-skip (hard-filter) toggle. The <strong>Model</strong>
+        tab is removed (scoring is Flash-only,
+        <a href="../decisions/0031-single-model-gemini-flash.html">ADR 0031</a>).</li>
+      <li><strong>Toolbar entry → web app</strong> — the action icon opens (or a
+        small popup redirects to) the web app rather than the options page.</li>
+      <li><strong>welcome.html → thin launcher</strong> — a big
+        <em>Set up your profile →</em> deep link to the web app; the detailed
+        how-to moves into the sidebar empty-state guide.</li>
+    </ol>
+    <p>
+      Plus removals: drop <strong>score-selected</strong> and
+      <strong>rescore</strong> (per roadmap), and tighten the extension↔web
+      flows — sign-in deep links, buy / out-of-credits nudges, and
+      <code>profile_not_set</code> routing all pointing cleanly at the web app.
+    </p>
+
+    <h2>Decisions to record (ADRs)</h2>
+    <p>
+      Significant calls here that a future agent would otherwise re-debate —
+      write each as an ADR before/with the code (numbering continues from 0031):
+    </p>
+    <ul>
+      <li><strong>Light-mode only</strong> — dropping the theme toggle and dark
+        tokens (removes a stored <code>theme</code> key + its
+        <code>storage.onChanged</code> consumer). Why: design sheet is light;
+        one token set is simpler; matches the "minimal" direction.</li>
+      <li><strong>Toolbar action behavior</strong> — popup vs. direct
+        <code>chrome.tabs.create</code> to the web app, and what happens to
+        <code>options_ui</code> / <code>action: {}</code> in the manifest.</li>
+      <li>(Possibly) <strong>removing rescore / score-selected</strong> if it
+        changes a stored contract or user-visible guarantee; otherwise a spec
+        Note is enough.</li>
+    </ul>
+
+    <h2>Files (anticipated — confirm at phase open)</h2>
+
+    <h3>Changed</h3>
+    <ul>
+      <li><code>ext/src/content.js</code> — sidebar markup/flow to match the
+        design sheet; remove score-selected + rescore controls; theme listener
+        removed (light-only); keep the ADR 0018 pre-filter, the out-of-credits +
+        <code>profile_not_set</code> nudges (repointed cleanly at the web app).</li>
+      <li><code>ext/src/sidebar.css</code> — adopt the design sheet's tokens;
+        delete dark-mode variables.</li>
+      <li><code>ext/options.html</code> + <code>ext/src/options.js</code> — strip
+        to sign-in/account + auto-skip toggle; remove the Model tab and the
+        <code>model</code> storage read/write (ADR 0031); remove the theme toggle.</li>
+      <li><code>ext/welcome.html</code> — reduce to a thin launcher (deferred from
+        v7.1, which kept it functionally as-is).</li>
+      <li><code>ext/src/background.js</code> — stop sending a user-chosen model on
+        <code>POST /scan</code> (Flash default; ADR 0031); adjust the action /
+        toolbar handler for the new toolbar behavior.</li>
+      <li><code>ext/manifest.json</code> — version bump; possibly
+        <code>action</code> / <code>options_ui</code> changes per the toolbar
+        decision.</li>
+    </ul>
+
+    <h3>Reference</h3>
+    <ul>
+      <li><code>ext/design/extension_sidebar_job_scan/code.html</code> +
+        <code>screen.png</code> — the target design. <strong>It never ships</strong>
+        (not in the <code>package.sh</code> allowlist) and keeps its CDN links;
+        port the <em>look</em> into local <code>sidebar.css</code>, do not link
+        the design's remote CSS (ADR 0030 — self-host all shipped resources).</li>
+    </ul>
+
+    <h2>Verify</h2>
+    <ol>
+      <li>Sidebar matches the design sheet on a live WW jobs page (cards, score
+        chip, verdict colors, reason snippet, save-to-folder).</li>
+      <li>No theme toggle anywhere; pages render in light mode only; no
+        <code>theme</code> key read/written.</li>
+      <li>Options page shows only account/sign-in + the auto-skip toggle — no
+        Model tab, no <code>&lt;select id="model"&gt;</code>; <code>grep -rn
+        "model" ext/src/options.js</code> finds no model-selection logic.</li>
+      <li>A scan still scores correctly with Flash; the request carries no
+        user-chosen model (ADR 0031).</li>
+      <li>Toolbar icon opens the web app per the chosen behavior;
+        <code>welcome.html</code> is a thin launcher whose CTA deep-links to the
+        web app's profile setup.</li>
+      <li>Extension↔web flows: signed-out → sign-in; out-of-credits → web
+        <code>/buy</code>; <code>profile_not_set</code> → web <code>/profile</code>.</li>
+      <li><code>grep -rn "fonts.googleapis\|cdn\|unpkg\|tailwindcss.com"
+        ext/src ext/*.html</code> → no remote resource in any shipped file
+        (ADR 0030 still holds after the restyle).</li>
+      <li><code>./package.sh</code> zip excludes <code>design/</code>,
+        <code>server/</code>, <code>web/</code>; manifest version matches the
+        commit.</li>
+    </ol>
+
+    <h2>Notes</h2>
+    <ul>
+      <li><strong>Scale mismatch in the mockup:</strong> the design
+        <code>screen.png</code> shows single-digit scores (9, 4, 7, 8) on what
+        reads as a 1–10 scale. The live product scores <strong>1–20</strong> with
+        a six-verdict ladder (<a href="../decisions/0017-scoring-scale-1-20.html">ADR
+        0017</a>). Port the <em>visual style</em>, but keep the real 1–20 score +
+        Strong&nbsp;Apply / Apply / Consider / Unlikely / Skip / Excluded verdicts
+        — do not regress the scale to match the mockup.</li>
+      <li><strong>Gated behind v7.2 approval.</strong> Per the locked sequencing,
+        do not begin implementation until the current design is published and
+        Stripe is live — this rewrite must not jeopardize the approval the
+        product needs to monetize.</li>
+      <li>Likely worth slicing into sub-versions (e.g. options/Model removal,
+        sidebar restyle, welcome launcher, toolbar behavior) as separate commits
+        per the per-phase commit discipline, rather than one large commit.</li>
+      <li>The v8 JS→TS migration follows this; keep the restyle in plain JS — do
+        not start TS here.</li>
+    </ul>
+  </body>
+</html>

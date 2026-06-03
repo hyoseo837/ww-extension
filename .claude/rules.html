@@ -66,8 +66,17 @@
         attributes nobody reads.
       </li>
       <li>
-        No CSS, no JavaScript, no design. Content and structural metadata
-        only.
+        No JavaScript, no inline or per-document styling, no
+        <code>class</code> attributes. Content and structural metadata only —
+        <strong>with one narrow exception</strong>: a single shared,
+        presentation-only stylesheet, <code>docs/style.css</code>, linked from
+        documents purely so a human reads them more comfortably in a browser
+        (added <time datetime="2026-06-03">2026-06-03</time>). It uses element
+        selectors only and carries no meaning. Writing documentation is
+        <em>not</em> affected by it — author the same semantic HTML you always
+        would, and an agent must be able to read and interpret any document
+        with the stylesheet ignored entirely. Do not add any other CSS, inline
+        styles, or a second stylesheet.
       </li>
     </ul>
     <p>
