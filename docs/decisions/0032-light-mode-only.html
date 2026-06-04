@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-06-04" />
+    <title>ADR 0032 — Light-mode only; drop the dark/light theme toggle</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>ADR 0032 — Light-mode only, no theme toggle</h1>
+
+    <h2>Context</h2>
+    <p>
+      The extension ships two themes, dark (default) and light. Each shipped
+      page carries both token sets and a switch:
+    </p>
+    <ul>
+      <li><code>options.html</code> — a dark <code>:root</code> plus a
+        <code>body.light</code> override, and a <strong>Theme</strong> card in
+        Settings (the <code>#themeToggle</code> pill).</li>
+      <li><code>options.js</code> — <code>applyTheme()</code> + the toggle
+        handler persist the choice to <code>chrome.storage.local</code> under a
+        <code>theme</code> key and read it back on load.</li>
+      <li><code>content.js</code> / <code>sidebar.css</code> — the in-page
+        sidebar mirrors the same dark/light tokens via
+        <code>applyThemeToContent()</code> and a <code>storage.onChanged</code>
+        listener on <code>theme</code>.</li>
+    </ul>
+    <p>
+      The v7.3 sidebar design sheet
+      (<code>ext/design/extension_sidebar_job_scan/</code>) is a single
+      <em>warm editorial</em> light look. Carrying a dark token set and a
+      runtime toggle through that redesign doubles the styling surface, adds a
+      stored key and its change-listener to maintain, and keeps a settings
+      control the minimal-options direction (ADR 0031) wants gone.
+    </p>
+
+    <h2>Decision</h2>
+    <p>
+      The extension standardizes on a <strong>single light theme</strong>.
+      There is <strong>no theme toggle and no dark mode</strong>. Concretely:
+    </p>
+    <ul>
+      <li>The options-page <strong>Theme</strong> card and the
+        <code>#themeToggle</code> control are removed; <code>applyTheme()</code>
+        and the toggle handler go with them.</li>
+      <li>The <code>theme</code> storage key is <strong>no longer read or
+        written</strong> by the client. Any residual stored value is ignored
+        (no migration needed — it is display-only state).</li>
+      <li>Each shipped page keeps <strong>one set of tokens</strong> — the
+        former <code>body.light</code> values promoted onto <code>:root</code>;
+        the dark <code>:root</code> and the <code>body.light</code> override are
+        deleted.</li>
+    </ul>
+    <p>
+      This ADR governs the whole client, but lands in slices: the
+      <strong>options page</strong> goes light-only with the Model-tab removal
+      (first v7.3 slice); the <strong>sidebar</strong>
+      (<code>content.js</code> + <code>sidebar.css</code>: the theme listener,
+      <code>applyThemeToContent</code>, and the dark tokens) is converted in the
+      sidebar-restyle slice that adopts the design sheet.
+    </p>
+
+    <h2>Consequences</h2>
+    <ul>
+      <li><strong>Easier:</strong> one token set per page; no theme key, handler,
+        or change-listener to carry through the redesign; one fewer settings
+        control (closer to the ADR 0031 "auto-skip + sign-in only" target).</li>
+      <li><strong>Harder / lost:</strong> users who preferred dark mode lose it.
+        Accepted — the redesign is a single deliberate light look, and a
+        personal-scale tool does not need a theme system.</li>
+      <li><strong>Constrains:</strong> v7.3 (and the v8 TS migration after it)
+        must not re-introduce dark tokens or a toggle. Pairs with ADR 0030
+        (self-host all shipped resources) as a styling constraint on the
+        redesign.</li>
+      <li>Until the sidebar slice lands, the in-page sidebar still honors a
+        stored <code>theme</code>; once that slice ships, the key is fully dead.</li>
+    </ul>
+  </body>
+</html>

@@ -3,57 +3,6 @@ const el = id => document.getElementById(id);
 // Web app — account, profile, preferences, billing all live here now (v6.4).
 const WEB_APP_URL = 'https://ww-extension.hyoseo.dev';
 
-// ── Help popovers ─────────────────────────────────────────────────────────────
-
-const HELP_CONTENT = {
-  model: 'Flash: cheaper per scan (~$0.001 CAD). Pro: more accurate, ~10× the cost. Flash is recommended.',
-};
-
-// ── Tab navigation ────────────────────────────────────────────────────────────
-
-document.querySelectorAll('.nav-item').forEach(btn => {
-  btn.addEventListener('click', () => {
-    if (!btn.dataset.tab) return;  // external link (WaterlooWorks)
-    document.querySelectorAll('.nav-item').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-    btn.classList.add('active');
-    el('tab-' + btn.dataset.tab).classList.add('active');
-  });
-});
-
-// ── Status helper (Model tab) ──────────────────────────────────────────────────
-
-function setStatus(msg, type) {
-  const s = el('status');
-  s.textContent = msg;
-  s.className = 'status-line' + (type ? ' ' + type : '');
-}
-
-// ── Theme toggle ──────────────────────────────────────────────────────────────
-
-function applyTheme(theme) {
-  const isLight = theme === 'light';
-  document.body.classList.toggle('light', isLight);
-  const pill = el('themeToggle');
-  if (pill) {
-    pill.classList.toggle('on', isLight);
-    pill.setAttribute('aria-checked', String(isLight));
-  }
-  const dark = el('themeOptDark');
-  const light = el('themeOptLight');
-  if (dark && light) {
-    dark.classList.toggle('active', !isLight);
-    light.classList.toggle('active', isLight);
-  }
-}
-
-el('themeToggle').addEventListener('click', () => {
-  const isLight = !document.body.classList.contains('light');
-  const theme = isLight ? 'light' : 'dark';
-  applyTheme(theme);
-  chrome.storage.local.set({ theme });
-});
-
 // ── Hard-exclusion pre-filter toggle (ADR 0018) ───────────────────────────────
 
 function applyHardFilter(enabled) {
@@ -71,17 +20,6 @@ el('hardFilterToggle').addEventListener('click', () => {
 });
 
 chrome.storage.local.get('hardFilterEnabled', d => applyHardFilter(d.hardFilterEnabled !== false));
-
-// ── Model (load + save) ────────────────────────────────────────────────────────
-
-chrome.storage.local.get(['model', 'theme'], data => {
-  if (data.model) el('model').value = data.model;
-  applyTheme(data.theme);
-});
-
-el('save').addEventListener('click', () => {
-  chrome.storage.local.set({ model: el('model').value }, () => setStatus('Saved.', 'ok'));
-});
 
 // ── Open the web app (account / profile / billing) ─────────────────────────────
 
@@ -210,25 +148,4 @@ el('extVersion').textContent = 'v' + chrome.runtime.getManifest().version;
 
 el('showWelcome').addEventListener('click', () => {
   chrome.tabs.create({ url: chrome.runtime.getURL('welcome.html') });
-});
-
-// ── Help popover toggle ───────────────────────────────────────────────────────
-
-const helpPopover = el('opts-help-popover');
-
-document.addEventListener('click', e => {
-  const btn = e.target.closest('.opts-help-btn');
-  if (btn) {
-    const key = btn.dataset.help;
-    const isSame = helpPopover.classList.contains('visible') && helpPopover.dataset.open === key;
-    if (isSame) { helpPopover.classList.remove('visible'); return; }
-    helpPopover.textContent = HELP_CONTENT[key] || '';
-    helpPopover.dataset.open = key;
-    const r = btn.getBoundingClientRect();
-    helpPopover.style.top = (r.bottom + 8) + 'px';
-    helpPopover.style.left = Math.max(8, Math.min(r.left - 8, window.innerWidth - 300)) + 'px';
-    helpPopover.classList.add('visible');
-  } else if (!e.target.closest('#opts-help-popover')) {
-    helpPopover.classList.remove('visible');
-  }
 });

@@ -5,8 +5,8 @@
     <meta name="project" content="ww-extension" />
     <meta name="type" content="spec" />
     <meta name="version" content="v7.3.0" />
-    <meta name="status" content="planned" />
-    <meta name="last-updated" content="2026-06-02" />
+    <meta name="status" content="in-progress" />
+    <meta name="last-updated" content="2026-06-04" />
     <title>v7.3.0 — Extension redesign + web-app integration polish</title>
     <link rel="stylesheet" href="../style.css" />
   </head>
@@ -48,6 +48,23 @@
       flows — sign-in deep links, buy / out-of-credits nudges, and
       <code>profile_not_set</code> routing all pointing cleanly at the web app.
     </p>
+
+    <h2>Progress (slices)</h2>
+    <ul>
+      <li><strong>v7.3.0 — options-page simplification <em>(done 2026-06-04)</em>.</strong>
+        Removed the <strong>Model</strong> tab (ADR 0031) and the
+        <strong>Theme</strong> toggle (<a href="../decisions/0032-light-mode-only.html">ADR
+        0032</a>); collapsed the tabbed shell to a single scrolling page; made
+        the page light-only (one token set). <code>options.js</code> dropped the
+        tab nav, help popover, <code>applyTheme</code>, and the
+        <code>model</code> load/save. Account + auto-skip toggle + How-to + About
+        kept (How-to stays here until the sidebar empty-state guide lands).
+        <em>Server untouched</em> — the <code>model</code> field still rides
+        <code>/scan</code>; with no selector, new clients default to Flash via
+        the existing <code>|| 'gemini-2.5-flash'</code> fallback. The residual
+        <code>model</code> / <code>theme</code> storage keys (still read by
+        <code>content.js</code>) are cleaned in the sidebar-restyle slice.</li>
+    </ul>
 
     <h2>Decisions to record (ADRs)</h2>
     <p>
