@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-06-04" />
+    <title>ADR 0034 — Bonus-credit packages + re-margin to ~1 credit/scan</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>ADR 0034 — Bonus-credit packages + re-margin to ~1 credit/scan</h1>
+
+    <h2>Context</h2>
+    <p>
+      <a href="0012-credit-system-stripe.html">ADR 0012</a> set the credit
+      economy: <strong>1 credit = $0.01 CAD</strong>, per-scan cost derived from
+      Gemini token usage via a single <code>MARGIN</code> dial
+      (<code>billing/pricing.py</code>), and Stripe packages where
+      <strong><code>cad_cents == credits</code></strong> (no bonus). At
+      <code>MARGIN = 5.0</code> a Flash scan runs ~0.5 credits, so the 100-credit
+      signup bonus buys ~200 scans and the packs were 500 / 1000 / 2000 credits
+      at $5 / $10 / $20.
+    </p>
+    <p>
+      The owner wants a simpler, more marketable story: a scan costs
+      <strong>about 1 credit</strong>, the entry price is <strong>$1 for 100
+      credits</strong>, and <strong>bigger packs include bonus credits</strong>.
+      Token-based pricing stays (it keeps cost honest and the refund-on-actual
+      machinery intact); only the dial and the package table change.
+    </p>
+
+    <h2>Decision</h2>
+    <ul>
+      <li><strong>Keep token-based per-scan pricing</strong> and the base unit
+        <strong>1 credit = $0.01 CAD</strong>. No change to the scan/extract
+        debit-estimate-settle flow. <strong>PDF extract stays variable</strong>
+        (token-based) — only the dial moves.</li>
+      <li><strong>Re-margin:</strong> <code>MARGIN 5.0 → 10.0</code> so a Flash
+        scan costs <strong>~1 credit</strong> and the 100-credit signup bonus
+        buys ~100 scans. One number, as the pricing module intends.</li>
+      <li><strong>Bonus-credit packages</strong> (this is the part that amends
+        ADR 0012 — <code>cad_cents</code> no longer equals <code>credits</code>):
+        <table border="1" cellpadding="6" cellspacing="0">
+          <tr><th>id</th><th>price (cad_cents)</th><th>credits</th><th>bonus</th></tr>
+          <tr><td>credits_100</td><td>$1 (100)</td><td>100</td><td>—</td></tr>
+          <tr><td>credits_550</td><td>$5 (500)</td><td>550</td><td>+50</td></tr>
+          <tr><td>credits_1200</td><td>$10 (1000)</td><td>1200</td><td>+200</td></tr>
+        </table>
+        Stripe is charged <code>cad_cents</code>; the ledger is granted
+        <code>credits</code> — already how <code>create_checkout_session</code> /
+        <code>grant_purchase</code> work, so the bonus needs no new code, only the
+        table values. The line-item name <code>f"{credits} credits"</code> stays
+        correct.</li>
+    </ul>
+
+    <h2>Consequences</h2>
+    <ul>
+      <li><strong>Retires</strong> ADR 0012's <code>cad_cents == credits</code>
+        invariant; the code comments asserting it are updated. Server
+        (<code>billing/payments.py</code>) and web
+        (<code>web/src/packages.ts</code>) package tables must stay in lockstep —
+        changed together in one commit.</li>
+      <li><strong>Existing balances</strong> buy ~half as many scans as before the
+        re-margin (0.5 → ~1 credit/scan). Accepted: the user base is tiny
+        (post-launch) and the bonus packs offset it.</li>
+      <li>Margin headroom is fine — a Flash scan's raw Google cost is ~$0.001;
+        at $0.01–$0.0083 per credit revenue the multiple stays ample even on the
+        bonus tiers.</li>
+      <li>Web pricing copy moves from "1 credit = $0.01 CAD" to "about 1 credit
+        per scan, bigger packs include bonus credits."</li>
+      <li>No Stripe dashboard change (prices are inline <code>price_data</code>,
+        ADR 0012). Server change → <code>server/pyproject.toml</code> bump
+        (ADR 0010).</li>
+    </ul>
+  </body>
+</html>

@@ -1,7 +1,7 @@
 // Credit packages — the single source for the Buy page and the logged-out
-// landing pricing. Mirrors the server's CREDIT_PACKAGES (billing/payments.py);
-// strictly 1 credit = $0.01 CAD (no bulk discount). The Stitch design's
-// "Save %" tiers are illustrative only.
+// landing pricing. MUST mirror the server's CREDIT_PACKAGES
+// (billing/payments.py). Base rate 1 credit = $0.01 CAD (≈ 1 scan); bigger
+// packs include bonus credits (ADR 0034).
 export type CreditPackage = {
   id: string;
   credits: number;
@@ -11,7 +11,7 @@ export type CreditPackage = {
 };
 
 export const PACKAGES: CreditPackage[] = [
-  { id: "credits_500", credits: 500, price: "$5", note: "Good for a first batch of scans." },
-  { id: "credits_1000", credits: 1000, price: "$10", popular: true, note: "A typical term top-up." },
-  { id: "credits_2000", credits: 2000, price: "$20", note: "For a heavy scanning term." },
+  { id: "credits_100", credits: 100, price: "$1", note: "About 100 scans." },
+  { id: "credits_550", credits: 550, price: "$5", popular: true, note: "500 + 50 bonus credits." },
+  { id: "credits_1200", credits: 1200, price: "$10", note: "1,000 + 200 bonus credits — best value." },
 ];

@@ -14,13 +14,11 @@ Calibration snapshot
 Date:    2026-05-29
 Source:  https://ai.google.dev/pricing
 USD→CAD: 1.37
-Margin:  5.0× over raw Google rates (covers DO + Supabase fixed costs
-         + FX cushion + actual margin). Rebalanced from 2.0× → 5.0× in
-         v4.6 so the 100-credit signup bonus buys ~200 Flash scans (a
-         meaningful trial) instead of a whole co-op term: at 2.0× the
-         real v4.4 logs put a Flash scan at ~0.18 credits (~550 scans
-         per bonus), too generous to ever drive a purchase. See spec
-         v4.6.0 Notes for the rebalance rationale.
+Margin:  10.0× over raw Google rates (covers DO + Supabase fixed costs
+         + FX cushion + actual margin). History: 2.0× → 5.0× in v4.6
+         (~0.5 credits/scan, ~200 scans per 100-credit bonus); 5.0× →
+         10.0× in v7.4.0 so a Flash scan costs ~1 credit and the bonus
+         buys ~100 scans — the "1 credit ≈ 1 scan" story (ADR 0034).
 
 Updating the price is a code review + redeploy on purpose — see spec
 v4.4.0 Notes ("Pricing constants live in code, not env").
@@ -47,9 +45,9 @@ CAD_PER_CREDIT = Decimal("0.01")   # 1 credit = $0.01 CAD
 
 # The margin dial: multiplies raw Google cost to cover DO + Supabase
 # fixed costs, FX cushion, and actual margin. THIS is the number to edit
-# when re-pricing. v4.6 raised it 2.0 → 5.0 so the 100-credit signup
-# bonus buys ~200 Flash scans instead of a whole co-op term.
-MARGIN = Decimal("5.0")
+# when re-pricing. v4.6: 2.0 → 5.0 (~0.5 credits/scan). v7.4.0: 5.0 →
+# 10.0 so a Flash scan costs ~1 credit (ADR 0034).
+MARGIN = Decimal("10.0")
 
 # Credit-per-token rates, derived from the dials above.
 _RATES: dict[str, dict[str, Decimal]] = {

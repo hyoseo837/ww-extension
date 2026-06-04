@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v7.4.0" />
+    <meta name="status" content="in-progress" />
+    <meta name="last-updated" content="2026-06-04" />
+    <title>v7.4.0 — Billing: bonus packages + re-margin</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>v7.4.0 — Bonus packages + re-margin</h1>
+
+    <h2>Goal</h2>
+    <p>
+      Reprice per <a href="../decisions/0034-bonus-packages-and-remargin.html">ADR
+      0034</a>: a scan costs <strong>~1 credit</strong> (raise
+      <code>MARGIN</code>), the entry pack is <strong>$1 / 100 credits</strong>,
+      and bigger packs include <strong>bonus credits</strong>
+      ($5 → 550, $10 → 1200). Token-based pricing and the extract flow are
+      unchanged; only the dial, the package tables, and the web copy move.
+    </p>
+
+    <h2>Files (one commit — server + web package tables must stay in sync)</h2>
+    <ul>
+      <li><code>server/app/billing/pricing.py</code> — <code>MARGIN 5.0 → 10.0</code>;
+        update the calibration docstring (now ~1 credit/scan, ~100 scans per
+        bonus).</li>
+      <li><code>server/app/billing/payments.py</code> — replace
+        <code>CREDIT_PACKAGES</code> with credits_100 / credits_550 / credits_1200
+        ($1/100, $5/550, $10/1200); update the "cad_cents == credits" comment to
+        note the bonus.</li>
+      <li><code>web/src/packages.ts</code> — mirror the new tiers + bonus notes;
+        update the "no bulk discount" comment.</li>
+      <li><code>web/src/pages/Buy.tsx</code>, <code>web/src/pages/Landing.tsx</code>,
+        <code>web/src/pages/Account.tsx</code> — copy: "~1 credit per scan, bigger
+        packs include bonus credits" (drop the bare "1 credit = $0.01").</li>
+      <li><code>server/pyproject.toml</code> — version bump (ADR 0010, server
+        touched).</li>
+      <li><code>ext/manifest.json</code> — repo version bump (ADR 0002).</li>
+    </ul>
+
+    <h2>Verify</h2>
+    <ol>
+      <li>A live Flash scan debits ≈ 1 credit (token-based, so ~0.8–1.2).</li>
+      <li><code>POST /credits/checkout</code> for <code>credits_550</code> creates
+        a Stripe session charging <strong>$5</strong> with line item
+        "550 credits"; on <code>checkout.session.completed</code> the ledger is
+        granted <strong>550</strong> (bonus included), idempotent on the event id
+        (ADR 0012).</li>
+      <li>Web Buy + Landing show 100 / 550 / 1200 at $1 / $5 / $10 with the bonus
+        called out; <code>tsc</code> clean.</li>
+      <li>Server and web package ids/amounts match exactly.</li>
+    </ol>
+
+    <h2>Notes</h2>
+    <ul>
+      <li>Existing balances buy ~half as many scans after the re-margin (ADR
+        0034) — acceptable at current scale.</li>
+      <li>Going live on real cards is still the separate Stripe live-mode step
+        (v7.2, pending) — this slice is test-mode-safe config + code.</li>
+    </ul>
+  </body>
+</html>

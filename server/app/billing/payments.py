@@ -13,12 +13,14 @@ from app.core.config import settings
 
 stripe.api_key = settings.stripe_secret_key
 
-# package_id -> {cad_cents, credits}. 1:1 by the credit-unit rule, so
-# cad_cents == credits for every package.
+# package_id -> {cad_cents, credits}. Base rate is 1 credit = 1 cent, but
+# bigger packs include BONUS credits, so cad_cents != credits above the
+# entry tier (ADR 0034). Stripe is charged cad_cents; the ledger is
+# granted credits.
 CREDIT_PACKAGES: dict[str, dict[str, int]] = {
-    "credits_500":  {"cad_cents": 500,  "credits": 500},
-    "credits_1000": {"cad_cents": 1000, "credits": 1000},
-    "credits_2000": {"cad_cents": 2000, "credits": 2000},
+    "credits_100":  {"cad_cents": 100,  "credits": 100},
+    "credits_550":  {"cad_cents": 500,  "credits": 550},
+    "credits_1200": {"cad_cents": 1000, "credits": 1200},
 }
 
 

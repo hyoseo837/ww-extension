@@ -507,6 +507,14 @@
           removing score-selected / rescore. Tighten the extension↔web flows
           (sign-in deep links, buy / out-of-credits nudges,
           <code>profile_not_set</code> routing). Its own ADR(s) at that phase.</dd>
+
+        <dt><a href="specs/v7.4.0-billing-bonus-packages.html">v7.4</a> — billing: bonus packages + re-margin
+          <em>(in progress 2026-06-04)</em></dt>
+        <dd>Reprice (<a href="decisions/0034-bonus-packages-and-remargin.html">ADR
+          0034</a>): keep token-based pricing but raise <code>MARGIN</code> 5→10 so
+          a scan costs ~1 credit, and add bonus-credit packs ($1/100, $5/550,
+          $10/1200) — retiring ADR 0012's <code>cad_cents == credits</code> rule.
+          Web pricing copy updated; extract stays variable.</dd>
       </dl>
     </section>
 
