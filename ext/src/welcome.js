@@ -1,7 +1,3 @@
-chrome.storage.local.get('theme', d => {
-  if (d.theme === 'light') document.body.classList.add('light');
-});
-
 document.getElementById('openSettings').addEventListener('click', () => {
   chrome.runtime.openOptionsPage();
 });

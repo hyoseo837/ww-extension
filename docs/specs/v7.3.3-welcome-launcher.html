@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v7.3.3" />
+    <meta name="status" content="in-progress" />
+    <meta name="last-updated" content="2026-06-04" />
+    <title>v7.3.3 — Welcome page → thin launcher</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>v7.3.3 — Welcome → thin launcher</h1>
+
+    <h2>Goal</h2>
+    <p>
+      v7.3 strand 5 (<a href="v7.3.0-redesign-integration.html">v7.3 spec</a>):
+      reduce <code>welcome.html</code> from a detailed three-step how-to to a
+      <strong>thin launcher</strong> — a prominent <em>Set up your profile →</em>
+      deep link to the web app, plus secondary "Open Settings" / "Skip" — and
+      bring it to the warm-editorial light look. The detailed how-to now lives in
+      the sidebar empty-state guide (shipped) and the options page How-to card, so
+      the welcome screen no longer repeats it.
+    </p>
+
+    <h2>Files</h2>
+    <ul>
+      <li><code>ext/welcome.html</code> — rewrite: warm palette (cream bg, maroon
+        primary), Source Serif 4 heading; drop the three step cards; big
+        <em>Set up your profile →</em> CTA to
+        <code>https://ww-extension.hyoseo.dev/profile</code>; a one-line
+        orientation hint; secondary Open Settings + Skip; light-only (ADR 0032).</li>
+      <li><code>ext/src/welcome.js</code> — drop the <code>theme</code> read
+        (ADR 0032); keep Open&nbsp;Settings → <code>openOptionsPage</code> and
+        Skip → WaterlooWorks.</li>
+      <li><code>ext/src/fonts.css</code> — add a self-hosted Source Serif 4
+        <code>@font-face</code> (reuses <code>fonts/source-serif-4.woff2</code>
+        added in v7.3.2) so the welcome heading matches the design (ADR 0030).</li>
+      <li><code>ext/manifest.json</code> — version bump.</li>
+    </ul>
+
+    <h2>Verify</h2>
+    <ol>
+      <li>First-run welcome shows the launcher in warm light styling (no dark);
+        the primary CTA deep-links to the web app profile page.</li>
+      <li>Open Settings opens the options page; Skip goes to WaterlooWorks.</li>
+      <li>No <code>theme</code> read; <code>grep -rn "fonts.googleapis\|cdn\|theme"
+        ext/welcome.html ext/src/welcome.js</code> → none.</li>
+    </ol>
+
+    <h2>Notes</h2>
+    <ul>
+      <li><strong>Palette drift:</strong> the options page (v7.3.0) is still the
+        purple light palette while the sidebar (v7.3.2) and this welcome page are
+        warm maroon. Unifying the options page to warm is a small follow-up, not
+        done here.</li>
+    </ul>
+  </body>
+</html>

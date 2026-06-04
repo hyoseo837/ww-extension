@@ -7,25 +7,17 @@
     <style>
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+      /* Warm-editorial, light only (ADR 0032). */
       :root {
-        --bg:         #0b1326;
-        --surface:    #131b2e;
-        --outline:    #494454;
-        --on:         #dae2fd;
-        --on-dim:     #8892a4;
-        --primary:    #a078ff;
-        --primary-dim:#d0bcff;
-        --on-primary: #1a0050;
-      }
-      body.light {
-        --bg:         #f7f9fb;
-        --surface:    #f2f4f6;
-        --outline:    #cbc3d7;
-        --on:         #191c1e;
-        --on-dim:     #7b7486;
-        --primary:    #6b38d4;
-        --primary-dim:#8455ef;
-        --on-primary: #ffffff;
+        --bg:          #fff8f0;
+        --surface:     #ffffff;
+        --border:      #e8e5dc;
+        --border-hi:   #d9c1ba;
+        --on:          #1e1b15;
+        --on-dim:      #6e6a5f;
+        --primary:     #8f4830;
+        --accent:      #b5644b;
+        --on-primary:  #ffffff;
       }
 
       body {
@@ -42,121 +34,91 @@
         line-height: 20px;
       }
 
-      .container { width: 100%; max-width: 540px; }
+      .container { width: 100%; max-width: 480px; }
 
       .logo-row {
         display: flex;
         align-items: center;
         gap: 12px;
-        margin-bottom: 28px;
+        margin-bottom: 32px;
       }
       .logo-row img { width: 40px; height: 40px; border-radius: 8px; }
       .logo-name {
-        font-family: 'Hanken Grotesk', sans-serif;
+        font-family: 'Source Serif 4', Georgia, serif;
         font-size: 20px;
         font-weight: 700;
-        letter-spacing: -0.02em;
+        letter-spacing: -0.01em;
+        color: var(--primary);
       }
 
       h1 {
-        font-family: 'Hanken Grotesk', sans-serif;
-        font-size: 30px;
+        font-family: 'Source Serif 4', Georgia, serif;
+        font-size: 32px;
         font-weight: 700;
-        letter-spacing: -0.03em;
-        margin-bottom: 10px;
+        letter-spacing: -0.01em;
+        margin-bottom: 12px;
       }
       .subtitle {
         color: var(--on-dim);
-        font-size: 14px;
-        margin-bottom: 36px;
+        font-size: 15px;
+        margin-bottom: 32px;
         line-height: 1.6;
       }
 
-      .steps {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        margin-bottom: 36px;
-      }
-      .step {
-        display: flex;
-        align-items: flex-start;
-        gap: 14px;
-        background: var(--surface);
-        border: 1px solid var(--outline);
-        border-radius: 10px;
-        padding: 16px 18px;
-      }
-      .step-num {
-        width: 28px;
-        height: 28px;
-        border-radius: 50%;
-        background: var(--primary);
-        color: var(--on-primary);
-        font-family: 'Hanken Grotesk', sans-serif;
-        font-size: 13px;
-        font-weight: 700;
+      .btn-primary {
         display: flex;
         align-items: center;
         justify-content: center;
-        flex-shrink: 0;
-        margin-top: 1px;
-      }
-      .step-title {
-        font-weight: 600;
-        font-size: 14px;
-        margin-bottom: 4px;
-      }
-      .step-desc {
-        font-size: 12px;
-        color: var(--on-dim);
-        line-height: 1.55;
-      }
-      .step-desc a { color: var(--primary-dim); text-decoration: none; }
-      .step-desc a:hover { text-decoration: underline; }
-
-      .ctas {
-        display: flex;
-        gap: 10px;
-      }
-      .btn-primary {
-        flex: 1;
+        gap: 8px;
+        width: 100%;
         background: var(--primary);
         color: var(--on-primary);
         border: none;
-        border-radius: 8px;
-        padding: 12px 24px;
+        border-radius: 12px;
+        padding: 16px 24px;
         font-family: 'Inter', sans-serif;
-        font-size: 14px;
+        font-size: 16px;
         font-weight: 600;
         cursor: pointer;
-        transition: opacity 0.15s;
+        text-decoration: none;
+        box-shadow: 0 2px 8px rgba(143,72,48,0.18);
+        transition: background 0.15s;
       }
-      .btn-primary:hover { opacity: 0.88; }
+      .btn-primary:hover { background: var(--accent); }
+
+      .hint {
+        margin: 22px 0 28px;
+        font-size: 13px;
+        color: var(--on-dim);
+        line-height: 1.65;
+      }
+      .hint b { color: var(--on); font-weight: 600; }
+
+      .ctas { display: flex; gap: 10px; }
       .btn-secondary {
         flex: 1;
         background: transparent;
         color: var(--on-dim);
-        border: 1px solid var(--outline);
-        border-radius: 8px;
-        padding: 12px 24px;
+        border: 1px solid var(--border-hi);
+        border-radius: 10px;
+        padding: 11px 20px;
         font-family: 'Inter', sans-serif;
         font-size: 14px;
         font-weight: 500;
         cursor: pointer;
-        transition: border-color 0.15s, color 0.15s;
+        transition: border-color 0.15s, color 0.15s, background 0.15s;
       }
-      .btn-secondary:hover { color: var(--on); border-color: var(--primary-dim); }
+      .btn-secondary:hover { color: var(--primary); border-color: var(--primary); background: #faf3e7; }
 
       .footer {
-        margin-top: 32px;
+        margin-top: 36px;
         text-align: center;
         font-size: 12px;
         color: var(--on-dim);
         line-height: 1.8;
       }
       .footer a { color: var(--on-dim); text-decoration: none; }
-      .footer a:hover { color: var(--primary-dim); }
+      .footer a:hover { color: var(--primary); }
       .sep { margin: 0 6px; }
     </style>
   </head>
@@ -168,51 +130,23 @@
       </div>
 
       <h1>Welcome!</h1>
-      <p class="subtitle">AI-powered job scoring for WaterlooWorks. Get set up in 3 steps.</p>
+      <p class="subtitle">
+        AI-powered job scoring for WaterlooWorks. Set up your profile on the web
+        app and you're ready to scan — it only takes a minute.
+      </p>
 
-      <div class="steps">
-        <div class="step">
-          <div class="step-num">1</div>
-          <div>
-            <div class="step-title">Sign in with Google</div>
-            <div class="step-desc">
-              Open Settings (button below), scroll to <b>Account</b>, and click
-              <b>Sign in with Google</b>. New accounts get <b>100 free credits</b>
-              — about <b>~200 job scans</b> — to try the extension. When the free
-              credits run low, you can buy more anytime from the Account section.
-              Scoring runs on the backend; you don't need your own Gemini API key.
-            </div>
-          </div>
-        </div>
-        <div class="step">
-          <div class="step-num">2</div>
-          <div>
-            <div class="step-title">Set up your profile</div>
-            <div class="step-desc">
-              Open the web app at
-              <a href="https://ww-extension.hyoseo.dev" target="_blank">ww-extension.hyoseo.dev</a>
-              and upload your application package PDF (from the WaterlooWorks
-              Documents page) to extract your profile, then set your match
-              preferences. Your profile is used to score each job.
-            </div>
-          </div>
-        </div>
-        <div class="step">
-          <div class="step-num">3</div>
-          <div>
-            <div class="step-title">Go to WaterlooWorks and scan</div>
-            <div class="step-desc">
-              Navigate to the
-              <a href="https://waterlooworks.uwaterloo.ca/myAccount/co-op/full/jobs.htm" target="_blank">co-op jobs list</a>,
-              click the purple <b>AI Score</b> tab on the right edge of the page,
-              then hit <b>Scan All Jobs</b>.
-            </div>
-          </div>
-        </div>
-      </div>
+      <a class="btn-primary" href="https://ww-extension.hyoseo.dev/profile" target="_blank" rel="noopener">
+        Set up your profile →
+      </a>
+
+      <p class="hint">
+        New here? Sign in under <b>Settings</b>, set up your profile on the web
+        app, then open the maroon <b>AI Score</b> panel on the WaterlooWorks jobs
+        page and hit <b>Scan All Jobs</b>. The full how-to is in the panel itself.
+      </p>
 
       <div class="ctas">
-        <button class="btn-primary" id="openSettings">Open Settings</button>
+        <button class="btn-secondary" id="openSettings">Open Settings</button>
         <button class="btn-secondary" id="skip">Skip for now</button>
       </div>
 
