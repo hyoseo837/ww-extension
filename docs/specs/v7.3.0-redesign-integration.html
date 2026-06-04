@@ -64,6 +64,19 @@
         the existing <code>|| 'gemini-2.5-flash'</code> fallback. The residual
         <code>model</code> / <code>theme</code> storage keys (still read by
         <code>content.js</code>) are cleaned in the sidebar-restyle slice.</li>
+      <li><strong>v7.3.1 — OAuth ID parity <em>(done 2026-06-04)</em>.</strong>
+        Out-of-band hotfix that took this version number: pinned the published
+        extension key in the manifest so the unpacked dev ID matches the store ID
+        (<a href="../decisions/0033-pin-extension-key-for-id-parity.html">ADR
+        0033</a>). Not a redesign strand.</li>
+      <li><strong>v7.3.2 — sidebar restyle + per-score delete
+        <em>(done 2026-06-04, pending live verification)</em>.</strong>
+        Rewrote <code>sidebar.css</code> to the warm-editorial light-only palette
+        and the design's card layout (score circle + verdict pill + folder + ✕);
+        self-hosted Source Serif 4; inline-SVG icons; added per-card ✕ delete
+        (<code>removeScore</code>) and a confirmation on Clear; dropped the theme
+        plumbing and the residual <code>model</code> read. See
+        <a href="v7.3.2-sidebar-restyle.html">v7.3.2 spec</a>.</li>
     </ul>
 
     <h2>Decisions to record (ADRs)</h2>

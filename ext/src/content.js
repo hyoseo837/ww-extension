@@ -13,6 +13,12 @@ const SCORING_SCHEMA_VERSION = 2;
 // Verdict → badge/toggle class slug ('Strong Apply' → 'strong-apply').
 const verdictSlug = v => String(v ?? '').toLowerCase().replace(/\s+/g, '-');
 
+// Inline SVG icons — Material Symbols are CDN-only, so the design's icons are
+// reproduced as local inline SVG (ADR 0030).
+const SVG_FOLDER = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>';
+const SVG_X = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
+const SVG_GEAR = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
+
 const scores = new Map(); // postingId → {score, verdict, reason, breakdown, title, org}
 let allPostingIds = [];   // ordered list from selectAll — used for page navigation
 let aborted = false;
@@ -28,17 +34,10 @@ if (!window.__wwExtensionInjected) {
   });
 }
 
-// ── Theme ─────────────────────────────────────────────────────────────────────
-
-function applyThemeToContent(theme) {
-  const isLight = theme === 'light';
-  document.documentElement.classList.toggle('ww-light', isLight);
-  document.getElementById('ww-ext-sidebar')?.classList.toggle('ww-light', isLight);
-}
+// ── Storage reactions ──────────────────────────────────────────────────────────
 
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== 'local') return;
-  if (changes.theme) applyThemeToContent(changes.theme.newValue ?? 'dark');
   if (changes.auth || changes.cvText) {
     chrome.storage.local.get(['auth', 'cvText'], data => {
       updateGuideSteps(!!data.auth?.access_token, !!(data.cvText && data.cvText.trim()));
@@ -114,6 +113,19 @@ function clearScores() {
   detectedPageSize = 50;
   chrome.storage.local.remove(['ww_scores', 'ww_posting_ids']);
   document.querySelectorAll('.ww-ext-badge').forEach(el => el.remove());
+  renderSidebarList();
+}
+
+// Delete one score: from the in-memory map, persisted cache, the inline table
+// badge, and the sidebar list. Leaves the rest untouched (allPostingIds is the
+// full posting list, not the scored set, so it is not touched here).
+function removeScore(id) {
+  if (!scores.has(id)) return;
+  scores.delete(id);
+  saveScores();
+  document.querySelectorAll('.ww-ext-badge[data-posting-id]').forEach(el => {
+    if (el.dataset.postingId === id) el.remove();
+  });
   renderSidebarList();
 }
 
@@ -296,6 +308,45 @@ function confirmScan(count, balance) {
   });
 }
 
+// Generic confirm overlay (same chrome as confirmScan). Resolves true on
+// confirm, false on cancel / backdrop / Esc.
+function confirmDialog({ title, msg, goLabel }) {
+  return new Promise(resolve => {
+    const sidebar = document.getElementById('ww-ext-sidebar');
+    if (!sidebar) { resolve(true); return; }
+
+    const backdrop = document.createElement('div');
+    backdrop.className = 'ww-ext-confirm-backdrop';
+    backdrop.innerHTML = `
+      <div class="ww-ext-confirm-card" role="dialog" aria-modal="true">
+        <div class="ww-ext-confirm-title">${esc(title)}</div>
+        <div class="ww-ext-confirm-msg">${esc(msg)}</div>
+        <div class="ww-ext-confirm-actions">
+          <button class="ww-ext-confirm-cancel">Cancel</button>
+          <button class="ww-ext-confirm-go">${esc(goLabel)}</button>
+        </div>
+      </div>`;
+
+    let settled = false;
+    const close = result => {
+      if (settled) return;
+      settled = true;
+      document.removeEventListener('keydown', onKey, true);
+      backdrop.remove();
+      resolve(result);
+    };
+    const onKey = e => { if (e.key === 'Escape') { e.preventDefault(); close(false); } };
+
+    backdrop.addEventListener('click', e => { if (e.target === backdrop) close(false); });
+    backdrop.querySelector('.ww-ext-confirm-cancel').addEventListener('click', () => close(false));
+    backdrop.querySelector('.ww-ext-confirm-go').addEventListener('click', () => close(true));
+    document.addEventListener('keydown', onKey, true);
+
+    sidebar.appendChild(backdrop);
+    backdrop.querySelector('.ww-ext-confirm-go').focus();
+  });
+}
+
 async function scanAllJobs() {
   const scanBtn = document.getElementById('ww-ext-scan');
   const stopBtn = document.getElementById('ww-ext-stop');
@@ -329,7 +380,7 @@ async function scanAllJobs() {
       return;
     }
 
-    const settings = await chrome.storage.local.get(['model', 'hardFilterEnabled']);
+    const settings = await chrome.storage.local.get(['hardFilterEnabled']);
 
     // Hard-exclusion pre-filter (ADR 0018): default on. Fetch the user's
     // "never"-tier locations once per batch so matching postings skip /scan
@@ -412,7 +463,7 @@ async function scanAllJobs() {
         type: 'scoreJob',
         meta,
         descriptionText,
-        model:       settings.model || 'gemini-2.5-flash',
+        model:       'gemini-2.5-flash',
         postingId,
         batchId
       });
@@ -558,11 +609,17 @@ function renderSidebarList() {
   ul.innerHTML = sorted.map(([id, { score, verdict, reason, breakdown, title, org }]) => `
     <li class="ww-ext-card" data-posting-id="${esc(id)}">
       <div class="ww-ext-card-top">
-        <span class="ww-ext-badge ww-ext-badge--${esc(verdictSlug(verdict))}">${score != null ? esc(score) + ' · ' : ''}${esc(verdict)}</span>
-        <span class="ww-ext-card-org">${esc(org)}</span>
-        <button class="ww-ext-save-btn" title="Save to folder">&#128193;</button>
+        <div class="ww-ext-card-verdict ww-ext-v--${esc(verdictSlug(verdict))}">
+          <span class="ww-ext-card-score">${score != null ? esc(score) : '–'}</span>
+          <span class="ww-ext-card-pill">${esc(verdict)}</span>
+        </div>
+        <div class="ww-ext-card-actions">
+          <button class="ww-ext-save-btn" title="Save to folder">${SVG_FOLDER}</button>
+          <button class="ww-ext-del-btn" title="Remove from list">${SVG_X}</button>
+        </div>
       </div>
       <button class="ww-ext-card-title ww-ext-card-link">${esc(title)}</button>
+      <div class="ww-ext-card-org">${esc(org)}</div>
       <div class="ww-ext-card-reason">${esc(reason)}</div>
       ${renderBreakdown(breakdown)}
     </li>
@@ -734,13 +791,12 @@ function injectSidebar() {
   sidebar.innerHTML = `
     <div id="ww-ext-header">
       <div class="ww-ext-header-left">
-        <span>WW AI Scorer</span>
+        <span class="ww-ext-title">WW Scorer</span>
         <span id="ww-ext-credits" hidden></span>
       </div>
       <div class="ww-ext-header-btns">
-        <button id="ww-ext-help-open" title="How to use">?</button>
-        <button id="ww-ext-settings" title="Settings">&#9881;</button>
-        <button id="ww-ext-close">&#x2715;</button>
+        <button id="ww-ext-settings" title="Settings">${SVG_GEAR}</button>
+        <button id="ww-ext-close" title="Close">${SVG_X}</button>
       </div>
     </div>
     <div id="ww-ext-controls">
@@ -788,9 +844,6 @@ function injectSidebar() {
     <ul id="ww-ext-results"></ul>
   `;
   document.body.appendChild(sidebar);
-
-  // Apply saved theme
-  chrome.storage.local.get('theme', data => { if (data.theme) applyThemeToContent(data.theme); });
 
   // Initial credits chip render
   chrome.storage.local.get(['auth', 'creditBalance'], data => {
@@ -843,9 +896,6 @@ function injectSidebar() {
 
   toggle.addEventListener('click', () => sidebar.classList.toggle('open'));
   document.getElementById('ww-ext-close').addEventListener('click', () => sidebar.classList.remove('open'));
-  document.getElementById('ww-ext-help-open').addEventListener('click', () => {
-    chrome.runtime.sendMessage({ type: 'openWelcome' });
-  });
   document.getElementById('ww-ext-settings').addEventListener('click', () => {
     chrome.runtime.sendMessage({ type: 'openOptions' });
   });
@@ -862,11 +912,24 @@ function injectSidebar() {
     if (!ids.length) { setProgress('No jobs match the filter.', true); return; }
     sendBridge('openFolderSidebarBulk', { postingIds: ids });
   });
-  document.getElementById('ww-ext-clear').addEventListener('click', clearScores);
+  document.getElementById('ww-ext-clear').addEventListener('click', async () => {
+    if (!scores.size) return;
+    const n = scores.size;
+    const ok = await confirmDialog({
+      title: `Clear all ${n} ${n === 1 ? 'score' : 'scores'}?`,
+      msg: 'This removes every score from the list and the job table. It can’t be undone.',
+      goLabel: 'Clear all'
+    });
+    if (ok) clearScores();
+  });
 
   document.getElementById('ww-ext-results').addEventListener('click', e => {
     const card = e.target.closest('.ww-ext-card');
     if (!card) return;
+    if (e.target.closest('.ww-ext-del-btn')) {
+      removeScore(card.dataset.postingId);
+      return;
+    }
     if (e.target.closest('.ww-ext-save-btn')) {
       sendBridge('openFolderSidebar', { postingId: card.dataset.postingId });
       return;

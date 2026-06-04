@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v7.3.2" />
+    <meta name="status" content="in-progress" />
+    <meta name="last-updated" content="2026-06-04" />
+    <title>v7.3.2 — Sidebar restyle + per-score delete</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>v7.3.2 — Sidebar restyle + per-score delete</h1>
+
+    <h2>Goal</h2>
+    <p>
+      Bring the in-page WaterlooWorks sidebar up to the warm-editorial design
+      sheet (<code>ext/design/extension_sidebar_job_scan/</code>) and add the two
+      score-list affordances the owner asked for: a per-card <strong>✕</strong>
+      to delete a single score, and a <strong>confirmation</strong> on the
+      destructive "Clear" button. This is the second slice of the v7.3 redesign
+      (<a href="v7.3.0-redesign-integration.html">v7.3 spec</a>); it converts the
+      sidebar to light-mode-only per
+      <a href="../decisions/0032-light-mode-only.html">ADR 0032</a>.
+    </p>
+
+    <h2>Design fidelity constraints</h2>
+    <ul>
+      <li><strong>No remote resources</strong>
+        (<a href="../decisions/0030-self-host-all-extension-resources.html">ADR
+        0030</a>): the design sheet links Tailwind, Source Serif 4, and Material
+        Symbols from CDNs. Port the <em>look</em> into local
+        <code>sidebar.css</code>; <strong>self-host Source Serif 4</strong> as a
+        woff2; use <strong>inline SVG</strong> in place of the Material Symbols
+        font.</li>
+      <li><strong>Keep the real scale</strong>
+        (<a href="../decisions/0017-scoring-scale-1-20.html">ADR 0017</a>): the
+        mockup shows single digits; ship the 1–20 score + the six-verdict ladder
+        (Strong&nbsp;Apply / Apply / Consider / Unlikely / Skip / Excluded). The
+        mockup's three filter pills were illustrative — keep all six.</li>
+    </ul>
+
+    <h2>Files</h2>
+    <h3>Changed</h3>
+    <ul>
+      <li><code>ext/src/sidebar.css</code> — rewrite to a single warm-editorial
+        light token set (cream <code>#fff8f0</code> page, white surfaces, maroon
+        <code>#8f4830</code> primary, warm borders). Drop the dark
+        <code>:root</code> / <code>.ww-light</code> dual tokens (ADR 0032).
+        New card layout: score circle + verdict pill + folder + ✕; serif
+        headings via a self-hosted <code>@font-face</code>; body in Inter.</li>
+      <li><code>ext/src/content.js</code> — new card markup (score circle, org
+        under title, folder + ✕ buttons); a <code>removeScore(id)</code> that
+        deletes one entry from the <code>scores</code> map + storage + its table
+        badge; a <code>confirmDialog()</code> reused for a "Clear all N scores?"
+        prompt; drop the theme plumbing (<code>applyThemeToContent</code>, the
+        <code>theme</code> change-listener, the saved-theme read — ADR 0032) and
+        the residual <code>model</code> storage read (always Flash — ADR 0031).
+        Header text → "WW Scorer"; drop the header help (?) button (how-to lives
+        in the empty-state guide).</li>
+      <li><code>ext/fonts/source-serif-4.woff2</code> — new self-hosted font
+        (latin subset, variable weight).</li>
+      <li><code>ext/manifest.json</code> — version bump; add the woff2 to
+        <code>web_accessible_resources</code> for the WW host so the
+        content-script-injected <code>@font-face</code> can load it.</li>
+    </ul>
+
+    <h2>Verify</h2>
+    <ol>
+      <li>On a live WW jobs page the sidebar matches the design: cream panel,
+        maroon "WW Scorer" serif header, score circle + verdict pill cards, warm
+        borders; renders in light only (no theme toggle, no dark tokens).</li>
+      <li>Each card has a folder button (save) and a ✕ that removes only that
+        score — from the list, the cached scores, and the inline table badge —
+        leaving the rest intact.</li>
+      <li>"Clear" now prompts for confirmation; cancel keeps the scores, confirm
+        clears all (existing <code>clearScores</code> behavior).</li>
+      <li>A scan still scores 1–20 with six verdicts; the <code>/scan</code>
+        request carries no user-chosen model (Flash).</li>
+      <li><code>grep -rn "fonts.googleapis\|cdn\|tailwindcss.com\|ww-light\|applyThemeToContent\|settings.model"
+        ext/src</code> → none in shipped files.</li>
+      <li><code>./package.sh</code> zips <code>fonts/source-serif-4.woff2</code>
+        and excludes <code>design/</code>.</li>
+    </ol>
+
+    <h2>Notes</h2>
+    <ul>
+      <li>Residual <code>theme</code> / <code>model</code> storage keys left by
+        older builds are now read nowhere; no migration needed (display-only
+        state) — closes the cleanup deferred from v7.3.0.</li>
+      <li>The <strong>rescore</strong> idea (re-score one posting against current
+        criteria) is related but out of scope here — parked on the whiteboard.</li>
+    </ul>
+  </body>
+</html>
