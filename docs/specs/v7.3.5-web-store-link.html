@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v7.3.5" />
+    <meta name="status" content="shipped" />
+    <meta name="last-updated" content="2026-06-04" />
+    <title>v7.3.5 — Chrome Web Store link on the web app</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>v7.3.5 — Web Store link (landing + dashboard)</h1>
+
+    <h2>Goal</h2>
+    <p>
+      Now that the extension is published (v7.2), surface a link to the
+      <a href="https://chromewebstore.google.com/detail/ww-extension/bichfckekdcnmkenflpmmehegggcfgdd">Chrome
+      Web Store listing</a> from the web app so visitors and signed-in users can
+      install it. Web-app-only change; no decisions.
+    </p>
+
+    <h2>Files</h2>
+    <ul>
+      <li><code>web/src/links.ts</code> — new: <code>CHROME_STORE_URL</code>
+        single source for the listing link.</li>
+      <li><code>web/src/pages/Landing.tsx</code> — secondary "Add to Chrome —
+        it's free" button in the hero, under the sign-in CTA.</li>
+      <li><code>web/src/Layout.tsx</code> — "Chrome Web Store" item in the
+        dashboard sidebar nav (next to the WaterlooWorks link); shows on the
+        dashboard and every signed-in page.</li>
+      <li><code>ext/manifest.json</code> — version bump (repo-wide version is the
+        manifest, ADR 0002), even though the change is web-only.</li>
+    </ul>
+
+    <h2>Verify</h2>
+    <ol>
+      <li>Logged-out landing hero shows "Add to Chrome" linking to the store
+        listing (new tab).</li>
+      <li>Signed-in: the dashboard sidebar shows a "Chrome Web Store" link.</li>
+      <li><code>tsc</code> / web build passes.</li>
+    </ol>
+  </body>
+</html>

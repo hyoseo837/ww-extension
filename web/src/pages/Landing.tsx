@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { signInWithGoogle } from "../supabase";
 import { SUPPORT_EMAIL } from "../support";
+import { CHROME_STORE_URL } from "../links";
 import { PACKAGES } from "../packages";
 import Icon from "../Icon";
 
@@ -63,6 +64,15 @@ export default function Landing() {
             <GoogleMark />
             Sign in with Google
           </button>
+          <a
+            href={CHROME_STORE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-sm flex items-center gap-sm rounded-[10px] border border-border bg-surface px-[24px] py-[14px] font-label-md text-label-md text-primary transition-colors hover:bg-surface-alt"
+          >
+            <Icon name="extension" className="text-[18px]" />
+            Add to Chrome — it's free
+          </a>
           <p className="mt-md max-w-[420px] font-label-sm text-label-sm text-text-muted">
             By continuing, you agree to our{" "}
             <Link to="/terms" className="underline transition-colors hover:text-text-secondary">Terms</Link> and{" "}
