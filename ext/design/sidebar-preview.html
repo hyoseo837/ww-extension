@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WW Scorer — sidebar preview</title>
+    <!--
+      Standalone visual/interaction preview of the extension sidebar, for use
+      when a real WaterlooWorks jobs page isn't available (between co-op cycles).
+      It loads the REAL ../src/sidebar.css and renders the same DOM that
+      content.js produces, seeded with sample scored jobs. The ✕ (delete), Clear
+      (confirm), and reason-expand interactions work on the sample data.
+
+      NOT shipped (ext/design/ is excluded from package.sh). This mirrors
+      content.js's markup; it does not run content.js, so it does not exercise
+      the WaterlooWorks scan/parse/backend flow — only the sidebar UI.
+
+      Open it directly (file://) or, if the fonts don't load over file://, serve
+      the ext/ folder:  cd ext && python3 -m http.server  then visit
+      http://localhost:8000/design/sidebar-preview.html
+    -->
+    <link rel="stylesheet" href="../src/sidebar.css" />
+    <style>
+      /* Just the preview chrome — simulate the page the sidebar docks onto. */
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          repeating-linear-gradient(45deg, #efece6 0 12px, #f5f2ec 12px 24px);
+        font-family: system-ui, sans-serif;
+      }
+      .preview-note {
+        position: fixed;
+        left: 24px;
+        top: 24px;
+        max-width: 360px;
+        color: #4a463f;
+        font-size: 13px;
+        line-height: 1.6;
+      }
+      .preview-note h1 { font-size: 18px; margin: 0 0 8px; color: #8f4830; }
+      .preview-note button {
+        margin-top: 12px;
+        padding: 7px 14px;
+        border: 1px solid #cbb8b0;
+        border-radius: 8px;
+        background: #fff;
+        color: #8f4830;
+        font: 600 13px system-ui, sans-serif;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="preview-note">
+      <h1>Sidebar preview</h1>
+      <p>The real <code>sidebar.css</code> with sample scored jobs. Try the
+        <b>✕</b> on a card (deletes it), <b>Clear</b> (asks to confirm), and
+        click a reason to expand it. Reload — or use the button — to restore the
+        samples.</p>
+      <button id="reset">↻ Restore samples</button>
+    </div>
+
+    <!-- Mirrors the sidebar DOM built in content.js injectSidebar(). -->
+    <div id="ww-ext-sidebar" class="open">
+      <div id="ww-ext-header">
+        <div class="ww-ext-header-left">
+          <span class="ww-ext-title">WW Scorer</span>
+          <span id="ww-ext-credits">⚡ 92.00</span>
+        </div>
+        <div class="ww-ext-header-btns">
+          <button id="ww-ext-settings" title="Settings"></button>
+          <button id="ww-ext-close" title="Close"></button>
+        </div>
+      </div>
+      <div id="ww-ext-controls">
+        <div class="ww-ext-section">
+          <div class="ww-ext-section-label">Scan</div>
+          <button id="ww-ext-scan">Scan All Jobs</button>
+          <button id="ww-ext-stop" disabled>Stop</button>
+        </div>
+        <div class="ww-ext-section">
+          <div class="ww-ext-section-label">Save to Folder</div>
+          <div id="ww-ext-save-row">
+            <label for="ww-ext-min-score">Score &ge;</label>
+            <input id="ww-ext-min-score" type="number" min="1" max="20" value="14" />
+          </div>
+          <div id="ww-ext-verdict-row">
+            <label class="ww-ext-verdict-toggle" data-v="strong-apply"><input type="checkbox" data-verdict="Strong Apply" checked />Strong Apply</label>
+            <label class="ww-ext-verdict-toggle" data-v="apply"><input type="checkbox" data-verdict="Apply" checked />Apply</label>
+            <label class="ww-ext-verdict-toggle" data-v="consider"><input type="checkbox" data-verdict="Consider" />Consider</label>
+            <label class="ww-ext-verdict-toggle" data-v="unlikely"><input type="checkbox" data-verdict="Unlikely" />Unlikely</label>
+            <label class="ww-ext-verdict-toggle" data-v="skip"><input type="checkbox" data-verdict="Skip" />Skip</label>
+            <label class="ww-ext-verdict-toggle" data-v="excluded"><input type="checkbox" data-verdict="Excluded" />Excluded</label>
+          </div>
+          <div id="ww-ext-action-row">
+            <button id="ww-ext-save-all">Save to Folder</button>
+            <button id="ww-ext-clear">Clear</button>
+          </div>
+        </div>
+        <div id="ww-ext-progress"></div>
+      </div>
+      <ul id="ww-ext-results"></ul>
+    </div>
+
+    <script>
+      // ── Icons (copied from content.js) ─────────────────────────────────────
+      const SVG_FOLDER = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>';
+      const SVG_X = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
+      const SVG_GEAR = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
+      document.getElementById('ww-ext-settings').innerHTML = SVG_GEAR;
+      document.getElementById('ww-ext-close').innerHTML = SVG_X;
+
+      const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+      const verdictSlug = v => String(v ?? '').toLowerCase().replace(/\s+/g, '-');
+
+      // Sample scored jobs covering every verdict + a null-score Excluded.
+      const SAMPLE = [
+        { id:'a', score:18, verdict:'Strong Apply', title:'AI-Powered Software Development Internship', org:'RamSoft Inc', reason:'Excellent fit — your recent ML coursework and the internship’s stack line up almost exactly, and the team explicitly wants someone who can ship.', breakdown:[{point:'Tech stack matches (Python, PyTorch)',effect:'plus'},{point:'Prefers junior with research exposure',effect:'plus'},{point:'On-site only, Toronto',effect:'minus'}] },
+        { id:'b', score:15, verdict:'Apply', title:'Data Engineering Co-op', org:'Public Health Agency of Canada', reason:'Strong match on data tooling and your SQL background; government term length is a touch long but workable.', breakdown:[{point:'Strong SQL + pipeline match',effect:'plus'},{point:'Remote-friendly',effect:'plus'}] },
+        { id:'c', score:11, verdict:'Consider', title:'Student Transit Planner Co-op', org:'Toronto Transit Commission', reason:'Analytical skills carry over, but domain knowledge in transit systems is limited — a stretch role with onboarding.', breakdown:[{point:'Transferable analysis skills',effect:'plus'},{point:'Domain knowledge gap',effect:'minus'}] },
+        { id:'d', score:5, verdict:'Skip', title:'Backend Engineering', org:'Cambio Corp', reason:'Core requirements you don’t yet have — significant gap in the database-scaling experience the posting calls out.', breakdown:[{point:'Missing required Kafka/Kubernetes',effect:'minus'},{point:'Senior-leaning expectations',effect:'minus'}] },
+        { id:'e', score:null, verdict:'Excluded', title:'Mechanical Design Intern', org:'Northwind Aerospace', reason:'Excluded by your match criteria — location is one you marked “Never”.', breakdown:[] },
+      ];
+
+      let scores = [];
+
+      function renderBreakdown(breakdown) {
+        if (!Array.isArray(breakdown) || !breakdown.length) return '';
+        const items = breakdown.map(({ point, effect }) =>
+          `<li class="ww-ext-bd-${effect === 'minus' ? 'minus' : 'plus'}">${esc(point)}</li>`).join('');
+        return `<ul class="ww-ext-card-breakdown">${items}</ul>`;
+      }
+
+      function render() {
+        const ul = document.getElementById('ww-ext-results');
+        if (!scores.length) {
+          ul.innerHTML = `
+            <li class="ww-ext-empty">
+              <div class="ww-ext-guide-title">Get started</div>
+              <div class="ww-ext-guide-step"><span class="ww-ext-step-num">1</span><div>Sign in with Google in <button class="ww-ext-inline-link">Settings</button></div></div>
+              <div class="ww-ext-guide-step"><span class="ww-ext-step-num">2</span><div>Set up your <button class="ww-ext-inline-link">profile</button> on the web app</div></div>
+              <div class="ww-ext-guide-step"><span class="ww-ext-step-num">3</span><div>Click <b>Scan All Jobs</b> above</div></div>
+            </li>`;
+          return;
+        }
+        ul.innerHTML = scores.map(({ id, score, verdict, reason, breakdown, title, org }) => `
+          <li class="ww-ext-card" data-posting-id="${esc(id)}">
+            <div class="ww-ext-card-top">
+              <div class="ww-ext-card-verdict ww-ext-v--${esc(verdictSlug(verdict))}">
+                <span class="ww-ext-card-score">${score != null ? esc(score) : '–'}</span>
+                <span class="ww-ext-card-pill">${esc(verdict)}</span>
+              </div>
+              <div class="ww-ext-card-actions">
+                <button class="ww-ext-save-btn" title="Save to folder">${SVG_FOLDER}</button>
+                <button class="ww-ext-del-btn" title="Remove from list">${SVG_X}</button>
+              </div>
+            </div>
+            <button class="ww-ext-card-title ww-ext-card-link">${esc(title)}</button>
+            <div class="ww-ext-card-org">${esc(org)}</div>
+            <div class="ww-ext-card-reason">${esc(reason)}</div>
+            ${renderBreakdown(breakdown)}
+          </li>`).join('');
+      }
+
+      // Generic confirm overlay (mirrors content.js confirmDialog).
+      function confirmDialog({ title, msg, goLabel }) {
+        return new Promise(resolve => {
+          const sidebar = document.getElementById('ww-ext-sidebar');
+          const backdrop = document.createElement('div');
+          backdrop.className = 'ww-ext-confirm-backdrop';
+          backdrop.innerHTML = `
+            <div class="ww-ext-confirm-card" role="dialog" aria-modal="true">
+              <div class="ww-ext-confirm-title">${esc(title)}</div>
+              <div class="ww-ext-confirm-msg">${esc(msg)}</div>
+              <div class="ww-ext-confirm-actions">
+                <button class="ww-ext-confirm-cancel">Cancel</button>
+                <button class="ww-ext-confirm-go">${esc(goLabel)}</button>
+              </div>
+            </div>`;
+          const close = r => { backdrop.remove(); resolve(r); };
+          backdrop.addEventListener('click', e => { if (e.target === backdrop) close(false); });
+          backdrop.querySelector('.ww-ext-confirm-cancel').addEventListener('click', () => close(false));
+          backdrop.querySelector('.ww-ext-confirm-go').addEventListener('click', () => close(true));
+          sidebar.appendChild(backdrop);
+        });
+      }
+
+      document.getElementById('ww-ext-results').addEventListener('click', e => {
+        const card = e.target.closest('.ww-ext-card');
+        if (!card) return;
+        if (e.target.closest('.ww-ext-del-btn')) {
+          scores = scores.filter(s => s.id !== card.dataset.postingId);
+          render();
+          return;
+        }
+        const reason = e.target.closest('.ww-ext-card-reason');
+        if (reason) reason.classList.toggle('ww-ext-expanded');
+      });
+
+      document.getElementById('ww-ext-clear').addEventListener('click', async () => {
+        if (!scores.length) return;
+        const n = scores.length;
+        const ok = await confirmDialog({
+          title: `Clear all ${n} ${n === 1 ? 'score' : 'scores'}?`,
+          msg: 'This removes every score from the list and the job table. It can’t be undone.',
+          goLabel: 'Clear all',
+        });
+        if (ok) { scores = []; render(); }
+      });
+
+      document.getElementById('reset').addEventListener('click', () => { scores = SAMPLE.map(s => ({ ...s })); render(); });
+
+      scores = SAMPLE.map(s => ({ ...s }));
+      render();
+    </script>
+  </body>
+</html>
