@@ -7,22 +7,22 @@
     <style>
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-      /* Light-mode only — one token set (ADR 0032). */
+      /* Warm-editorial, light only (ADR 0032) — matches sidebar + welcome. */
       :root {
-        --bg:              #f7f9fb;
+        --bg:              #fff8f0;
         --bg-low:          #ffffff;
-        --surface:         #f2f4f6;
-        --surface-high:    #e6e8ea;
-        --surface-top:     #e0e3e5;
-        --on-surface:      #191c1e;
-        --on-surface-dim:  #7b7486;
-        --outline:         #cbc3d7;
-        --primary:         #6b38d4;
-        --primary-dim:     #8455ef;
-        --primary-glow:    rgba(107,56,212,0.2);
+        --surface:         #ffffff;
+        --surface-high:    #f4ede2;
+        --surface-top:     #efe7dc;
+        --on-surface:      #1e1b15;
+        --on-surface-dim:  #6e6a5f;
+        --outline:         #e8e5dc;
+        --primary:         #8f4830;
+        --primary-dim:     #ad5f46;
+        --primary-glow:    rgba(143,72,48,0.18);
         --on-primary:      #ffffff;
         --error:           #ba1a1a;
-        --success:         #1a7a55;
+        --success:         #5e7c5a;
       }
 
       body {
@@ -49,10 +49,11 @@
       }
       .app-header img { width: 32px; height: 32px; border-radius: 7px; }
       .app-name {
-        font-family: 'Hanken Grotesk', sans-serif;
+        font-family: 'Source Serif 4', Georgia, serif;
         font-size: 20px;
         font-weight: 700;
-        letter-spacing: -0.02em;
+        letter-spacing: -0.01em;
+        color: var(--primary);
       }
       .app-ver {
         font-family: 'JetBrains Mono', monospace;
@@ -71,10 +72,10 @@
 
       .field-label {
         display: block;
-        font-family: 'JetBrains Mono', monospace;
+        font-family: 'Inter', system-ui, sans-serif;
         font-size: 10px;
         font-weight: 600;
-        letter-spacing: 0.05em;
+        letter-spacing: 0.08em;
         text-transform: uppercase;
         color: var(--on-surface-dim);
         margin-bottom: 8px;
@@ -178,11 +179,11 @@
 
       <!-- How to use -->
       <div class="card">
-        <span class="field-label">How to Use</span>
-        <ol style="margin:0; padding-left:20px; display:flex; flex-direction:column; gap:8px; font-size:13px; color:var(--on-surface); line-height:1.6;">
-          <li>Sign in with Google under <b>Account</b> below. New accounts receive 100 free credits — about <b>~200 job scans</b>.</li>
-          <li>Set up your <b>profile and match preferences</b> on the web app at <a href="https://ww-extension.hyoseo.dev" target="_blank">ww-extension.hyoseo.dev</a> — upload your application package to extract your profile, then set your match criteria.</li>
-          <li>Navigate to the <a href="https://waterlooworks.uwaterloo.ca/myAccount/co-op/full/jobs.htm" target="_blank">WaterlooWorks jobs list</a>, click the purple <b>AI Score</b> tab on the right edge, then hit <b>Scan All Jobs</b>.</li>
+        <span class="field-label">How to use</span>
+        <ol style="margin:0; padding-left:20px; display:flex; flex-direction:column; gap:10px; font-size:13px; color:var(--on-surface); line-height:1.6;">
+          <li><b>Sign in</b> with Google under Account below.</li>
+          <li><b>Set up your profile</b> on the <a href="https://ww-extension.hyoseo.dev" target="_blank">web app</a>: upload your application package, then set your match preferences.</li>
+          <li>Open the <a href="https://waterlooworks.uwaterloo.ca/myAccount/co-op/full/jobs.htm" target="_blank">WaterlooWorks jobs list</a>, click the <b>AI Score</b> tab on the right edge, then <b>Scan All Jobs</b>.</li>
         </ol>
         <button class="btn-secondary" id="showWelcome" style="margin-top:16px;">Show welcome page again</button>
       </div>
