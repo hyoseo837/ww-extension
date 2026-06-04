@@ -97,6 +97,10 @@
       .ctas { display: flex; gap: 10px; }
       .btn-secondary {
         flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
         background: transparent;
         color: var(--on-dim);
         border: 1px solid var(--border-hi);
@@ -105,10 +109,12 @@
         font-family: 'Inter', sans-serif;
         font-size: 14px;
         font-weight: 500;
+        text-decoration: none;
         cursor: pointer;
         transition: border-color 0.15s, color 0.15s, background 0.15s;
       }
       .btn-secondary:hover { color: var(--primary); border-color: var(--primary); background: #faf3e7; }
+      .btn-secondary svg { flex-shrink: 0; }
 
       .footer {
         margin-top: 36px;
@@ -147,7 +153,10 @@
 
       <div class="ctas">
         <button class="btn-secondary" id="openSettings">Open Settings</button>
-        <button class="btn-secondary" id="skip">Skip for now</button>
+        <a class="btn-secondary" href="https://waterlooworks.uwaterloo.ca/myAccount/co-op/full/jobs.htm" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/></svg>
+          WaterlooWorks
+        </a>
       </div>
 
       <div class="footer">

@@ -98,6 +98,10 @@
       .btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
 
       .btn-secondary {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
         background: transparent;
         color: var(--on-surface);
         border: 1px solid var(--outline);
@@ -106,10 +110,35 @@
         font-family: 'Inter', sans-serif;
         font-size: 13px;
         font-weight: 500;
+        text-decoration: none;
         cursor: pointer;
         transition: border-color 0.15s, background 0.15s;
       }
       .btn-secondary:hover { border-color: var(--primary-dim); background: var(--surface-high); }
+      .btn-secondary svg { flex-shrink: 0; }
+
+      /* Top quick links — big web-app CTA + WaterlooWorks. */
+      .quick-links { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+      .quick-links .btn-secondary { width: 100%; }
+      .btn-cta {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        background: var(--primary);
+        color: var(--on-primary);
+        border: none;
+        border-radius: 12px;
+        padding: 14px 24px;
+        font-family: 'Inter', sans-serif;
+        font-size: 16px;
+        font-weight: 600;
+        text-decoration: none;
+        cursor: pointer;
+        box-shadow: 0 2px 8px var(--primary-glow);
+        transition: background 0.15s;
+      }
+      .btn-cta:hover { background: #b5644b; }
 
       /* ── Status lines ────────────────────────────────────────────────────── */
       .status-line {
@@ -176,6 +205,14 @@
         <span class="app-name">WW Extension</span>
         <span class="app-ver" id="extVersion"></span>
       </header>
+
+      <div class="quick-links">
+        <a class="btn-cta" href="https://ww-extension.hyoseo.dev" target="_blank" rel="noopener">Open the web app →</a>
+        <a class="btn-secondary" href="https://waterlooworks.uwaterloo.ca/myAccount/co-op/full/jobs.htm" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/></svg>
+          WaterlooWorks
+        </a>
+      </div>
 
       <!-- How to use -->
       <div class="card">
