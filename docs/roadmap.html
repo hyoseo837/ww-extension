@@ -435,12 +435,19 @@
       <p>
         v6 rebuilt the account/profile/payment surface as the web app; v7 turns
         back to the Chrome extension so it (a) works cleanly against that web app
-        and (b) <strong>passes Chrome Web Store review</strong>. The last
-        submission was rejected:
+        and (b) <strong>passes Chrome Web Store review</strong>. Submission
+        history:
       </p>
       <ul>
         <li><strong>Version 0.1.0 — Rejection — 2026-05-26 — Content Policies.</strong>
           Violation: <em>"Including remotely hosted code in a Manifest V3 item."</em></li>
+        <li><strong>Version 7.1.1 — Approved &amp; published — 2026-06-04.</strong>
+          Live at
+          <a href="https://chromewebstore.google.com/detail/ww-extension/bichfckekdcnmkenflpmmehegggcfgdd">chromewebstore.google.com/&hellip;/bichfckekdcnmkenflpmmehegggcfgdd</a>
+          (publisher hyoseo.dev). The published build is <code>7.1.1</code>; the
+          later <code>7.1.2</code>–<code>7.1.6</code> commits were docs/assets
+          only and were never uploaded, so the spec's planned <code>7.2.0</code>
+          re-upload version was not used for this submission.</li>
       </ul>
       <p>
         <strong>Diagnosis of current <code>ext/</code>:</strong>
@@ -476,13 +483,16 @@
           0030</a> (self-host all resources; binds the later redesign so it can't
           re-introduce the Tailwind / Material-Symbols CDNs).</dd>
 
-        <dt>v7.2 — resubmit + launch</dt>
+        <dt><a href="specs/v7.2.0-resubmit-launch.html">v7.2</a> — resubmit + launch
+          <em>(store approved 2026-06-04; Stripe live-mode in progress)</em></dt>
         <dd>Package and resubmit to the Web Store with a reviewed listing
           (privacy-practices form, per-permission justification, screenshots,
-          description); address review. On approval, run the Stripe live-mode
-          checklist (live key + live webhook + a real-card smoke test) and open
-          monetization. Resubmits with the <em>current</em> design — by the
-          sequencing call, redesign comes after approval.</dd>
+          description); address review. <strong>Approved &amp; published as
+          7.1.1 on 2026-06-04</strong> (see submission history above). On
+          approval, run the Stripe live-mode checklist (live key + live webhook
+          + a real-card smoke test) and open monetization. Resubmitted with the
+          <em>current</em> design — by the sequencing call, redesign comes after
+          approval.</dd>
 
         <dt>v7.3 — redesign + integration polish</dt>
         <dd>Post-approval. Match the sidebar design sheet
