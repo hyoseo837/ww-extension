@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-06-04" />
+    <title>ADR 0033 — Pin the extension key in manifest for dev/prod ID parity</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>ADR 0033 — Pin the extension key for dev/prod ID parity</h1>
+
+    <h2>Context</h2>
+    <p>
+      Google sign-in runs through <code>chrome.identity.launchWebAuthFlow</code>
+      with a Supabase <code>redirect_to</code> of
+      <code>chrome.identity.getRedirectURL()</code>, which is
+      <code>https://&lt;extension-id&gt;.chromiumapp.org/</code>. Supabase only
+      redirects back to a <code>redirect_to</code> that is in its allowlist, so
+      the extension ID — and therefore the redirect URL — must be stable and
+      known.
+    </p>
+    <p>
+      <strong>v7.1.3</strong> (<code>0db088a</code>) removed the dev
+      <code>key</code> from <code>manifest.json</code>, reasoning that the Web
+      Store assigns the published ID so the key was "dev-only." That was a
+      mistake for auth: without a pinned key, the <em>unpacked</em> ID is derived
+      from the load path and changes between machines/loads, breaking the
+      allowlisted redirect URL. After approval, sign-in failed — Supabase
+      refused the (now-changed) <code>chromiumapp.org</code> redirect.
+    </p>
+    <p>
+      Two facts settled the fix:
+    </p>
+    <ul>
+      <li>The git dev key (from the v7.1.1 manifest) hashes to
+        <code>ceobdeelponblelbcbbnojfjijheffpi</code> — <strong>not</strong> the
+        published ID. The Web Store generated its own key on publish, so the dev
+        key never matched production.</li>
+      <li>The <strong>published</strong> public key, extracted from the live
+        CRX, hashes to the store ID
+        <code>bichfckekdcnmkenflpmmehegggcfgdd</code>. A public key shipped in
+        every CRX is not a secret, so it can be committed.</li>
+    </ul>
+
+    <h2>Decision</h2>
+    <p>
+      Pin the <strong>published</strong> extension's public key in
+      <code>manifest.json</code> as the <code>key</code> field. The unpacked dev
+      build then loads under the <em>same</em> ID as the store build
+      (<code>bichfckekdcnmkenflpmmehegggcfgdd</code>), so:
+    </p>
+    <ul>
+      <li>Dev and prod share <strong>one</strong> redirect URL —
+        <code>https://bichfckekdcnmkenflpmmehegggcfgdd.chromiumapp.org/</code> —
+        the only entry that needs to be in Supabase's redirect allowlist.</li>
+      <li>The dev ID never drifts again across machines/reloads.</li>
+    </ul>
+    <p>
+      This reverses the v7.1.3 key removal. Re-uploading to the Web Store with
+      this <code>key</code> present is safe: the store already uses this exact
+      key for the item, so it is consistent rather than conflicting.
+    </p>
+    <p>
+      <strong>Operational dependency (not code):</strong> sign-in only works once
+      <code>https://bichfckekdcnmkenflpmmehegggcfgdd.chromiumapp.org/</code> is
+      added to Supabase → Authentication → URL Configuration → Redirect URLs.
+      Pinning the key removes the <em>moving target</em>; the allowlist entry is
+      the gate.
+    </p>
+
+    <h2>Consequences</h2>
+    <ul>
+      <li><strong>Easier:</strong> one stable redirect URL; dev and prod auth
+        behave identically; no per-machine allowlist churn.</li>
+      <li><strong>Constrains:</strong> the <code>key</code> must stay in the
+        manifest; removing it again re-breaks the unpacked ID (see v7.1.3). Any
+        future ID change (e.g. a republish under a new item) requires updating
+        both the key and the Supabase allowlist.</li>
+      <li><strong>Supersedes</strong> the v7.1.3 "drop dev key" change.</li>
+    </ul>
+  </body>
+</html>
