@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-06-05" />
+    <title>ADR 0036 — Replace Google sign-in with Microsoft Entra (UWaterloo)</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>ADR 0036 — Microsoft Entra (UWaterloo) sign-in, replacing Google</h1>
+
+    <h2>Context</h2>
+    <p>
+      Sign-in is a single OAuth provider, <strong>Google</strong> (Supabase),
+      used by both the web app and the extension. New accounts get free signup
+      credits — so anyone with a throwaway Gmail can farm free credits, the main
+      abuse vector (only partly mitigated by the email-hash signup-bonus block,
+      <a href="0029-signup-bonus-suppression-on-deletion.html">ADR 0029</a>).
+    </p>
+    <p>
+      The product only serves <strong>UWaterloo students</strong> (the extension
+      runs on WaterlooWorks). UWaterloo identities are <strong>Microsoft Entra
+      ID</strong> (formerly Azure AD) — <code>@uwaterloo.ca</code>. A spike on
+      2026-06-05 confirmed feasibility: a <em>multitenant</em> Entra app
+      authenticated an <code>@uwaterloo.ca</code> account through Supabase's
+      "Azure" provider <strong>without hitting an admin-consent wall</strong>.
+      The only gap was the email claim, fixed by adding the <code>email</code>
+      optional claim to the app registration.
+    </p>
+
+    <h2>Decision</h2>
+    <ul>
+      <li>Switch the single OAuth provider from Google to <strong>Microsoft
+        Entra</strong> (Supabase <code>azure</code> provider) — i.e. UWaterloo
+        sign-in. <strong>Replace</strong>, not add: Google is disabled in
+        Supabase. One account per real student is the anti-abuse goal, which
+        "add alongside" would not achieve.</li>
+      <li>Tenant <code>common</code> (multitenant). <strong>Restricting to the
+        uwaterloo.ca domain</strong> (reject other orgs / personal accounts by
+        checking the email-domain / tenant claim) is desired but tracked as a
+        follow-up — the spike used <code>common</code>.</li>
+      <li>Relies on the Entra <code>email</code> optional claim; if email is ever
+        absent, fall back to <code>preferred_username</code> (the UPN,
+        <code>user@uwaterloo.ca</code>).</li>
+    </ul>
+
+    <h2>Consequences</h2>
+    <ul>
+      <li><strong>Existing Google users are not deleted</strong> — their
+        <code>auth.users</code> rows, profiles, and credit balances persist — but
+        they <strong>lose sign-in access</strong>. Their personal Gmail ≠ their
+        <code>@uwaterloo.ca</code> email, so a UWaterloo login creates a
+        <em>new</em> account (fresh bonus); old credits orphan. <strong>Accepted:</strong>
+        the current user base is essentially test accounts — confirm there are no
+        real paying users (Supabase → Users + the credit ledger) before flipping.
+        Any that exist would need manual credit migration.</li>
+      <li><strong>Alumni</strong> lose access once they leave UWaterloo. Accepted
+        — it is a student tool.</li>
+      <li>Legal copy referencing "Google account / Google sign-in"
+        (Privacy/Terms) must change to Microsoft/UWaterloo. <em>Note:</em> the
+        separate references to <strong>Google's Gemini API</strong> (the scoring
+        backend) stay — that is unrelated to sign-in.</li>
+      <li>Extension OAuth still uses <code>launchWebAuthFlow</code> with the
+        <code>chromiumapp.org</code> redirect (ADR 0033) — unchanged; only the
+        Supabase provider behind it changes. The Entra app's redirect is the
+        Supabase callback (server-side), so the extension redirect allowlist is
+        untouched.</li>
+    </ul>
+
+    <h2>Alternatives considered</h2>
+    <ul>
+      <li><strong>Keep Google</strong> — status quo; abuse-prone.</li>
+      <li><strong>Add Microsoft alongside Google</strong> — no migration pain, but
+        Gmail-based credit farming continues, so it misses the point.</li>
+    </ul>
+  </body>
+</html>

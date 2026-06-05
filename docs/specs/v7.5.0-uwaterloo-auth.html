@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v7.5.0" />
+    <meta name="status" content="planned" />
+    <meta name="last-updated" content="2026-06-05" />
+    <title>v7.5.0 — UWaterloo (Microsoft Entra) sign-in</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>v7.5.0 — UWaterloo (Microsoft Entra) sign-in</h1>
+
+    <h2>Goal</h2>
+    <p>
+      Replace Google OAuth with <strong>Microsoft Entra</strong> (UWaterloo)
+      sign-in across the web app and the extension, per
+      <a href="../decisions/0036-uwaterloo-microsoft-auth.html">ADR 0036</a>, so
+      only UWaterloo students can create accounts (anti-abuse). <strong>Status:
+      planned</strong> — the spike (2026-06-05) passed and the decision is made,
+      but code is deferred; this spec is the implementation plan.
+    </p>
+
+    <h2>Prerequisites (dashboard — owner)</h2>
+    <ol>
+      <li><strong>Entra app registration</strong> (done in spike): multitenant;
+        redirect URI <code>https://bumrzedwwfhbxlttwboh.supabase.co/auth/v1/callback</code>;
+        client ID + secret; <code>email</code> optional claim added (Token
+        configuration) so Supabase receives the email.</li>
+      <li><strong>Supabase → Auth → Providers:</strong> enable <strong>Azure</strong>
+        (client ID/secret, tenant URL <code>https://login.microsoftonline.com/common</code>);
+        <strong>disable Google</strong>.</li>
+      <li>Before flipping: confirm no real paying users exist (Supabase → Users +
+        credit ledger). Existing Google accounts orphan their credits (ADR 0036).</li>
+    </ol>
+
+    <h2>Code changes (touchpoints found 2026-06-05)</h2>
+    <h3>Web app</h3>
+    <ul>
+      <li><code>web/src/supabase.ts</code> — <code>signInWithGoogle</code> →
+        <code>signInWithMicrosoft</code>: <code>provider: "azure"</code>,
+        <code>options.scopes: "email"</code> (so the email claim is requested).</li>
+      <li><code>web/src/pages/Landing.tsx</code> — both sign-in buttons (hero +
+        pricing "Sign in to buy") label "Sign in with Google" → "Sign in with
+        your UWaterloo account"; replace <code>GoogleMark</code> with a Microsoft
+        mark; update the import.</li>
+    </ul>
+    <h3>Extension</h3>
+    <ul>
+      <li><code>ext/src/options.js</code> — the <code>authUrl</code>
+        <code>provider=google</code> → <code>provider=azure</code> (add
+        <code>&amp;scopes=email</code>); status text "Opening Google sign-in…".</li>
+      <li><code>ext/options.html</code> — the <code>#signIn</code> button "Sign in
+        with Google" and the Account-card sign-in blurb.</li>
+      <li><code>ext/src/content.js</code> — sidebar empty-state guide "Sign in
+        with Google in Settings" → "Sign in with your UWaterloo account".</li>
+      <li>(<code>welcome.html</code> already says generic "Sign in under Settings"
+        — no change needed.)</li>
+    </ul>
+    <h3>Legal (sign-in references only — keep Gemini/Google API mentions)</h3>
+    <ul>
+      <li><code>web/src/pages/legal/Privacy.tsx</code> — the account-identity /
+        "sign-in is through Google" / "no password" lines → Microsoft/UWaterloo.
+        <strong>Leave</strong> the Gemini-API "Google" references (lines about the
+        paid Gemini tier) — that processor is unchanged.</li>
+      <li><code>web/src/pages/legal/Terms.tsx</code> — "You need a Google account
+        to sign in" → UWaterloo account. Leave the "depends on Google, Stripe,
+        Supabase…" dependency line (Google still provides Gemini).</li>
+    </ul>
+
+    <h2>Optional follow-up — enforce the uwaterloo.ca domain</h2>
+    <p>
+      <code>common</code> tenant accepts any Microsoft org / personal account.
+      To hard-restrict to UWaterloo, reject sessions whose email domain / tenant
+      isn't UWaterloo (a Supabase auth hook or a server-side check on the JWT).
+      Decide whether this is needed or whether "must have an
+      <code>@uwaterloo.ca</code> to be useful anyway" is enough.
+    </p>
+
+    <h2>Verify (at implementation)</h2>
+    <ol>
+      <li>Web + extension: signing in with <code>@uwaterloo.ca</code> completes
+        end-to-end; the new user row carries the email; Google is no longer
+        offered anywhere.</li>
+      <li>If domain-enforced: a non-uwaterloo Microsoft account is rejected.</li>
+      <li><code>grep -rni "google" web/src ext/src ext/*.html</code> returns only
+        the intended Gemini-API references + the chromewebstore link — no sign-in
+        copy.</li>
+    </ol>
+
+    <h2>Notes</h2>
+    <ul>
+      <li>Server change is unlikely (auth is Supabase-side); if any
+        <code>server/</code> file changes (e.g. a domain-enforcement check), bump
+        <code>pyproject.toml</code> (ADR 0010).</li>
+      <li>Migration of any real existing Google user's credits is manual (ADR
+        0036) — handle before disabling Google if such users exist.</li>
+    </ul>
+  </body>
+</html>

@@ -518,6 +518,15 @@
           <a href="specs/v7.4.2-pricing-revision.html">v7.4.2</a> to $3/300,
           $5/525, $10/1100 (dropped $1 — Stripe's $0.30 fixed fee made it
           inefficient).</dd>
+
+        <dt><a href="specs/v7.5.0-uwaterloo-auth.html">v7.5</a> — UWaterloo (Microsoft Entra) sign-in
+          <em>(planned — spike passed 2026-06-05)</em></dt>
+        <dd>Replace Google OAuth with Microsoft Entra / UWaterloo sign-in
+          (<a href="decisions/0036-uwaterloo-microsoft-auth.html">ADR 0036</a>) so
+          only UWaterloo students can sign up — anti-abuse against throwaway-Gmail
+          credit farming. Spike confirmed feasibility (no admin-consent wall);
+          code deferred. Existing Google accounts orphan their credits on switch
+          (tiny user base — confirm no paying users first).</dd>
       </dl>
     </section>
 
