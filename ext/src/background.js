@@ -16,8 +16,12 @@ chrome.runtime.onInstalled.addListener((details) => {
   }
 });
 
+// Toolbar icon → the web app dashboard (account/profile/billing live there
+// now, v6). Options stays reachable via right-click → Options and the sidebar
+// gear (ADR 0035). "/account" resolves to the dashboard when signed in and to
+// the landing page when signed out (the web app's catch-all route).
 chrome.action.onClicked.addListener(() => {
-  chrome.runtime.openOptionsPage();
+  chrome.tabs.create({ url: WEB_APP_URL + "/account" });
 });
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {

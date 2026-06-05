@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-06-05" />
+    <title>ADR 0035 — Toolbar icon opens the web app, not the options page</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>ADR 0035 — Toolbar icon opens the web app</h1>
+
+    <h2>Context</h2>
+    <p>
+      The browser-action (toolbar) icon's click handler
+      (<code>background.js</code>, <code>chrome.action.onClicked</code>) opened the
+      extension's <strong>options page</strong>. Since v6, the account, profile,
+      preferences, and billing surfaces all live in the <strong>web app</strong>
+      (<code>ww-extension.hyoseo.dev</code>); the options page was reduced (v7.3)
+      to a thin local settings panel (sign-in + auto-skip + How-to + links). So
+      the most useful destination for the toolbar icon is the web app, not the
+      options page — this is v7.3 redesign strand 4.
+    </p>
+
+    <h2>Decision</h2>
+    <ul>
+      <li>The toolbar icon's <code>onClicked</code> opens the web app
+        <strong>dashboard</strong> via
+        <code>chrome.tabs.create({ url: WEB_APP_URL + "/account" })</code>.
+        <code>/account</code> resolves to the dashboard when signed in and to the
+        landing page when signed out (the web app's catch-all route), so it works
+        in both states without the extension knowing the auth state.</li>
+      <li><strong>Direct action, no popup.</strong> Keep <code>action</code> with
+        just a <code>default_title</code> (hover label) — no
+        <code>default_popup</code>. A popup would be extra UI for a single
+        redirect; the design calls for the icon to take you to the web app.</li>
+      <li><strong>Options stays reachable</strong> — it is not the toolbar
+        destination anymore, but remains available via right-click the icon →
+        <em>Options</em> (<code>options_ui</code> is kept), the in-page sidebar
+        gear, and the welcome page's "Open Settings". No
+        <code>openOptionsPage</code> entry point is lost.</li>
+    </ul>
+
+    <h2>Consequences</h2>
+    <ul>
+      <li>One-click access to the account/billing surface that actually matters
+        for a paid product; the icon's behavior matches the v6+ "web app is the
+        account home" model.</li>
+      <li>Users who clicked the icon expecting options now land on the web app;
+        acceptable — options is a thin settings panel and still one right-click
+        away.</li>
+      <li>No new permissions (<code>tabs.create</code> needs none for a normal
+        URL). <code>options_ui</code> and <code>action</code> both remain in the
+        manifest.</li>
+    </ul>
+  </body>
+</html>
