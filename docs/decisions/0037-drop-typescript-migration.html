@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-06-05" />
+    <title>ADR 0037 — Drop the v8 extension JavaScript→TypeScript migration</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>ADR 0037 — Drop the v8 extension JavaScript→TypeScript migration</h1>
+
+    <h2>Context</h2>
+    <p>
+      On 2026-06-01 the extension JS→TS migration was pulled out of v7 and
+      scheduled as its own major, <strong>v8</strong> (roadmap), to bring the
+      extension to TypeScript for parity with the web app
+      (<a href="0019-web-app-stack-vite-react-ts.html">ADR 0019</a>). That
+      scheduling was always hedged: the roadmap itself notes v8 has
+      <strong>zero Web-Store-review benefit</strong>, adds a build step, and
+      would <strong>supersede the no-build packaging</strong> of
+      <a href="0026-extension-in-ext-folder.html">ADR 0026</a> — so it was
+      deliberately placed after approval and monetization, not blocking them.
+    </p>
+    <p>
+      As of v7.5 the extension is approved, published, and working in production
+      as plain JavaScript: no build step, <code>ext/</code> loads unpacked,
+      <code>package.sh</code> zips it directly. The one motivation for v8 was
+      cross-codebase parity, an internal nicety with no user- or review-facing
+      payoff.
+    </p>
+
+    <h2>Decision</h2>
+    <ul>
+      <li><strong>Cancel v8 as a planned major.</strong> The extension stays
+        JavaScript. The no-build packaging of
+        <a href="0026-extension-in-ext-folder.html">ADR 0026</a> stands —
+        nothing supersedes it.</li>
+      <li>TypeScript scope remains <strong>the web app only</strong>
+        (<a href="0019-web-app-stack-vite-react-ts.html">ADR 0019</a>),
+        unchanged.</li>
+      <li>The idea is not forbidden, only de-committed: it moves to the roadmap's
+        "Further out (uncommitted)" candidates. Reopening it would take a future
+        ADR that shows a concrete payoff (e.g. a build step earning its keep some
+        other way).</li>
+    </ul>
+
+    <h2>Consequences</h2>
+    <ul>
+      <li>The extension keeps its zero-dependency, no-build workflow — the
+        simplest thing that ships, and the thing that already passed Web Store
+        review.</li>
+      <li>The JS and TS halves of the monorepo stay stylistically split (web =
+        TS, <code>ext/</code> = JS). Accepted: the boundary is a clean
+        client/API split (the extension is a thin profile reader +
+        in-page scorer), not shared code, so the parity gain was cosmetic.</li>
+      <li>No type-checking safety net is added to the extension. Accepted at its
+        current size; revisit if the extension grows materially.</li>
+    </ul>
+
+    <h2>Alternatives considered</h2>
+    <ul>
+      <li><strong>Keep v8 planned</strong> — status quo before this ADR; spends a
+        whole major on an internal refactor with no user benefit while the
+        product works.</li>
+      <li><strong>Migrate incrementally inside a later phase</strong> — still
+        forces the build step / ADR 0026 reversal for no review or product gain;
+        same objection, smaller blast radius. Rejected for the same reason.</li>
+    </ul>
+  </body>
+</html>

@@ -428,9 +428,11 @@
         <em>resubmit and get approved</em>, and only <em>then</em> do the
         redesign and feature upgrades — the Web Store approval gate (and going
         live on Stripe) stays ahead of the riskier rewrite. The JavaScript→
-        TypeScript migration is pulled out of v7 and scheduled as its own major,
-        <strong>v8</strong> (below). Phases are listed at the end of this
-        section; per-phase specs/ADRs land as each opens.
+        TypeScript migration was pulled out of v7 and scheduled as its own major,
+        <strong>v8</strong> — since <strong>dropped</strong>
+        (<a href="decisions/0037-drop-typescript-migration.html">ADR 0037</a>; see
+        v8 below). Phases are listed at the end of this section; per-phase
+        specs/ADRs land as each opens.
       </p>
       <p>
         v6 rebuilt the account/profile/payment surface as the web app; v7 turns
@@ -531,15 +533,18 @@
     </section>
 
     <section id="v8">
-      <h2>v8 — JavaScript → TypeScript migration (planned)</h2>
+      <h2>v8 — JavaScript → TypeScript migration (dropped)</h2>
       <p>
-        Scheduled 2026-06-01 as its own major (pulled out of v7). Migrate the
-        extension from JS to TS for parity with the web app
-        (<a href="decisions/0019-web-app-stack-vite-react-ts.html">ADR 0019</a>).
-        It adds a build step and supersedes the no-build packaging of
-        <a href="decisions/0026-extension-in-ext-folder.html">ADR 0026</a>, with
-        zero Web-Store-review benefit — so it deliberately follows approval and
-        monetization rather than blocking them. Detail lands when v8 opens.
+        Scheduled 2026-06-01 as its own major, then <strong>dropped 2026-06-05</strong>
+        (<a href="decisions/0037-drop-typescript-migration.html">ADR 0037</a>).
+        The extension ships and works in production as plain JS; the migration's
+        only motivation was parity with the web app
+        (<a href="decisions/0019-web-app-stack-vite-react-ts.html">ADR 0019</a>),
+        with zero Web-Store-review benefit, while it would add a build step and
+        supersede the no-build packaging of
+        <a href="decisions/0026-extension-in-ext-folder.html">ADR 0026</a>. Not
+        worth a whole major — the extension stays JS; ADR 0026 stands. De-committed
+        to "Further out" below, reopenable only by a future ADR.
       </p>
     </section>
 
@@ -548,8 +553,12 @@
       <p>
         Candidates still on the table, no commitment yet — revisit at
         phase-planning time: cover-letter generation, re-score on demand, and
-        team / recruiter views. <em>Non-Gemini provider / multi-model support is
-        no longer on the scoring path</em> — scoring standardizes on Gemini Flash
+        team / recruiter views. The <em>extension JS→TS migration</em> sits here
+        too, de-committed
+        (<a href="decisions/0037-drop-typescript-migration.html">ADR 0037</a>) —
+        revisit only if a build step earns its keep some other way.
+        <em>Non-Gemini provider / multi-model support is no longer on the scoring
+        path</em> — scoring standardizes on Gemini Flash
         (<a href="decisions/0031-single-model-gemini-flash.html">ADR 0031</a>); a
         future ADR would have to reopen it.
       </p>
