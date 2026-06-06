@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="project" content="ww-extension" />
     <meta name="type" content="roadmap" />
-    <meta name="active-major-version" content="v07" />
+    <meta name="active-major-version" content="v08" />
     <meta name="last-updated" content="2026-06-01" />
     <title>Roadmap — ww-extension</title>
     <link rel="stylesheet" href="style.css" />
@@ -420,8 +420,8 @@
       </p>
     </section>
 
-    <section id="active" data-status="in-progress">
-      <h2>v7 — Extension fix: website integration + Web Store approval (active)</h2>
+    <section id="v7" data-status="done">
+      <h2>v7 — Extension fix: website integration + Web Store approval (shipped)</h2>
       <p>
         <strong>Opened 2026-06-01 (v7.0).</strong> <strong>Sequencing locked
         2026-06-01:</strong> ship the essential compliance fix first, then
@@ -532,19 +532,26 @@
       </dl>
     </section>
 
-    <section id="v8">
-      <h2>v8 — JavaScript → TypeScript migration (dropped)</h2>
+    <section id="active" data-status="in-progress">
+      <h2>v8 — Maintenance &amp; polish (active)</h2>
       <p>
-        Scheduled 2026-06-01 as its own major, then <strong>dropped 2026-06-05</strong>
-        (<a href="decisions/0037-drop-typescript-migration.html">ADR 0037</a>).
-        The extension ships and works in production as plain JS; the migration's
-        only motivation was parity with the web app
-        (<a href="decisions/0019-web-app-stack-vite-react-ts.html">ADR 0019</a>),
-        with zero Web-Store-review benefit, while it would add a build step and
-        supersede the no-build packaging of
-        <a href="decisions/0026-extension-in-ext-folder.html">ADR 0026</a>. Not
-        worth a whole major — the extension stays JS; ADR 0026 stands. De-committed
-        to "Further out" below, reopenable only by a future ADR.
+        Opened 2026-06-05 as a <strong>rolling maintenance major</strong>:
+        cleanup, small fixes, and minor bugs now that the product is in
+        production (per <a href="specs/v8.0.0-open-v8.html">v8.0 open spec</a>).
+        Scope isn't fixed up front — items are collected as they surface and
+        shipped as <code>v8.x</code>. Strand order: <strong>cleanup first</strong>
+        (low-risk hygiene on what shipped fast — dead code, stale doc links,
+        copy/naming inconsistencies, no behaviour change), then small fixes /
+        minor bugs as the backlog fills in (tracked on the whiteboard's
+        <em>Existing Bugs</em> list). Process is scaled to the change: trivial
+        fixes ship as a <code>v8.x</code> commit without a full spec; non-trivial
+        changes or real decisions still get a spec / ADR.
+      </p>
+      <p>
+        The v8 slot previously held the extension JS→TS migration, dropped
+        2026-06-05 (<a href="decisions/0037-drop-typescript-migration.html">ADR
+        0037</a>) — the number is reused here; the migration lives in "Further
+        out" below.
       </p>
     </section>
 

@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v8.0.0" />
+    <meta name="status" content="done" />
+    <meta name="last-updated" content="2026-06-05" />
+    <title>v8.0.0 — Open v8: maintenance &amp; polish (rough plan)</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>v8.0.0 — Open v8: maintenance &amp; polish</h1>
+
+    <h2>Goal</h2>
+    <p>
+      Open major version 8 as a <strong>maintenance &amp; polish</strong> major:
+      cleanup, small fixes, and minor bugs. v7 delivered its mission — the
+      extension is approved, published, and working against the web app, with
+      monetization live — so the product is essentially in production. v8 is the
+      <em>upkeep</em> track that follows: tidy what shipped fast, and fix the
+      small things that surface in real use.
+    </p>
+    <p>
+      This is a <strong>rough plan</strong>, opened deliberately before the work
+      is fully known. The backlog is still being collected, so v8 runs as a
+      <strong>rolling</strong> major rather than a fixed scope — items are added
+      as they're found, not enumerated up front.
+    </p>
+
+    <h2>The v8 slot</h2>
+    <p>
+      v8 previously held the extension JS→TS migration, scheduled 2026-06-01 and
+      <strong>dropped 2026-06-05</strong>
+      (<a href="../decisions/0037-drop-typescript-migration.html">ADR 0037</a> —
+      the extension ships fine in JS; the migration had no Web-Store benefit and
+      would have added a build step superseding ADR 0026). That idea now lives in
+      the roadmap's "Further out". The v8 <em>number</em> is reused here for the
+      maintenance major; it is unrelated to the dropped migration.
+    </p>
+
+    <h2>Strands (ordered)</h2>
+    <ol>
+      <li><strong>Cleanup first.</strong> Low-risk hygiene on what already
+        ships: dead/duplicated code, stale doc references, inconsistent naming or
+        copy, and small inconsistencies left by the fast v6→v7 build-out. No
+        behaviour change — each cleanup is verifiable as "same behaviour, less
+        cruft". This strand starts immediately.</li>
+      <li><strong>Small fixes / minor bugs.</strong> Filled in as the owner
+        collects "fix needed" points (and as real-use bugs appear). Each is its
+        own <code>v8.x</code>. Tracked on the whiteboard's <em>Existing Bugs</em>
+        list until scheduled.</li>
+    </ol>
+
+    <h2>Process (lighter than a full phase)</h2>
+    <p>
+      The standard rule is per-phase spec + ADR (rules.html). For v8 that is
+      <strong>scaled to the change</strong>, since most items are one- or
+      two-file fixes where a full spec would outweigh the work:
+    </p>
+    <ul>
+      <li><strong>Trivial fix / cleanup</strong> — ship as a <code>v8.x</code>
+        commit with a clear message; no spec. The commit is the record.</li>
+      <li><strong>Grouped cleanup</strong> — a themed batch (e.g. "doc-link
+        sweep") may get a short spec if it spans many files, but doesn't have
+        to.</li>
+      <li><strong>Non-trivial change or any real decision</strong> — still gets a
+        spec and/or an ADR, per the normal rule.</li>
+    </ul>
+    <p>Versioning, commit-per-change, and minimal-code rules are unchanged.</p>
+
+    <h2>Files (this opening phase)</h2>
+    <h3>Added</h3>
+    <ul>
+      <li><code>docs/specs/v8.0.0-open-v8.html</code> — this file.</li>
+    </ul>
+    <h3>Changed</h3>
+    <ul>
+      <li><code>docs/roadmap.html</code> — <code>active-major-version</code>
+        <code>v07</code> → <code>v08</code>; v7 section flipped to
+        <em>shipped</em> (its mission is delivered; any operational close-out is
+        noted there); the v8 section repurposed from the dropped JS→TS migration
+        to this maintenance major and promoted to active.</li>
+      <li><code>ext/manifest.json</code> — version <code>7.5.2</code> →
+        <code>8.0.0</code>.</li>
+    </ul>
+    <h3>Deliberately NOT done this phase</h3>
+    <ul>
+      <li><strong>v7 specs are not archived</strong> (the v6→v7 open moved the
+        prior major's specs to <code>docs/archive/</code>). Deferred: v7 is
+        freshly shipped and its specs are still live references for the running
+        product. Archive v7 in a later v8.x once it's clearly settled.</li>
+      <li>No design ADR — opening a maintenance major locks no architecture.</li>
+    </ul>
+
+    <h2>Verify</h2>
+    <ol>
+      <li><code>grep version ext/manifest.json</code> → <code>"8.0.0"</code>.</li>
+      <li><code>docs/roadmap.html</code>: <code>active-major-version</code> is
+        <code>v08</code>; v8 is the active section (maintenance &amp; polish, not
+        the old JS→TS text); v7 reads shipped.</li>
+      <li>No broken links: the v8 section no longer claims the dropped-migration
+        scope, and ADR 0037 is still reachable from "Further out".</li>
+    </ol>
+
+    <h2>Notes</h2>
+    <ul>
+      <li>The <em>Existing Bugs</em> and cleanup candidates are gathered on
+        <code>docs/whiteboard.md</code> (owner-edited) and promoted into
+        <code>v8.x</code> as they're scheduled.</li>
+      <li>Cleanup strand begins right after this open — starting with a low-risk
+        survey of dead code, stale doc references, and copy/naming
+        inconsistencies, surfaced for the owner before anything sweeping.</li>
+    </ul>
+  </body>
+</html>
