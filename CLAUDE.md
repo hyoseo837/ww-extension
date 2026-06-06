@@ -3,11 +3,12 @@
 Chrome MV3 extension that scores WaterlooWorks job postings via Gemini,
 with a `server/` backend (user accounts + credit system) and a `web/`
 account/profile/payment app. Monorepo since 2026-05-27 (ADR 0010
-superseded ADR 0004). v4 (monetization), v5 (scoring quality), and v6
-(web-app UI transition + data rights) are shipped and frozen;
-**v7 — extension Web Store approval + website integration — is the active
-major** (opened 2026-06-01). The web app is deployed; the last *public*
-Web Store extension release is v03.015 (re-publishing it is the v7 goal).
+superseded ADR 0004). v4 (monetization), v5 (scoring quality), v6
+(web-app UI transition + data rights), and v7 (extension Web Store
+approval + website integration) are shipped and frozen;
+**v8 — maintenance & polish — is the active major** (opened 2026-06-05).
+The web app is deployed and the extension is published on the Web Store
+(approved as 7.1.1 on 2026-06-04); v8 is cleanup + small fixes on top.
 
 ## Before doing any work
 
