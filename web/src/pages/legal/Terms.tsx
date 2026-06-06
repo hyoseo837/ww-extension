@@ -27,8 +27,8 @@ export default function Terms() {
       <h2>3. Eligibility &amp; accounts</h2>
       <p>
         WW Scorer is for enrolled post-secondary co-op students aged 16 or older.
-        You need a Google account to sign in, and you are responsible for activity
-        on your account.
+        You need a UWaterloo (Microsoft) account to sign in, and you are
+        responsible for activity on your account.
       </p>
 
       <h2>4. Credits &amp; payment</h2>

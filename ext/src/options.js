@@ -69,10 +69,10 @@ function renderBalance(balance) {
 
 el('signIn').addEventListener('click', async () => {
   const redirectUrl = chrome.identity.getRedirectURL();
-  const authUrl = `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}`;
+  const authUrl = `${SUPABASE_URL}/auth/v1/authorize?provider=azure&scopes=email&redirect_to=${encodeURIComponent(redirectUrl)}`;
 
   el('signIn').disabled = true;
-  setAuthStatus('Opening Google sign-in…');
+  setAuthStatus('Opening UWaterloo sign-in…');
 
   try {
     const responseUrl = await chrome.identity.launchWebAuthFlow({ url: authUrl, interactive: true });

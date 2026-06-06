@@ -5,7 +5,7 @@
     <meta name="project" content="ww-extension" />
     <meta name="type" content="spec" />
     <meta name="version" content="v7.5.0" />
-    <meta name="status" content="planned" />
+    <meta name="status" content="implemented" />
     <meta name="last-updated" content="2026-06-05" />
     <title>v7.5.0 — UWaterloo (Microsoft Entra) sign-in</title>
     <link rel="stylesheet" href="../style.css" />
@@ -19,8 +19,9 @@
       sign-in across the web app and the extension, per
       <a href="../decisions/0036-uwaterloo-microsoft-auth.html">ADR 0036</a>, so
       only UWaterloo students can create accounts (anti-abuse). <strong>Status:
-      planned</strong> — the spike (2026-06-05) passed and the decision is made,
-      but code is deferred; this spec is the implementation plan.
+      implemented</strong> (v7.5.0, 2026-06-05) — the spike passed, the Supabase
+      Azure provider is live, and the code touchpoints below are done. The
+      <code>uwaterloo.ca</code> domain-enforcement follow-up remains optional.
     </p>
 
     <h2>Prerequisites (dashboard — owner)</h2>

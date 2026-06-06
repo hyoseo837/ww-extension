@@ -16,7 +16,7 @@ export default function Privacy() {
 
       <h2>1. What we collect</h2>
       <ul>
-        <li><strong>Account identity</strong> — your email and Google account, via Google sign-in. We never store a password.</li>
+        <li><strong>Account identity</strong> — your email and UWaterloo (Microsoft) account, via UWaterloo sign-in. We never store a password.</li>
         <li><strong>Candidate profile</strong> — the CV text and structured profile you upload (education, experience, skills, projects, languages, and related application materials), plus your match criteria and notes.</li>
         <li><strong>Usage records</strong> — the job postings you scan and their AI results, and your credit ledger (purchases, scan charges and refunds, grants).</li>
         <li><strong>Payment</strong> — handled by Stripe. We store ledger entries and a Stripe reference, not your card number.</li>
@@ -25,7 +25,7 @@ export default function Privacy() {
       <h2>2. What we don't collect</h2>
       <ul>
         <li>Your <strong>card or banking details</strong> — Stripe handles payment; we never see or store your full card number.</li>
-        <li>A <strong>password</strong> — sign-in is through Google, so we never create or hold one.</li>
+        <li>A <strong>password</strong> — sign-in is through your UWaterloo (Microsoft) account, so we never create or hold one.</li>
         <li>Your <strong>activity outside WW Scorer</strong> — we don't track your browsing; we only see the postings you choose to scan.</li>
         <li><strong>Location, device fingerprints, or advertising identifiers.</strong></li>
         <li>Personal data about you <strong>bought from or supplied by third parties</strong> — everything we hold comes from you or from your use of the service.</li>
@@ -50,7 +50,8 @@ export default function Privacy() {
       <p>We do not sell your personal data. We share data only with the providers that run the service:</p>
       <ul>
         <li><strong>Supabase</strong> — authentication and database (Canada).</li>
-        <li><strong>Google</strong> — sign-in and the Gemini scoring API.</li>
+        <li><strong>Microsoft</strong> — UWaterloo (Entra) sign-in.</li>
+        <li><strong>Google</strong> — the Gemini scoring API.</li>
         <li><strong>Stripe</strong> — payment processing.</li>
         <li><strong>DigitalOcean</strong> — backend hosting (Canada).</li>
         <li><strong>Vercel</strong> — web app hosting.</li>
@@ -60,7 +61,7 @@ export default function Privacy() {
       <h2>6. Data location</h2>
       <p>
         Your account and profile data are stored in Canada. Some of the providers
-        above (such as Google, Stripe, Vercel, and Cloudflare) may process data in
+        above (such as Microsoft, Google, Stripe, Vercel, and Cloudflare) may process data in
         other countries, where it can be subject to the laws of those
         jurisdictions.
       </p>

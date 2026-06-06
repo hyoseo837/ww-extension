@@ -8,10 +8,12 @@ export const supabase = createClient(
   { auth: { flowType: "pkce" } },
 );
 
-export function signInWithGoogle() {
+export function signInWithMicrosoft() {
   return supabase.auth.signInWithOAuth({
-    provider: "google",
-    options: { redirectTo: window.location.origin },
+    provider: "azure",
+    // Request the email claim (added as an Entra optional claim) so the
+    // session carries an @uwaterloo.ca email — ADR 0036.
+    options: { redirectTo: window.location.origin, scopes: "email" },
   });
 }
 

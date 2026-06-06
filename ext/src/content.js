@@ -578,7 +578,7 @@ function renderSidebarList() {
         <div class="ww-ext-guide-title">Get started</div>
         <div class="ww-ext-guide-step" id="ww-ext-step-auth">
           <span class="ww-ext-step-num">1</span>
-          <div>Sign in with Google in <button class="ww-ext-inline-link" id="ww-ext-guide-signin">Settings</button></div>
+          <div>Sign in with your UWaterloo account in <button class="ww-ext-inline-link" id="ww-ext-guide-signin">Settings</button></div>
         </div>
         <div class="ww-ext-guide-step" id="ww-ext-step-cv">
           <span class="ww-ext-step-num">2</span>
