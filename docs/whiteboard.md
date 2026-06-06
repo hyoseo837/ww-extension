@@ -28,19 +28,11 @@ moved out or dropped.
 ## Future features
 
 - Diffrent models (Gemini pro, Claude Haiku, Sonnet, Opus, Gpt 5.5, mini ...)
-- Admin page (Manage users, credit gift)
 - re-score feature
 
 ## fixes needed
 
-- JavaScript to TypeScript
-- upgrade prompt for job scan
-- upgrade prompt for upload application package (not just extracting text)
-- confirmation button for any credit uses
-
 ## Possible questions
-
-- Add project website for account setting
 
 ## Solved
 
@@ -48,3 +40,14 @@ moved out or dropped.
   card in options page with sign-in, email, balance, Buy credits, sign-out.
   Further consolidation (dedicated area + credit history) still tracked as
   v5 roadmap thread #5, possibly subsumed by the external-site direction.
+
+- ~upgrade prompt for job scan~ - shipped (v5)
+- upgrade prompt for upload application package (not just extracting text)
+
+- ~~confirmation button for any credit uses~~ — shipped: the scan confirm
+  (v6.13) already gated the only credit-spending action; v7.5.1 added the
+  estimated cost, low-balance warning, and a Buy-credits nudge.
+
+- ~~JavaScript to TypeScript~~ — dropped (v7.5.2, ADR 0037): the extension
+  ships fine in JS; the migration had zero Web-Store benefit and would add a
+  build step superseding ADR 0026. De-committed to roadmap "Further out".

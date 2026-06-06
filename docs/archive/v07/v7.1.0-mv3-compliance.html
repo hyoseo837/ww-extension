@@ -8,7 +8,6 @@
     <meta name="status" content="done" />
     <meta name="last-updated" content="2026-06-01" />
     <title>v7.1.0 — MV3 / Web Store compliance: self-host fonts + fix welcome packaging</title>
-    <link rel="stylesheet" href="../style.css" />
   </head>
   <body>
     <h1>v7.1.0 — MV3 / Web Store compliance</h1>
@@ -25,7 +24,7 @@
         <code>welcome.html</code> — the only remote resource left in a shipped
         page — and serve the fonts from local <code>woff2</code> files. This is
         the standing rule from
-        <a href="../decisions/0030-self-host-all-extension-resources.html">ADR
+        <a href="../../decisions/0030-self-host-all-extension-resources.html">ADR
         0030</a>.</li>
       <li><strong>Fix a packaging bug.</strong> <code>welcome.html</code> is
         opened by <code>background.js</code> (first-run + action) and
@@ -39,7 +38,7 @@
       Context for the resubmission: the rejected <code>0.1.0</code> artifact was
       the old v03 public build (manifest predated strict versioning), not the
       current code — see
-      <a href="../decisions/0030-self-host-all-extension-resources.html">ADR
+      <a href="../../decisions/0030-self-host-all-extension-resources.html">ADR
       0030</a>. The audit confirmed no remote JS/Wasm in <code>ext/</code>; fonts
       are the only fix needed on the code side.
     </p>

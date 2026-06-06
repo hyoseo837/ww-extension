@@ -5,10 +5,9 @@
     <meta name="project" content="ww-extension" />
     <meta name="type" content="spec" />
     <meta name="version" content="v7.2.0" />
-    <meta name="status" content="planned" />
+    <meta name="status" content="done" />
     <meta name="last-updated" content="2026-06-02" />
     <title>v7.2.0 — Resubmit to the Web Store + go live on Stripe</title>
-    <link rel="stylesheet" href="../style.css" />
   </head>
   <body>
     <h1>v7.2.0 — Resubmit + launch</h1>
@@ -19,7 +18,7 @@
       <strong>open monetization</strong>. v7.1 closed the only code-side
       compliance gap (self-hosted fonts; <code>welcome.html</code> packaging fix
       — <a href="v7.1.0-mv3-compliance.html">v7.1 spec</a>,
-      <a href="../decisions/0030-self-host-all-extension-resources.html">ADR
+      <a href="../../decisions/0030-self-host-all-extension-resources.html">ADR
       0030</a>), so v7.2 is mostly <em>process</em>, not code: prepare a clean
       store listing, package the current build, submit, and address review. On
       approval, run the Stripe live-mode checklist so a real card can buy
@@ -130,7 +129,7 @@
         balance increases by exactly the package's credits (idempotent —
         no double grant on Stripe retry; ADR 0012's partial-unique-index).</li>
       <li><strong>Refund path:</strong> confirm the v6.12 refund policy
-        (<a href="../decisions/0028-refund-policy.html">ADR 0028</a>) text is
+        (<a href="../../decisions/0028-refund-policy.html">ADR 0028</a>) text is
         live, and that a Dashboard refund of the smoke-test charge works. (Credit
         clawback on refund is out of scope unless the policy requires it — note
         it, don't build it here.)</li>

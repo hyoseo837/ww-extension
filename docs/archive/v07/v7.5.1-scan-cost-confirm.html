@@ -8,7 +8,6 @@
     <meta name="status" content="implemented" />
     <meta name="last-updated" content="2026-06-05" />
     <title>v7.5.1 — Scan confirm: estimated cost + low-balance warning</title>
-    <link rel="stylesheet" href="../style.css" />
   </head>
   <body>
     <h1>v7.5.1 — Scan confirm: estimated cost + low-balance warning</h1>
@@ -21,7 +20,7 @@
       <code>ext/src/content.js</code>) gates the only credit-spending action,
       the bulk <strong>Scan All Jobs</strong>. There is no per-job / rescore path
       to gate (score-selected and rescore were removed in v7.3,
-      <a href="../decisions/0031-single-model-gemini-flash.html">ADR 0031</a>). So the
+      <a href="../../decisions/0031-single-model-gemini-flash.html">ADR 0031</a>). So the
       whiteboard "confirmation button for any credit uses" item was already
       satisfied; this phase upgrades the existing dialog rather than adding one.
     </p>
@@ -30,7 +29,7 @@
     <p>
       Today the dialog says only "This uses credits — you have {balance}". After
       the v7.4 re-margin a scan costs <strong>~1 credit each</strong>
-      (<a href="../decisions/0034-bonus-packages-and-remargin.html">ADR 0034</a>), so
+      (<a href="../../decisions/0034-bonus-packages-and-remargin.html">ADR 0034</a>), so
       N unscored jobs ≈ N credits — but the user can't see that, and nothing
       warns them when, say, scanning 50 jobs on an 8-credit balance. That scan
       currently dies partway with a <code>NO_CREDITS</code> halt (handled, but

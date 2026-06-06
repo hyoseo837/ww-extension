@@ -5,10 +5,9 @@
     <meta name="project" content="ww-extension" />
     <meta name="type" content="spec" />
     <meta name="version" content="v7.3.0" />
-    <meta name="status" content="in-progress" />
+    <meta name="status" content="done" />
     <meta name="last-updated" content="2026-06-04" />
     <title>v7.3.0 — Extension redesign + web-app integration polish</title>
-    <link rel="stylesheet" href="../style.css" />
   </head>
   <body>
     <h1>v7.3.0 — Redesign + integration polish</h1>
@@ -35,7 +34,7 @@
       <li><strong>Minimal options page</strong> — reduce to a sign-in/account
         state + the auto-skip (hard-filter) toggle. The <strong>Model</strong>
         tab is removed (scoring is Flash-only,
-        <a href="../decisions/0031-single-model-gemini-flash.html">ADR 0031</a>).</li>
+        <a href="../../decisions/0031-single-model-gemini-flash.html">ADR 0031</a>).</li>
       <li><strong>Toolbar entry → web app</strong> — the action icon opens (or a
         small popup redirects to) the web app rather than the options page.</li>
       <li><strong>welcome.html → thin launcher</strong> — a big
@@ -53,7 +52,7 @@
     <ul>
       <li><strong>v7.3.0 — options-page simplification <em>(done 2026-06-04)</em>.</strong>
         Removed the <strong>Model</strong> tab (ADR 0031) and the
-        <strong>Theme</strong> toggle (<a href="../decisions/0032-light-mode-only.html">ADR
+        <strong>Theme</strong> toggle (<a href="../../decisions/0032-light-mode-only.html">ADR
         0032</a>); collapsed the tabbed shell to a single scrolling page; made
         the page light-only (one token set). <code>options.js</code> dropped the
         tab nav, help popover, <code>applyTheme</code>, and the
@@ -67,7 +66,7 @@
       <li><strong>v7.3.1 — OAuth ID parity <em>(done 2026-06-04)</em>.</strong>
         Out-of-band hotfix that took this version number: pinned the published
         extension key in the manifest so the unpacked dev ID matches the store ID
-        (<a href="../decisions/0033-pin-extension-key-for-id-parity.html">ADR
+        (<a href="../../decisions/0033-pin-extension-key-for-id-parity.html">ADR
         0033</a>). Not a redesign strand.</li>
       <li><strong>v7.3.2 — sidebar restyle + per-score delete
         <em>(done 2026-06-04, pending live verification)</em>.</strong>
@@ -100,7 +99,7 @@
       <li><strong>v7.4.3 — toolbar → web app (strand 4) <em>(done 2026-06-05)</em>.</strong>
         The toolbar icon now opens the web app dashboard
         (<code>/account</code>) instead of the options page
-        (<a href="../decisions/0035-toolbar-opens-web-app.html">ADR 0035</a>);
+        (<a href="../../decisions/0035-toolbar-opens-web-app.html">ADR 0035</a>);
         options stays reachable via right-click → Options + the sidebar gear.
         All five redesign strands are now done — only flow-tightening polish
         remains.</li>
@@ -185,7 +184,7 @@
       <li><strong>Scale mismatch in the mockup:</strong> the design
         <code>screen.png</code> shows single-digit scores (9, 4, 7, 8) on what
         reads as a 1–10 scale. The live product scores <strong>1–20</strong> with
-        a six-verdict ladder (<a href="../decisions/0017-scoring-scale-1-20.html">ADR
+        a six-verdict ladder (<a href="../../decisions/0017-scoring-scale-1-20.html">ADR
         0017</a>). Port the <em>visual style</em>, but keep the real 1–20 score +
         Strong&nbsp;Apply / Apply / Consider / Unlikely / Skip / Excluded verdicts
         — do not regress the scale to match the mockup.</li>
