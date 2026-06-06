@@ -276,15 +276,23 @@ function confirmScan(count, balance) {
     const bal = Number.isFinite(balance) ? parseFloat(balance.toFixed(2)) : null;
     const jobWord = count === 1 ? 'job' : 'jobs';
 
+    // Estimated cost: ~1 credit/scan (ADR 0034) — N jobs ≈ N credits. The real
+    // per-scan charge is token-variable, hence "~". Warn when the balance can't
+    // cover the whole batch (v7.5.1).
+    const costWord = count === 1 ? 'credit' : 'credits';
+    const short = bal != null && bal < count;
+
     const backdrop = document.createElement('div');
     backdrop.className = 'ww-ext-confirm-backdrop';
     backdrop.innerHTML = `
       <div class="ww-ext-confirm-card" role="dialog" aria-modal="true">
         <div class="ww-ext-confirm-title">Scan ${count} unscored ${jobWord}?</div>
-        <div class="ww-ext-confirm-msg">This uses credits${bal != null ? ` — you have ${bal}` : ''}.</div>
+        <div class="ww-ext-confirm-msg">This costs ~${count} ${costWord}${bal != null ? ` — you have ${bal}` : ''}.</div>
+        ${short ? '<div class="ww-ext-confirm-warn">⚠ Not enough to scan them all.</div>' : ''}
         <div class="ww-ext-confirm-actions">
           <button class="ww-ext-confirm-cancel">Cancel</button>
-          <button class="ww-ext-confirm-go">Scan ${count}</button>
+          ${short ? '<button class="ww-ext-confirm-buy">Buy credits</button>' : ''}
+          <button class="ww-ext-confirm-go">${short ? 'Scan anyway' : `Scan ${count}`}</button>
         </div>
       </div>`;
 
@@ -301,6 +309,11 @@ function confirmScan(count, balance) {
     backdrop.addEventListener('click', e => { if (e.target === backdrop) close(false); });
     backdrop.querySelector('.ww-ext-confirm-cancel').addEventListener('click', () => close(false));
     backdrop.querySelector('.ww-ext-confirm-go').addEventListener('click', () => close(true));
+    // Buy credits → web app /buy; treated as a cancel (navigating away, not scanning).
+    backdrop.querySelector('.ww-ext-confirm-buy')?.addEventListener('click', () => {
+      chrome.runtime.sendMessage({ type: 'openWebApp', path: '/buy' });
+      close(false);
+    });
     document.addEventListener('keydown', onKey, true);
 
     sidebar.appendChild(backdrop);

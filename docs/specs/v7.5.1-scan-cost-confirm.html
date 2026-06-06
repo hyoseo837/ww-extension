@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v7.5.1" />
+    <meta name="status" content="implemented" />
+    <meta name="last-updated" content="2026-06-05" />
+    <title>v7.5.1 — Scan confirm: estimated cost + low-balance warning</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>v7.5.1 — Scan confirm: estimated cost + low-balance warning</h1>
+
+    <h2>Goal</h2>
+    <p>
+      Make the pre-scan confirmation tell the user <em>how much</em> a scan will
+      cost and warn when their balance won't cover it. The confirmation itself
+      already exists — <code>confirmScan</code> (v6.13,
+      <code>ext/src/content.js</code>) gates the only credit-spending action,
+      the bulk <strong>Scan All Jobs</strong>. There is no per-job / rescore path
+      to gate (score-selected and rescore were removed in v7.3,
+      <a href="../decisions/0031-single-model-gemini-flash.html">ADR 0031</a>). So the
+      whiteboard "confirmation button for any credit uses" item was already
+      satisfied; this phase upgrades the existing dialog rather than adding one.
+    </p>
+
+    <h2>Why</h2>
+    <p>
+      Today the dialog says only "This uses credits — you have {balance}". After
+      the v7.4 re-margin a scan costs <strong>~1 credit each</strong>
+      (<a href="../decisions/0034-bonus-packages-and-remargin.html">ADR 0034</a>), so
+      N unscored jobs ≈ N credits — but the user can't see that, and nothing
+      warns them when, say, scanning 50 jobs on an 8-credit balance. That scan
+      currently dies partway with a <code>NO_CREDITS</code> halt (handled, but
+      after burning time and part of the balance). Surfacing the estimate and a
+      low-balance warning + Buy-credits nudge up front is the fix.
+    </p>
+
+    <h2>Behaviour</h2>
+    <p>
+      Estimated cost is <code>~count</code> credits (1 credit/scan; the real
+      per-scan cost is token-variable, hence "~"). Let <code>bal</code> be the
+      cached <code>creditBalance</code>.
+    </p>
+    <table>
+      <thead>
+        <tr><th>Case</th><th>Message</th><th>Buttons</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>bal</code> unknown (null)</td>
+          <td>"This costs ~N credits."</td>
+          <td>Cancel · Scan N</td>
+        </tr>
+        <tr>
+          <td><code>bal &ge; count</code> (covers it)</td>
+          <td>"This costs ~N credits — you have B."</td>
+          <td>Cancel · Scan N</td>
+        </tr>
+        <tr>
+          <td><code>bal &lt; count</code> (short)</td>
+          <td>"This costs ~N credits — you have B." +
+            warning line "⚠ Not enough to scan them all."</td>
+          <td>Cancel · Buy credits · Scan anyway</td>
+        </tr>
+      </tbody>
+    </table>
+    <ul>
+      <li><strong>Buy credits</strong> opens the web app at <code>/buy</code>
+        (the existing <code>openWebApp</code> message, same path
+        <code>setActionPrompt</code> uses for the out-of-credits halt) and
+        dismisses the dialog as a cancel (resolves <code>false</code> — the user
+        is navigating away, not scanning).</li>
+      <li><strong>Scan anyway</strong> proceeds (resolves <code>true</code>); the
+        existing <code>NO_CREDITS</code> halt still stops the batch when the
+        balance runs out, so over-scanning is already safe.</li>
+      <li>Singular wording when <code>count === 1</code> ("~1 credit").</li>
+    </ul>
+
+    <h2>Code changes</h2>
+    <ul>
+      <li><code>ext/src/content.js</code> — <code>confirmScan(count, balance)</code>:
+        compute the estimate + insufficient flag, render the cost in the message,
+        add the conditional warning line and the third (Buy credits) button wired
+        to <code>{ type: 'openWebApp', path: '/buy' }</code>. The
+        <code>confirmDialog</code> helper (clear-scores) is untouched.</li>
+      <li><code>ext/src/sidebar.css</code> — a <code>.ww-ext-confirm-warn</code>
+        line (<code>var(--s-error)</code>, the existing red) and a neutral
+        third-button style (reuse the <code>-cancel</code> look for Buy credits).
+        The <code>-actions</code> flex row already handles three buttons.</li>
+      <li><code>ext/manifest.json</code> — version → <code>7.5.1</code>.</li>
+    </ul>
+
+    <h2>Verify</h2>
+    <ol>
+      <li>Scan with balance ≥ count: message shows "~N credits — you have B",
+        two buttons, scans as before.</li>
+      <li>Scan with balance &lt; count: warning line shows, three buttons; Buy
+        credits opens the web app <code>/buy</code> tab and cancels the scan;
+        Scan anyway runs and still halts cleanly on <code>NO_CREDITS</code>.</li>
+      <li>count === 1 reads "~1 credit" (singular).</li>
+      <li>No second credit-spending path exists (grep for <code>scoreJob</code> /
+        <code>/scan</code> — only the bulk loop), so the gate stays complete.</li>
+    </ol>
+
+    <h2>Notes</h2>
+    <ul>
+      <li>No ADR — this is a copy/UX refinement of an existing dialog, no new
+        decision. The "~1 credit/scan" basis is ADR 0034.</li>
+      <li>No <code>server/</code> change — the estimate is client-side; the
+        authoritative charge stays server-side per scan.</li>
+      <li>Strike the stale "confirmation button for any credit uses" entry on the
+        whiteboard once this ships (with the user's go-ahead — whiteboard is
+        owner-edited).</li>
+    </ul>
+  </body>
+</html>

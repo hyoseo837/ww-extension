@@ -262,8 +262,14 @@
   color: var(--s-on-dim);
   margin-bottom: 16px;
 }
+.ww-ext-confirm-warn {
+  font: 600 12px/1.4 'WW Sans', system-ui, sans-serif;
+  color: var(--s-error);
+  margin: -8px 0 16px;
+}
 .ww-ext-confirm-actions { display: flex; gap: 8px; }
 .ww-ext-confirm-cancel,
+.ww-ext-confirm-buy,
 .ww-ext-confirm-go {
   flex: 1;
   padding: 9px 14px;
@@ -272,12 +278,14 @@
   font: 600 14px 'WW Sans', system-ui, sans-serif;
   transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
-.ww-ext-confirm-cancel {
+.ww-ext-confirm-cancel,
+.ww-ext-confirm-buy {
   background: transparent;
   color: var(--s-on-dim);
   border: 1px solid var(--s-border);
 }
-.ww-ext-confirm-cancel:hover { color: var(--s-on); border-color: var(--s-on-dim); }
+.ww-ext-confirm-cancel:hover,
+.ww-ext-confirm-buy:hover { color: var(--s-on); border-color: var(--s-on-dim); }
 .ww-ext-confirm-go {
   background: var(--s-primary);
   color: var(--s-on-primary);
