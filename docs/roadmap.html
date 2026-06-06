@@ -5,7 +5,7 @@
     <meta name="project" content="ww-extension" />
     <meta name="type" content="roadmap" />
     <meta name="active-major-version" content="v08" />
-    <meta name="last-updated" content="2026-06-01" />
+    <meta name="last-updated" content="2026-06-05" />
     <title>Roadmap — ww-extension</title>
     <link rel="stylesheet" href="style.css" />
   </head>
@@ -42,494 +42,117 @@
 
     <section id="v4" data-status="done">
       <h2>v4 — Monetization (shipped)</h2>
-
       <p>
-        <strong>Shipped and frozen.</strong> All v4 phase specs are archived
-        under <code>docs/archive/v04/</code> (kept in spec format — see
-        <a href="decisions/0014-archive-shipped-major-version-specs.html">ADR 0014</a>);
-        the cross-cutting decisions remain in <code>docs/decisions/</code>.
-        This section is retained for the vision/rationale; per-phase detail
-        lives in the archived specs.
-      </p>
-
-      <p>
-        <strong>Goal:</strong> turn the extension into a monetizable service.
-        A FastAPI backend in <code>server/</code> (monorepo since
-        <a href="decisions/0010-monorepo-with-server-folder.html">ADR 0010</a>
-        superseded 0004) holds user accounts, a credit ledger, and the
-        Gemini-calling logic + prompts. The extension becomes a thin client:
-        authenticates the user, spends credits per scan, displays results.
-      </p>
-
-      <p><strong>Rationale for moving the backend off the client:</strong></p>
-      <ul>
-        <li>Hide proprietary scoring prompts and tuning logic from
-          end users (kept out of the Web Store zip by
-          <code>package.sh</code>).</li>
-        <li>Centralize Gemini key management — user no longer needs their
-          own paid API key.</li>
-        <li>Enable per-user billing (credits) without trusting the client.</li>
-      </ul>
-
-      <p>
-        <strong>Stack and platform locked in v4 planning (2026-05-27):</strong>
-      </p>
-      <ul>
-        <li>Backend: FastAPI on Python 3.12+
-          (<a href="decisions/0009-backend-stack-fastapi.html">ADR 0009</a>).</li>
-        <li>Deploy: DigitalOcean App Platform
-          (<a href="decisions/0007-deploy-on-digitalocean-app-platform.html">ADR 0007</a>).</li>
-        <li>Auth + DB: Supabase (Google OAuth provider; managed
-          Postgres for the credit ledger)
-          (<a href="decisions/0008-auth-and-db-via-supabase.html">ADR 0008</a>).</li>
-        <li>Payments: Stripe Checkout (hosted page) + webhook-driven
-          credit grants
-          (<a href="decisions/0012-stripe-checkout-webhook-grants.html">ADR 0012</a>).</li>
-      </ul>
-
-      <p>
-        <strong>Phases</strong> (all shipped; one line each — full detail in
-        the archived specs under <code>docs/archive/v04/</code>):
-      </p>
-      <dl>
-        <dt><a href="archive/v04/v4.0.0-restructure.html">v4.0</a> — doc restructure + v4 opening</dt>
-        <dd>Spec+ADR doc architecture stood up; v4 planning.</dd>
-
-        <dt><a href="archive/v04/v4.1.0-backend-bootstrap.html">v4.1</a> — backend bootstrap</dt>
-        <dd>FastAPI skeleton in <code>server/</code>, <code>/health</code> live
-          on DO, Supabase + Google OAuth, <code>package.sh</code> excludes
-          <code>server/</code>. No client change.</dd>
-
-        <dt><a href="archive/v04/v4.2.0-auth.html">v4.2</a> — auth in the extension</dt>
-        <dd>Sign-in via <code>launchWebAuthFlow</code>; Supabase session JWT
-          stored.</dd>
-
-        <dt><a href="archive/v04/v4.3.0-credit-ledger.html">v4.3</a> — credit ledger</dt>
-        <dd>Server-side balance, append-only ledger, signup bonus; extension
-          shows balance.</dd>
-
-        <dt><a href="archive/v04/v4.4.0-server-side-scoring.html">v4.4</a> — server-side scoring</dt>
-        <dd>Gemini calls + scoring prompt + profile moved to the backend;
-          estimate-debit-refund on <code>POST /scan</code>. Extension no longer
-          holds a Gemini key.</dd>
-
-        <dt><a href="archive/v04/v4.5.0-stripe-credit-purchase.html">v4.5</a> — Stripe credit purchase</dt>
-        <dd>Stripe Checkout + webhook-driven grants + options-page purchase UI
-          (<a href="decisions/0012-stripe-checkout-webhook-grants.html">ADR 0012</a>).
-          Verified end-to-end in test mode; going live needs only the
-          <code>sk_live_…</code> env swap on DO — no code change.</dd>
-
-        <dt><a href="archive/v04/v4.6.0-free-paid-tier-ux.html">v4.6</a> — free + paid tier UX</dt>
-        <dd>Per-token margin <code>2×→5×</code> (single <code>MARGIN</code> dial
-          in <code>pricing.py</code>); approximate-scan-count copy; out-of-credits
-          sidebar nudge.</dd>
-
-        <dt><a href="archive/v04/v4.7.0-tunable-constants.html">v4.7</a> — tunable constants</dt>
-        <dd>Server knobs (output-token caps, default model/temperatures, signup
-          bonus) consolidated into named constants. No behavior change.</dd>
-      </dl>
-
-      <p>
-        <strong>Out of scope for v4 (deferred):</strong> auto-apply,
-        cover-letter generation, non-Gemini providers, native mobile.
+        <strong>Shipped &amp; frozen.</strong> Turned the extension into a
+        monetizable service: a FastAPI backend in <code>server/</code>
+        (monorepo, <a href="decisions/0010-monorepo-with-server-folder.html">ADR
+        0010</a>) holds user accounts, an append-only credit ledger, and the
+        Gemini logic + prompts, with the extension a thin client that
+        authenticates, spends credits per scan, and shows results — moving the
+        proprietary prompts and key management off the client. Stack locked in
+        v4 planning: FastAPI
+        (<a href="decisions/0009-backend-stack-fastapi.html">ADR 0009</a>) on
+        DigitalOcean App Platform
+        (<a href="decisions/0007-deploy-on-digitalocean-app-platform.html">ADR
+        0007</a>), Supabase auth + Postgres
+        (<a href="decisions/0008-auth-and-db-via-supabase.html">ADR 0008</a>),
+        Stripe Checkout + webhook credit grants
+        (<a href="decisions/0012-stripe-checkout-webhook-grants.html">ADR
+        0012</a>), with a per-token <code>MARGIN</code> dial in
+        <code>pricing.py</code>. Per-phase detail (v4.0–v4.7):
+        <code>docs/archive/v04/</code>.
       </p>
     </section>
 
     <section id="v5" data-status="done">
       <h2>v5 — Profile structure + scoring quality (shipped)</h2>
       <p>
-        <strong>Shipped and frozen.</strong> All v5 phase specs are archived
-        under <code>docs/archive/v05/</code> (kept in spec format — see
-        <a href="decisions/0014-archive-shipped-major-version-specs.html">ADR 0014</a>);
-        the cross-cutting decisions remain in <code>docs/decisions/</code>. This
-        section is retained for the vision/rationale; per-phase detail lives in
-        the archived specs.
+        <strong>Shipped &amp; frozen.</strong> The quality pass — made scoring
+        <em>trustworthy</em> where v4 had treated preferences as one prose field
+        and the profile as a raw resume dump. Replaced the textarea with
+        <strong>structured match criteria</strong> (work authorization,
+        weighted/tiered locations, term + length, work mode, languages;
+        <a href="decisions/0013-structured-match-criteria-jsonb.html">ADR
+        0013</a>); switched the profile to a <strong>structured JSON
+        profile</strong> extracted via a Gemini <code>responseSchema</code>,
+        with supplementary experience/projects and a <code>cv_text</code>
+        fallback
+        (<a href="decisions/0015-structured-json-profile.html">ADR 0015</a>);
+        rewrote the scan prompt to a <strong>1–20 scale</strong> with a
+        five-band verdict ladder, an <strong>Excluded</strong> gate, and a
+        per-aspect breakdown
+        (<a href="decisions/0016-scoring-output-v2.html">ADR 0016</a>,
+        <a href="decisions/0017-scoring-scale-1-20.html">0017</a>); and added a
+        credit-free client-side <strong>hard-exclusion pre-filter</strong>
+        (<a href="decisions/0018-client-hard-exclusion-prefilter.html">ADR
+        0018</a>), with the <code>prompts.py</code> extraction in v5.4–v5.5.
+        Per-phase detail (v5.0–v5.5): <code>docs/archive/v05/</code>.
       </p>
-      <p>
-        <strong>Direction set 2026-05-28.</strong> v4 ships a
-        functional monetized product but treats user preferences as
-        one free-form prose field and the candidate profile as a raw
-        text dump of the resume PDF. That's enough for the
-        product to work; it isn't enough for the scoring to be
-        <em>trustworthy</em>. v5 is the quality pass.
-      </p>
-      <p>
-        <strong>Phase-started 2026-05-29.</strong> Sequence chosen by
-        dependency: <strong>structured match criteria</strong> leads (the
-        <strong>v5.0.0</strong> phase — biggest accuracy gap, and it unblocks
-        hard filters), then structured profile, then the prompt rewrite (now
-        that live v4.4–v4.6 scoring data exists to calibrate against), then
-        hard filters. (Account-management and external-web-surface work moved
-        to v6 — see below.) Threads:
-      </p>
-      <ul>
-        <li><strong>Structured Custom Match Criteria.</strong>
-          <em>(Shipped — v5.0.0 phase: backend v5.0.3, client
-          v5.0.4–v5.0.5, docs v5.0.6–v5.0.7.)</em> Replaced
-          the single textarea with structured fields (work
-          authorization, plus weighted/tiered preferred locations, target
-          term + length, work mode, languages) and demoted the existing
-          free-form prose to an "additional notes" field. Biggest gap closed:
-          work-authorization signal for international students. Storage in
-          <a href="decisions/0013-structured-match-criteria-jsonb.html">ADR 0013</a>.</li>
-        <li><strong>Structured PDF extraction.</strong>
-          <em>(Shipped — v5.1.x.)</em> Switch the
-          profile from a raw-text blob to a JSON profile
-          (summary / education / experience / skills / projects /
-          languages), extracted via a Gemini <code>responseSchema</code>.
-          Cheaper signal per scan than re-sending resume prose, and sharper
-          matching. Also lets the user add <strong>supplementary
-          experience/projects</strong> as structured entries
-          (title + description) for things a one-page resume omits, merged into
-          the profile for scoring. Existing <code>cv_text</code> kept as a
-          fallback (no forced re-upload); storage + cutover in
-          <a href="decisions/0015-structured-json-profile.html">ADR 0015</a>.
-          The application package is multi-document: the CV is structured,
-          while the grade report, UW co-op work history, and cover letter are
-          captured as raw-text fields on <code>profile_json</code> (v5.1.6
-          follow-up). The options-page field visibility is poor and is
-          addressed by the v6 UI transition (web app).
-          See <code>docs/archive/v05/v5.1.0-structured-profile.html</code>.</li>
-        <li><strong>Scan-prompt rewrite + richer scoring output.</strong>
-          <em>(Shipped — v5.2.x.)</em> Co-op framing and calibration anchors in
-          the prompt. Moves scoring to a <strong>1–20 scale</strong>
-          with a verdict ladder of <strong>five score bands</strong>
-          (Strong Apply 17–20 / Apply 14–16 / Consider 10–13 / Unlikely 6–9 /
-          Skip 1–5) plus an <strong>Excluded</strong> verdict for
-          hard-criteria/eligibility gates (work-auth/citizenship, or a criterion
-          in the candidate's "excluded" tier) — all derived server-side — and
-          returns a <strong>structured per-aspect breakdown</strong> — the
-          specific criteria/profile points that gained or lost points (e.g.
-          "prefers Toronto, job in Québec"; "AWS preferred, not in profile"),
-          surfaced in the sidebar. The Excluded verdict is a down-payment on
-          thread #4 (its cheaper pre-scan filter stays separate). Contract in
-          <a href="decisions/0016-scoring-output-v2.html">ADR 0016</a>, scale +
-          Excluded verdict revised in
-          <a href="decisions/0017-scoring-scale-1-20.html">ADR 0017</a>.
-          Calibration is <strong>anchored only</strong> this phase; few-shot
-          from real disagreements is a later tuning pass once enough live v5
-          scans accumulate. See
-          <code>docs/archive/v05/v5.2.0-scan-prompt-rewrite.html</code>.</li>
-        <li><strong>Hard filters.</strong> <em>(Shipped — v5.3.x; v5.4–v5.5
-          followed: extract line-break fidelity and the <code>prompts.py</code>
-          module extraction.)</em>
-          Credit-free pre-scan skip: client-side, before <code>/scan</code>,
-          auto-Skip postings that match the candidate's own
-          <code>excluded</code>-tier criteria on a structured field (e.g. a City
-          in their "never" list), shown via the existing <strong>Excluded</strong>
-          verdict with no credit spent. Conservative — confident structured
-          matches only, never on missing data, so it can't wrongly hide a job.
-          Free-text work-auth/citizenship gates stay with the scan-time Excluded
-          verdict (not pre-filtered). Architecture in
-          <a href="decisions/0018-client-hard-exclusion-prefilter.html">ADR 0018</a>;
-          see <code>docs/archive/v05/v5.3.0-hard-filters.html</code>.</li>
-      </ul>
     </section>
 
     <section id="v6" data-status="done">
       <h2>v6 — UI transition to a web app + admin surface (shipped)</h2>
       <p>
-        <strong>Shipped and frozen.</strong> All v6 phase specs (v6.0–v6.15) are
-        archived under <code>docs/archive/v06/</code> (kept in spec format — see
-        <a href="decisions/0014-archive-shipped-major-version-specs.html">ADR
-        0014</a>). v6 delivered the web app (account, profile/CV, match criteria,
-        Stripe credit purchase), the admin surface, the legal/trust + support
-        pages, and the data-subject rights (export + account deletion). Closed
-        2026-06-01 as v7 opened.
-      </p>
-      <p>
-        <strong>Direction locked 2026-05-30 (v6.0).</strong> v5 made scoring
-        trustworthy; the remaining weak spot is the <em>UI</em>. The extension's
-        three-tab options page is cramped, and the structured-profile fields it
-        gained in v5.1 are barely usable there. v6's theme is the UI transition:
-        move account, profile/CV, match-criteria, and payment management off the
-        options page and onto a dedicated <strong>web app</strong>, leaving the
-        extension focused on in-page scoring. This absorbs the older
-        "consolidate the options-page Account section" idea — that consolidation
-        now happens <em>on the web</em>, not in the options page.
-      </p>
-      <p>
-        The move is clean because the state already lives server-side: profile
-        and credits sit behind authenticated FastAPI endpoints, and
-        <code>POST /scan</code> reads the stored profile (no client-sent profile
-        since v4.4.2). So the web app is a new <em>client</em> of the existing
-        API, and the extension becomes a profile <em>reader</em> (it still fetches
-        <code>match_criteria</code> for the
-        <a href="decisions/0018-client-hard-exclusion-prefilter.html">ADR 0018</a>
-        pre-filter) rather than an editor.
-      </p>
-      <p><strong>Decisions locked at v6.0:</strong></p>
-      <ul>
-        <li>Stack: Vite + React + TypeScript SPA
-          (<a href="decisions/0019-web-app-stack-vite-react-ts.html">ADR 0019</a>);
-          TypeScript scope is the web app only — the extension stays JS.</li>
-        <li>Repo: web app at <code>web/</code> in the monorepo, excluded from the
-          Web Store zip by the allowlist
-          (<a href="decisions/0020-web-app-in-monorepo.html">ADR 0020</a>).</li>
-        <li>Auth: extension and web app keep independent sessions, connected by a
-          <strong>Manage account →</strong> deep link, no handoff
-          (<a href="decisions/0021-independent-auth-sessions.html">ADR 0021</a>).</li>
-        <li>Hosting: Vercel at <code>ww-extension.hyoseo.dev</code>, Cloudflare
-          DNS-only CNAME
-          (<a href="decisions/0022-web-app-hosting-vercel.html">ADR 0022</a>).</li>
-      </ul>
-      <p><strong>Phases</strong> (one line each; per-phase detail in
-        <code>docs/specs/</code> when written):</p>
-      <dl>
-        <dt><a href="archive/v06/v6.0.0-open-v6.html">v6.0</a> — open v6 (docs only)</dt>
-        <dd>Archive v5, flip this roadmap, write the four locked-decision ADRs
-          (0019–0022). No code.</dd>
-
-        <dt>v6.1 — web app bootstrap</dt>
-        <dd>Scaffold <code>web/</code> (Vite + React + TS), Supabase Google
-          sign-in, signed-in shell, deploy to the subdomain, backend CORS +
-          Supabase redirect config. Architecture doc updated here.</dd>
-
-        <dt>v6.2 — account + credits on web</dt>
-        <dd>Balance, credit history (adds <code>GET /credits/history</code>), Buy
-          credits via Stripe with a real <code>success_url</code> (retires the
-          <code>chrome-extension://</code> result shim for web purchases).</dd>
-
-        <dt>v6.3 — design system + profile editor on web</dt>
-        <dd>Opens with the Stitch "Warm Editorial" design pass (Tailwind —
-          <a href="decisions/0023-tailwind-for-web-app.html">ADR 0023</a>;
-          v6.3.0 restyles the existing pages), then builds the profile editor as
-          two pages: <code>/profile</code> (CV upload + extract, experiences /
-          projects) and <code>/preferences</code> (structured match criteria,
-          notes) — the core "bad UI" fix.</dd>
-
-        <dt>v6.4 — extension slim-down</dt>
-        <dd>Options page → thin (signed-in state, balance, <strong>Manage account
-          →</strong>, local toggles only); extension fetches
-          <code>match_criteria</code> via <code>GET /profile</code>;
-          out-of-credits nudge + Buy button deep-link to web;
-          <code>profile_not_set</code> routes new users to the web app; welcome
-          page repointed.</dd>
-
-        <dt>v6.5 — v2 design: sidebar shell + dashboard + landing</dt>
-        <dd>Adopt the second Stitch design iteration (the <code>*_sidebar</code>
-          exports): a persistent left sidebar shell replacing the v6.3 top nav,
-          <code>/account</code> reworked into a dashboard home, and the full
-          logged-out landing/intro view of the web app (the original v6.5 scope).
-          Same Warm Editorial tokens (ADR 0023); shell/IA change in ADR 0024.</dd>
-
-        <dt>v6.6 — admin surface</dt>
-        <dd>Operator-only user list/inspect (balance, credit-ledger history, scan
-          activity) and manual <strong>gift-credit grants</strong> (goodwill,
-          support make-goods, promos) riding the append-only ledger as a new
-          entry <code>kind</code> — balance derivation unchanged, every grant
-          auditable. Admin authZ via an env allowlist of admin
-          <code>user_id</code>s enforced in a FastAPI dependency (the
-          credit-mutating endpoints locked to admins server-side, not just hidden
-          in the UI), plus a who/what/when/why audit trail; admin UI a gated
-          route in the same web app. Its own ADR at that phase.</dd>
-
-        <dt>v6.7 — extension into <code>ext/</code> <em>(done)</em></dt>
-        <dd>Collect the Chrome extension source into a dedicated
-          <code>ext/</code> folder, a symmetric peer of <code>web/</code> and
-          <code>server/</code> (ADR 0026). Pure restructure, no behavior change.</dd>
-
-        <dt>v6.8 — web visual tune <em>(done)</em></dt>
-        <dd>Shrink the Stitch type scale (it ran large on real screens), tighten
-          the spacing tokens, show the full sidebar email, and add Preferences +
-          a WaterlooWorks link to the sidebar nav (revises an ADR 0024 nav call).</dd>
-
-        <dt>v6.9 — account deletion</dt>
-        <dd>Self-serve "delete my account" (data-subject erasure; companion to
-          v6.14 export). Backend deletes the Supabase auth user (service-role
-          admin call); the app tables (<code>user_profile</code>,
-          <code>credit_ledger_entry</code>, <code>scan</code>) all
-          <code>ON DELETE CASCADE</code> on <code>auth.users</code>, so they
-          clear atomically. Type-DELETE confirm UX, sign-out + redirect.
-          <strong>Specced early, deferred, built 2026-06-01</strong> after
-          accepting the hard-delete policy
-          (<a href="decisions/0027-account-deletion-policy.html">ADR 0027</a>);
-          to keep the 100-credit signup bonus once-per-person (a hard delete
-          would otherwise let a re-register re-grab it), deletion also records a
-          one-way email hash that the bonus trigger checks
-          (<a href="decisions/0029-signup-bonus-suppression-on-deletion.html">ADR
-          0029</a>). Spec:
-          <code>docs/archive/v06/v6.9.0-account-deletion.html</code>.</dd>
-
-        <dt>v6.10 — legal, trust &amp; support</dt>
-        <dd>Wire the footer/trust surface: a <strong>Terms of Service</strong>
-          page (content user-supplied), a <strong>Privacy</strong> page — note
-          the previous external policy at
-          <code>hyoseo.dev/privacy-policy/ww-extension/</code> is being removed,
-          so host it in-app and repoint the README + extension links — a stated
-          <strong>refund policy</strong> (real money via Stripe → consumer-law
-          expectation), a real <strong>support/contact</strong> path (currently
-          <code>#</code> — uses the support email, see below), a
-          <strong>"not affiliated with the University of Waterloo /
-          WaterlooWorks"</strong> disclaimer on the web footer (already in the
-          README + extension), and a <strong>consent-at-signup</strong> line on
-          the sign-in screen linking Terms + Privacy. Draft starting point:
-          <code>docs/reference/legal-pages-scaffold.html</code> (non-binding
-          section outlines for both pages, pre-filled with known data-handling
-          facts + <code>[FILL]</code> placeholders). <strong>Note:</strong> only
-          the support slice shipped here (v6.10.0); the legal pages were deferred
-          past v6.11 and ship at <strong>v6.12</strong> (see below).</dd>
-
-        <dt>v6.11 — web UI refinements <em>(done)</em></dt>
-        <dd>Drop the redundant "Credits" nav item (the Buy Credits button covers
-          it); show balances at ≤2 decimals with a "credits" unit instead of raw
-          6-decimal NUMERIC; restructure the preferences input (keyword box +
-          chips on separate lines, weight selector out of "More options" onto the
-          input line).</dd>
-
-        <dt>v6.12 — legal &amp; trust pages <em>(done)</em></dt>
-        <dd>The remaining slices of the v6.10 legal/trust phase, deferred past
-          v6.11 (so they take the next free minor — versioning is monotonic):
-          in-app <strong>Privacy</strong> + <strong>Terms</strong> pages (copy
-          owner-supplied), a stated <strong>refund policy</strong> (ADR 0028),
-          the "not affiliated with UW / WaterlooWorks" footer disclaimer, and a
-          <strong>consent-at-signup</strong> line. Spec:
-          <code>docs/archive/v06/v6.12.0-legal-trust-pages.html</code>.</dd>
-
-        <dt>v6.13 — confirm before spending credits</dt>
-        <dd>A confirmation step before <strong>any</strong> credit-spending
-          action (whiteboard: "confirmation button for any credit uses"), so a
-          stray click can't burn the balance. Two gates: the extension's
-          <strong>Scan All Jobs</strong> (exact-count dialog, v6.13.1) and the
-          web app's <strong>application-package extraction</strong> — now
-          stage-the-file-then-press-Extract behind a confirm dialog, instead of
-          extracting the instant a PDF is picked (v6.13.2). Spec:
-          <code>docs/archive/v06/v6.13.0-credit-use-confirmation.html</code>.</dd>
-
-        <dt>v6.14 — data export</dt>
-        <dd>"Download my data" — the data-subject <em>access/portability</em>
-          right, companion to v6.9 deletion. Server already holds it all
-          (profile, ledger, scans); export as JSON via a new
-          <code>GET /account/export</code> (new <code>app/account/</code> module,
-          where deletion will also live). Pairs with the deletion ADR. Spec:
-          <code>docs/archive/v06/v6.14.0-data-export.html</code>.</dd>
-
-        <dt>v6.15 — landing &amp; UX polish</dt>
-        <dd><strong>Pricing visible to logged-out users</strong> on the landing
-          (today prices only show after sign-in at <code>/buy</code>);
-          <strong>error / empty / loading states</strong> across pages and a real
-          404 (today <code>*</code> silently redirects). <em>Cookies/analytics:
-          none by design</em> — Supabase auth uses localStorage, no trackers, so
-          no consent banner unless that changes. Spec:
-          <code>docs/archive/v06/v6.15.0-landing-ux-polish.html</code>.</dd>
-      </dl>
-      <p>
-        <strong>Out of scope for v6</strong> (stay on the whiteboard): re-score
-        feature, scan/extraction prompt upgrades, multi-model support, and the
-        extension JS→TS migration.
+        <strong>Shipped &amp; frozen</strong> (closed 2026-06-01). The UI
+        transition: moved account, profile/CV, match-criteria, and payment
+        management off the cramped options page onto a dedicated
+        <strong>web app</strong> (Vite + React + TS at
+        <code>ww-extension.hyoseo.dev</code>;
+        <a href="decisions/0019-web-app-stack-vite-react-ts.html">ADR 0019</a>,
+        <a href="decisions/0020-web-app-in-monorepo.html">0020</a>,
+        <a href="decisions/0022-web-app-hosting-vercel.html">0022</a>), leaving
+        the extension a profile <em>reader</em> + in-page scorer with independent
+        sessions joined by a deep link
+        (<a href="decisions/0021-independent-auth-sessions.html">ADR 0021</a>).
+        Delivered the Warm Editorial design system (Tailwind,
+        <a href="decisions/0023-tailwind-for-web-app.html">ADR 0023</a>; sidebar
+        shell + dashboard home,
+        <a href="decisions/0024-web-sidebar-shell-dashboard-home.html">ADR
+        0024</a>), the profile/preferences editors, an <strong>admin
+        surface</strong> (env-allowlisted gift-credit grants on the append-only
+        ledger, with an audit trail), the <code>ext/</code> restructure
+        (<a href="decisions/0026-extension-in-ext-folder.html">ADR 0026</a>), the
+        legal/trust + support pages (Privacy/Terms, refund policy
+        <a href="decisions/0028-refund-policy.html">ADR 0028</a>), data-subject
+        rights — export + hard-delete account
+        (<a href="decisions/0027-account-deletion-policy.html">ADR 0027</a> /
+        <a href="decisions/0029-signup-bonus-suppression-on-deletion.html">0029</a>)
+        — the credit-use confirmation, and landing/UX polish. Per-phase detail
+        (v6.0–v6.15): <code>docs/archive/v06/</code>.
       </p>
     </section>
 
     <section id="v7" data-status="done">
       <h2>v7 — Extension fix: website integration + Web Store approval (shipped)</h2>
       <p>
-        <strong>Opened 2026-06-01 (v7.0).</strong> <strong>Sequencing locked
-        2026-06-01:</strong> ship the essential compliance fix first, then
-        <em>resubmit and get approved</em>, and only <em>then</em> do the
-        redesign and feature upgrades — the Web Store approval gate (and going
-        live on Stripe) stays ahead of the riskier rewrite. The JavaScript→
-        TypeScript migration was pulled out of v7 and scheduled as its own major,
-        <strong>v8</strong> — since <strong>dropped</strong>
-        (<a href="decisions/0037-drop-typescript-migration.html">ADR 0037</a>; see
-        v8 below). Phases are listed at the end of this section; per-phase
-        specs/ADRs land as each opens.
+        <strong>Shipped &amp; frozen.</strong> Turned back to the Chrome
+        extension to make it work cleanly against the v6 web app and
+        <strong>pass Chrome Web Store review</strong>; sequencing held the
+        approval gate ahead of the redesign (compliance → approve → redesign).
+        Delivered: MV3 compliance by self-hosting the last remote resource
+        (Google Fonts) and binding all resources local
+        (<a href="decisions/0030-self-host-all-extension-resources.html">ADR
+        0030</a>) — <strong>approved &amp; published as 7.1.1 on
+        2026-06-04</strong>
+        (<a href="https://chromewebstore.google.com/detail/ww-extension/bichfckekdcnmkenflpmmehegggcfgdd">live</a>,
+        publisher hyoseo.dev; the rejected <code>0.1.0</code> was the old v03
+        build, not current <code>ext/</code>); the sidebar redesign — light-mode
+        only, Flash-only scoring with the Model tab removed
+        (<a href="decisions/0031-single-model-gemini-flash.html">ADR 0031</a>,
+        <a href="decisions/0032-light-mode-only.html">0032</a>), toolbar opens
+        the web app
+        (<a href="decisions/0035-toolbar-opens-web-app.html">ADR 0035</a>);
+        billing re-margin to ~1 credit/scan + bonus packs
+        (<a href="decisions/0034-bonus-packages-and-remargin.html">ADR 0034</a>);
+        and <strong>UWaterloo (Microsoft Entra) sign-in</strong> replacing Google
+        as anti-abuse
+        (<a href="decisions/0036-uwaterloo-microsoft-auth.html">ADR 0036</a>),
+        with extension key-id parity pinned
+        (<a href="decisions/0033-pin-extension-key-for-id-parity.html">ADR
+        0033</a>). Per-phase detail (v7.0–v7.5): <code>docs/specs/</code>.
+        <em>Operational close-out (Stripe live-mode smoke test) carried into
+        v8.</em>
       </p>
-      <p>
-        v6 rebuilt the account/profile/payment surface as the web app; v7 turns
-        back to the Chrome extension so it (a) works cleanly against that web app
-        and (b) <strong>passes Chrome Web Store review</strong>. Submission
-        history:
-      </p>
-      <ul>
-        <li><strong>Version 0.1.0 — Rejection — 2026-05-26 — Content Policies.</strong>
-          Violation: <em>"Including remotely hosted code in a Manifest V3 item."</em></li>
-        <li><strong>Version 7.1.1 — Approved &amp; published — 2026-06-04.</strong>
-          Live at
-          <a href="https://chromewebstore.google.com/detail/ww-extension/bichfckekdcnmkenflpmmehegggcfgdd">chromewebstore.google.com/&hellip;/bichfckekdcnmkenflpmmehegggcfgdd</a>
-          (publisher hyoseo.dev). The published build is <code>7.1.1</code>; the
-          later <code>7.1.2</code>–<code>7.1.6</code> commits were docs/assets
-          only and were never uploaded, so the spec's planned <code>7.2.0</code>
-          re-upload version was not used for this submission.</li>
-      </ul>
-      <p>
-        <strong>Diagnosis of current <code>ext/</code>:</strong>
-        the hard blocker (remote JS/Wasm) is not present now — no remote
-        <code>&lt;script src&gt;</code>, no <code>eval</code> /
-        <code>new Function</code> / <code>importScripts</code> / dynamic import;
-        the one script injection in <code>content.js</code> uses
-        <code>chrome.runtime.getURL('src/page-bridge.js')</code>, a locally
-        packaged web-accessible resource (the correct MV3 pattern). The only
-        remote dependency left is <strong>Google Fonts</strong>
-        (<code>&lt;link href="https://fonts.googleapis.com/…"&gt;</code> in
-        <code>welcome.html</code> + <code>options.html</code>) — self-hosted in
-        v7.1 (<a href="decisions/0030-self-host-all-extension-resources.html">ADR
-        0030</a>), so no remote resource remains in a shipped page.
-      </p>
-      <p>
-        <strong>Resolved:</strong> the rejected <code>0.1.0</code> artifact was
-        the old v03 public build (its manifest predated strict versioning), not
-        the current code — so the rejection was not against today's
-        <code>ext/</code> (see
-        <a href="decisions/0030-self-host-all-extension-resources.html">ADR
-        0030</a>).
-      </p>
-      <p><strong>Phases:</strong></p>
-      <dl>
-        <dt><a href="specs/v7.1.0-mv3-compliance.html">v7.1</a> — MV3 / Web Store compliance <em>(done)</em></dt>
-        <dd>Self-host the Google Fonts in <code>options.html</code> +
-          <code>welcome.html</code> as local woff2 — the only remote resource in
-          a shipped page — and fix a packaging bug where <code>welcome.html</code>
-          was opened on first-run but missing from the <code>package.sh</code>
-          allowlist (would 404 in the published build). Rule set in
-          <a href="decisions/0030-self-host-all-extension-resources.html">ADR
-          0030</a> (self-host all resources; binds the later redesign so it can't
-          re-introduce the Tailwind / Material-Symbols CDNs).</dd>
-
-        <dt><a href="specs/v7.2.0-resubmit-launch.html">v7.2</a> — resubmit + launch
-          <em>(store approved 2026-06-04; Stripe live-mode in progress)</em></dt>
-        <dd>Package and resubmit to the Web Store with a reviewed listing
-          (privacy-practices form, per-permission justification, screenshots,
-          description); address review. <strong>Approved &amp; published as
-          7.1.1 on 2026-06-04</strong> (see submission history above). On
-          approval, run the Stripe live-mode checklist (live key + live webhook
-          + a real-card smoke test) and open monetization. Resubmitted with the
-          <em>current</em> design — by the sequencing call, redesign comes after
-          approval.</dd>
-
-        <dt><a href="specs/v7.3.0-redesign-integration.html">v7.3</a> — redesign + integration polish
-          <em>(in progress — all 5 redesign strands done 2026-06-05; flow-tightening polish remains)</em></dt>
-        <dd>Post-approval. Match the sidebar design sheet
-          (<code>ext/design/extension_sidebar_job_scan/</code>), light-mode only
-          (drop the dark toggle), a minimal options page (auto-skip toggle +
-          sign-in only — the <strong>Model</strong> tab is removed, scoring is
-          Flash-only, <a href="decisions/0031-single-model-gemini-flash.html">ADR
-          0031</a>), the toolbar popup/icon redirecting to the web app,
-          <code>welcome.html</code> reduced to a thin launcher (big
-          <em>Set up your profile →</em>, how-to stays in the sidebar), and
-          removing score-selected / rescore. Tighten the extension↔web flows
-          (sign-in deep links, buy / out-of-credits nudges,
-          <code>profile_not_set</code> routing). Its own ADR(s) at that phase.</dd>
-
-        <dt><a href="specs/v7.4.0-billing-bonus-packages.html">v7.4</a> — billing: bonus packages + re-margin
-          <em>(in progress 2026-06-04)</em></dt>
-        <dd>Reprice (<a href="decisions/0034-bonus-packages-and-remargin.html">ADR
-          0034</a>): keep token-based pricing but raise <code>MARGIN</code> 5→10 so
-          a scan costs ~1 credit, and add bonus-credit packs — retiring ADR
-          0012's <code>cad_cents == credits</code> rule. Web pricing copy updated;
-          extract stays variable. Tiers revised in
-          <a href="specs/v7.4.2-pricing-revision.html">v7.4.2</a> to $3/300,
-          $5/525, $10/1100 (dropped $1 — Stripe's $0.30 fixed fee made it
-          inefficient).</dd>
-
-        <dt><a href="specs/v7.5.0-uwaterloo-auth.html">v7.5</a> — UWaterloo (Microsoft Entra) sign-in
-          <em>(planned — spike passed 2026-06-05)</em></dt>
-        <dd>Replace Google OAuth with Microsoft Entra / UWaterloo sign-in
-          (<a href="decisions/0036-uwaterloo-microsoft-auth.html">ADR 0036</a>) so
-          only UWaterloo students can sign up — anti-abuse against throwaway-Gmail
-          credit farming. Spike confirmed feasibility (no admin-consent wall);
-          code deferred. Existing Google accounts orphan their credits on switch
-          (tiny user base — confirm no paying users first).</dd>
-      </dl>
     </section>
 
     <section id="active" data-status="in-progress">
