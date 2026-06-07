@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiDelete, apiGet } from "../api";
 import { signOut } from "../supabase";
@@ -15,43 +15,45 @@ const CARD = "rounded-xl border border-border bg-surface p-lg shadow-[0_2px_8px_
 // hint when we have no scan yet to prove install, not authoritative state.
 const EXT_ACK_KEY = "ww_onboarding_ext_installed";
 
-const STEP_BTN =
-  "shrink-0 rounded-lg bg-primary px-[18px] py-sm font-label-md text-label-md text-on-primary transition-colors hover:bg-accent-hover";
-
 // ── Getting-started checklist (v8.1.2, ADR 0038) ────────────────────────────
-// First-run aid on the dashboard. Steps derive from state the dashboard
-// already loads; the whole card retires once the user is fully set up.
+// Compact first-run aid that sits beside Recent activity at the Profile-
+// snapshot width. Steps derive from state the dashboard already loads; the
+// whole card retires once the user is fully set up. Each open step is a single
+// clickable row; details live on /getting-started.
 
-function StepRow({
-  n,
-  done,
-  title,
-  body,
-  action,
-}: {
-  n: number;
-  done: boolean;
-  title: string;
-  body: string;
-  action: ReactNode;
-}) {
-  return (
-    <div className="flex items-start gap-md border-b border-border py-md last:border-0">
-      <span
-        className={`mt-[2px] flex h-7 w-7 shrink-0 items-center justify-center rounded-full font-label-md text-label-md ${
-          done ? "bg-positive text-white" : "bg-surface-container text-text-secondary"
-        }`}
-      >
-        {done ? <Icon name="check" className="text-[18px]" /> : n}
-      </span>
-      <div className="flex-1">
-        <div className={`font-body-md text-body-md ${done ? "text-text-muted line-through" : "text-on-surface"}`}>
-          {title}
-        </div>
-        {!done && <p className="mt-base font-label-sm text-label-sm text-text-secondary">{body}</p>}
+const STEP_ROW =
+  "flex items-center gap-sm border-b border-border py-sm last:border-0 transition-colors";
+
+function StepRow({ n, done, label, to, href }: { n: number; done: boolean; label: string; to?: string; href?: string }) {
+  const badge = (
+    <span
+      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full font-label-sm text-label-sm ${
+        done ? "bg-positive text-white" : "bg-surface-container text-text-secondary"
+      }`}
+    >
+      {done ? <Icon name="check" className="text-[16px]" /> : n}
+    </span>
+  );
+  if (done) {
+    return (
+      <div className={STEP_ROW}>
+        {badge}
+        <span className="flex-1 font-label-md text-label-md text-text-muted line-through">{label}</span>
       </div>
-      {!done && action}
-    </div>
+    );
+  }
+  const inner = (
+    <>
+      {badge}
+      <span className="flex-1 font-label-md text-label-md text-on-surface">{label}</span>
+      <Icon name="chevron_right" className="text-[18px] text-text-muted" />
+    </>
+  );
+  const cls = `${STEP_ROW} hover:text-primary`;
+  return to ? (
+    <Link to={to} className={cls}>{inner}</Link>
+  ) : (
+    <a href={href} target="_blank" rel="noopener noreferrer" className={cls}>{inner}</a>
   );
 }
 
@@ -67,59 +69,29 @@ function GettingStarted({
   onAckInstall: () => void;
 }) {
   return (
-    <section className={CARD}>
-      <div className="mb-xs flex items-center gap-sm">
-        <Icon name="rocket_launch" className="text-primary" />
-        <h2 className="font-headline-md text-headline-md text-on-surface">Get started</h2>
+    <section className={`${CARD} flex flex-col`}>
+      <div className="mb-sm flex items-center gap-xs">
+        <Icon name="rocket_launch" className="text-[20px] text-primary" />
+        <h3 className="font-headline-md text-headline-md text-on-surface">Get started</h3>
       </div>
-      <p className="mb-md font-body-md text-body-md text-text-secondary">
-        Three steps to your first scored job list.{" "}
-        <Link to="/getting-started" className="text-primary underline transition-colors hover:text-accent-hover">
-          Full guide
+      <div className="flex-1">
+        <StepRow n={1} done={extDone} label="Install the extension" href={CHROME_STORE_URL} />
+        <StepRow n={2} done={cvReady} label="Set up your profile" to="/profile" />
+        <StepRow n={3} done={hasScanned} label="Run your first scan" href={WW_JOBS_URL} />
+      </div>
+      <div className="mt-md flex items-center justify-between">
+        <Link to="/getting-started" className="font-label-sm text-label-sm text-primary transition-colors hover:text-accent-hover">
+          Full guide →
         </Link>
-      </p>
-
-      <StepRow
-        n={1}
-        done={extDone}
-        title="Install the Chrome extension"
-        body="One click, no setup — it's what scores jobs right on WaterlooWorks."
-        action={
-          <div className="flex shrink-0 flex-col items-end gap-base">
-            <a href={CHROME_STORE_URL} target="_blank" rel="noopener noreferrer" className={STEP_BTN}>
-              Get extension
-            </a>
-            <button
-              onClick={onAckInstall}
-              className="font-label-sm text-label-sm text-text-muted transition-colors hover:text-text-secondary"
-            >
-              Already installed
-            </button>
-          </div>
-        }
-      />
-      <StepRow
-        n={2}
-        done={cvReady}
-        title="Set up your profile"
-        body="Upload your application package and set your match criteria, so scoring reflects you."
-        action={
-          <Link to="/profile" className={STEP_BTN}>
-            Set up
-          </Link>
-        }
-      />
-      <StepRow
-        n={3}
-        done={hasScanned}
-        title="Run your first scan"
-        body="Open the WaterlooWorks jobs list, open the AI Score panel, and hit Scan All Jobs."
-        action={
-          <a href={WW_JOBS_URL} target="_blank" rel="noopener noreferrer" className={STEP_BTN}>
-            Open WW
-          </a>
-        }
-      />
+        {!extDone && (
+          <button
+            onClick={onAckInstall}
+            className="font-label-sm text-label-sm text-text-muted transition-colors hover:text-text-secondary"
+          >
+            Already installed?
+          </button>
+        )}
+      </div>
     </section>
   );
 }
@@ -272,10 +244,6 @@ export default function Account() {
 
   return (
     <div className="mx-auto max-w-max-width space-y-xxl p-gutter lg:p-xxl">
-      {showOnboarding && (
-        <GettingStarted extDone={extDone} cvReady={cvReady} hasScanned={hasScanned} onAckInstall={ackInstall} />
-      )}
-
       <section className="mt-md">
         <h1 className="mb-xs font-display-lg-mobile text-display-lg-mobile text-on-surface md:font-display-lg md:text-display-lg">
           Welcome back{name ? `, ${name}` : ""}
@@ -334,8 +302,9 @@ export default function Account() {
           </div>
         </div>
 
-        {/* Recent activity */}
-        <div className={`${CARD} md:col-span-3`}>
+        {/* Recent activity — full width normally; yields a column to the
+            getting-started card during onboarding. */}
+        <div className={`${CARD} ${showOnboarding ? "md:col-span-2" : "md:col-span-3"}`}>
           <div className="mb-md flex items-end justify-between border-b border-border pb-sm">
             <h3 className="font-headline-md text-headline-md text-on-surface">Recent activity</h3>
             <Link to="/billing" className="font-label-md text-label-md text-primary hover:text-accent-hover">View all</Link>
@@ -348,6 +317,12 @@ export default function Account() {
             <HistoryList entries={recent} limitRows={6} />
           )}
         </div>
+
+        {/* Getting started — sits under Profile snapshot, beside Recent
+            activity, at the same 1-column width (v8.1.2). */}
+        {showOnboarding && (
+          <GettingStarted extDone={extDone} cvReady={cvReady} hasScanned={hasScanned} onAckInstall={ackInstall} />
+        )}
       </div>
 
       {/* Your data */}
