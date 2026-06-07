@@ -23,7 +23,13 @@ moved out or dropped.
 
 ## Existing Bugs
 
--
+- (2026-06-06, security review) **`user_profile` direct-write hardening.**
+  The RLS policy `user_profile_modify_own` (`for all`) lets an authenticated
+  user write their own profile row directly via PostgREST with the anon key,
+  bypassing the FastAPI backend's Pydantic validation/normalization. Not a
+  vulnerability (own-row only), but consider narrowing it to `for select` so
+  the backend (service-role, direct Postgres conn) is the sole writer.
+  Touches `server/migrations/0003_user_profile.sql`.
 
 ## Future features
 
