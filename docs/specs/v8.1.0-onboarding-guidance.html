@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v8.1.0" />
+    <meta name="status" content="in-progress" />
+    <meta name="last-updated" content="2026-06-06" />
+    <title>v8.1.0 — New-user onboarding guidance (web)</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>v8.1.0 — New-user onboarding guidance</h1>
+
+    <h2>Goal</h2>
+    <p>
+      Tell a new user <strong>what to do</strong>. Today the web app sells the
+      product (landing) and, after sign-in, drops the user on the dashboard with
+      100 free credits and no next step. The three actions that produce the
+      first "aha" — install the extension, set up your profile, run a scan — are
+      never surfaced. This phase adds clear getting-started guidance in three
+      places, the dashboard one being a smart checklist that tracks progress.
+    </p>
+    <p>
+      Opened from a direct user request (2026-06-06), with scope confirmed by
+      the owner: all three surfaces below, and a <em>progress-tracking</em>
+      (not static) dashboard checklist. This is the first v8 <strong>feature</strong>
+      thread, so it opens the <code>v8.1.x</code> minor line; earlier
+      <code>v8.0.x</code> was doc/maintenance only.
+    </p>
+
+    <h2>Surfaces</h2>
+    <ol>
+      <li><strong>Landing "How it works"</strong> (public, logged-out). A
+        three-step section — <em>Install &middot; Set up your profile &middot;
+        Scan</em> — placed between the existing Features and Pricing sections, so
+        a visitor understands the flow before signing in. Static, no state.</li>
+      <li><strong>Dashboard getting-started checklist</strong> (signed-in). A
+        card at the top of <code>/account</code> for new users with the same
+        three steps, each auto-checked as it's completed, each with an action
+        button. Hides once the user is fully set up. This is the core of the
+        phase.</li>
+      <li><strong>Dedicated Getting Started page</strong> (signed-in,
+        <code>/getting-started</code>). A fuller walkthrough — the three steps
+        expanded with detail and a short FAQ — linked from the dashboard card and
+        the nav. The durable "how do I use this?" reference.</li>
+    </ol>
+
+    <h2>Checklist state model</h2>
+    <p>
+      Per <a href="../decisions/0038-onboarding-state-derivation.html">ADR
+      0038</a>, all state is derived web-side from data the dashboard already
+      fetches; no extension or backend change.
+    </p>
+    <table>
+      <thead>
+        <tr><th>Step</th><th>Done when</th><th>Action button</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1 &mdash; Install the extension</td>
+          <td><code>hasScanned</code> (a scan proves install), or a manual ack
+            stored in <code>localStorage.ww_onboarding_ext_installed</code></td>
+          <td>Open Chrome Web Store (<code>CHROME_STORE_URL</code>)</td>
+        </tr>
+        <tr>
+          <td>2 &mdash; Set up your profile</td>
+          <td><code>cvReady</code> from <code>GET /profile</code>
+            (<code>profile_json.summary</code> / <code>experience</code> /
+            legacy <code>cv_text</code>)</td>
+          <td>Go to <code>/profile</code></td>
+        </tr>
+        <tr>
+          <td>3 &mdash; Run your first scan</td>
+          <td>any <code>scan_debit</code> entry in
+            <code>GET /credits/history</code></td>
+          <td>Open the WaterlooWorks jobs list (new tab)</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>
+      The card is shown while the user is <strong>not</strong> fully set up, and
+      hidden once they are (profile ready <em>and</em> at least one scan). It is a
+      first-run aid that retires itself — never a persistent nag.
+    </p>
+
+    <h2>Out of scope</h2>
+    <ul>
+      <li>No precise extension-install detection (would need an extension
+        change; see ADR 0038 consequences).</li>
+      <li>No backend changes, no new endpoints, no schema changes.</li>
+      <li>No interactive product tour / tooltips — just the three surfaces.</li>
+    </ul>
+
+    <h2>Slices</h2>
+    <p>Each is its own <code>v8.x</code> commit (ADR 0002); all are web-only, so
+      each bumps <code>ext/manifest.json</code> but not
+      <code>server/pyproject.toml</code>.</p>
+    <ul>
+      <li><code>v8.1.0</code> &mdash; docs: this spec + ADR 0038.</li>
+      <li><code>v8.1.1</code> &mdash; web: Landing "How it works" section.</li>
+      <li><code>v8.1.2</code> &mdash; web: dashboard getting-started checklist
+        (smart, self-retiring).</li>
+      <li><code>v8.1.3</code> &mdash; web: <code>/getting-started</code> page +
+        nav/dashboard link.</li>
+    </ul>
+
+    <h2>Done when</h2>
+    <ul>
+      <li>A logged-out visitor sees a clear 3-step "How it works" on the landing.</li>
+      <li>A brand-new signed-in user sees a checklist guiding install → profile →
+        scan, with steps checking off as they're completed, and the card
+        disappearing once set up.</li>
+      <li>A <code>/getting-started</code> page exists with the expanded steps,
+        reachable from the dashboard and nav.</li>
+    </ul>
+  </body>
+</html>

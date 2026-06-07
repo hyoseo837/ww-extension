@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-06-06" />
+    <title>ADR 0038 — Derive onboarding progress from existing state, no extension change</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>ADR 0038 — Derive onboarding progress without touching the extension</h1>
+
+    <h2>Context</h2>
+    <p>
+      v8.1 adds a new-user <strong>getting-started checklist</strong> on the web
+      dashboard (<a href="../specs/v8.1.0-onboarding-guidance.html">v8.1.0
+      spec</a>). The three steps are: (1) install the Chrome extension,
+      (2) set up your profile, (3) run your first scan. For the checklist to be
+      "smart" — checking steps off as they're done — the web app needs to know
+      which steps a given user has completed.
+    </p>
+    <p>
+      Two of those are server state the web app already reads. The first
+      — "is the extension installed?" — is <strong>not</strong> cheaply knowable
+      from a web page. Reliable detection would mean either adding
+      <code>ww-extension.hyoseo.dev</code> to the extension's
+      <code>content_scripts</code> matches (so a content script can post an
+      install marker into the page) or declaring <code>externally_connectable</code>
+      and pinging the extension by ID. Both are <strong>manifest changes</strong>,
+      and any manifest change ships only through a <strong>Chrome Web Store review
+      cycle</strong> — heavyweight for v8, whose charter is maintenance &amp;
+      polish, not extension churn.
+    </p>
+
+    <h2>Decision</h2>
+    <p>
+      Derive all three step states on the <strong>web side only</strong>, from
+      data the dashboard already fetches. No extension or backend change.
+    </p>
+    <ul>
+      <li><strong>Step 2 — profile set up.</strong> <code>true</code> when
+        <code>GET /profile</code> shows a non-empty profile — the same
+        <code>cvReady</code> check the dashboard already computes
+        (<code>profile_json.summary</code> or <code>profile_json.experience</code>
+        or legacy <code>cv_text</code>).</li>
+      <li><strong>Step 3 — first scan done.</strong> <code>true</code> when
+        <code>GET /credits/history</code> contains any entry of kind
+        <code>scan_debit</code>. A debit is written only by a real scan, so its
+        presence is proof the user has scanned at least once.</li>
+      <li><strong>Step 1 — extension installed.</strong> No direct signal, so
+        infer it: <code>hasScanned</code> (step 3) <em>implies</em> the extension
+        is installed, because a scan is impossible without it. Until the first
+        scan, step 1 stays open and actionable (a Chrome Web Store button) and
+        the user may also tick it off manually; that manual ack is persisted in
+        <code>localStorage</code> (<code>ww_onboarding_ext_installed</code>), not
+        the backend — it is a UI hint, not authoritative state.</li>
+    </ul>
+    <p>
+      The checklist card hides once the user is fully set up (profile ready
+      <em>and</em> at least one scan), so it is a first-run aid that disappears
+      on its own and never nags an established user.
+    </p>
+
+    <h2>Consequences</h2>
+    <ul>
+      <li><strong>No Web Store review on the critical path.</strong> The whole
+        feature is web-only (<code>web/</code>), shippable as a normal deploy.</li>
+      <li><strong>No new endpoints.</strong> <code>/profile</code> and
+        <code>/credits/history</code> are already fetched by the dashboard
+        (<code>Account.tsx</code>); the checklist reuses them.</li>
+      <li><strong>Step 1 is a soft signal.</strong> A user who installs the
+        extension but never scans, and never ticks the box, sees step 1 as
+        "not done" — acceptable, since the next action we want from them
+        (scan) is exactly what would complete it. We accept a slightly loose
+        step-1 signal in exchange for not touching the extension.</li>
+      <li>If precise install detection is wanted later, it can be layered on
+        via a content-script marker on the web-app origin — a deliberate
+        extension change with its own ADR, not a prerequisite here.</li>
+    </ul>
+  </body>
+</html>
