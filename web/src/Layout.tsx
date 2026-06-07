@@ -19,6 +19,7 @@ const NAV = [
   { to: "/billing", label: "History", icon: "history", end: false },
   { to: "/profile", label: "Profile", icon: "person", end: false },
   { to: "/preferences", label: "Preferences", icon: "tune", end: false },
+  { to: "/getting-started", label: "Guide", icon: "menu_book", end: false },
 ];
 
 // The WaterlooWorks jobs page — where the extension actually runs.

@@ -7,6 +7,7 @@ import Billing from "./pages/Billing";
 import Buy from "./pages/Buy";
 import Profile from "./pages/Profile";
 import Preferences from "./pages/Preferences";
+import GettingStarted from "./pages/GettingStarted";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 import Privacy from "./pages/legal/Privacy";
@@ -46,6 +47,7 @@ export default function App() {
       <Route path="/terms" element={<Terms />} />
       <Route element={<Layout email={session.user.email ?? ""} />}>
         <Route path="/account" element={<Account />} />
+        <Route path="/getting-started" element={<GettingStarted />} />
         <Route path="/billing" element={<Billing />} />
         <Route path="/buy" element={<Buy />} />
         <Route path="/profile" element={<Profile />} />
