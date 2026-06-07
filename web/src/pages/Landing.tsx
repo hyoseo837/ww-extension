@@ -23,6 +23,24 @@ const FEATURES = [
   },
 ];
 
+const STEPS = [
+  {
+    icon: "extension",
+    title: "Install the extension",
+    body: "Add WW Scorer to Chrome from the Web Store — one click, no API keys, no setup.",
+  },
+  {
+    icon: "person",
+    title: "Set up your profile",
+    body: "Upload your WaterlooWorks application package and set your match criteria, so scoring reflects you.",
+  },
+  {
+    icon: "bolt",
+    title: "Scan on WaterlooWorks",
+    body: "Open the jobs list, hit Scan All Jobs, and every posting gets a 1–20 score and a verdict.",
+  },
+];
+
 function MicrosoftMark() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5 rounded-[2px] bg-white p-[2px]">
@@ -90,6 +108,33 @@ export default function Landing() {
                 </div>
                 <h3 className="mb-xs font-headline-md text-headline-md text-on-surface">{f.title}</h3>
                 <p className="font-body-md text-body-md text-text-secondary">{f.body}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* How it works — the three steps to first value, before the pricing
+            ask. Static (no auth state); mirrors the dashboard checklist. */}
+        <section className="mx-auto w-full max-w-max-width px-gutter pb-[120px]">
+          <div className="mb-xl flex flex-col items-center gap-sm text-center">
+            <h2 className="font-display-lg-mobile text-display-lg-mobile text-on-surface md:font-display-lg md:text-display-lg">
+              How it works
+            </h2>
+            <p className="max-w-[600px] font-body-lg text-body-lg text-text-secondary">
+              Three steps from sign-up to a fully scored job list.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 gap-lg md:grid-cols-3">
+            {STEPS.map((s, i) => (
+              <div key={s.title} className="flex flex-col items-start rounded-[16px] border border-border bg-surface p-lg">
+                <div className="mb-md flex items-center gap-sm">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary font-label-md text-label-md text-on-primary">
+                    {i + 1}
+                  </span>
+                  <Icon name={s.icon} className="text-primary" />
+                </div>
+                <h3 className="mb-xs font-headline-md text-headline-md text-on-surface">{s.title}</h3>
+                <p className="font-body-md text-body-md text-text-secondary">{s.body}</p>
               </div>
             ))}
           </div>
