@@ -32,7 +32,12 @@ This order is load-bearing — follow it for every phase, not just when asked:
    is vague or involves product / pricing / money calls, clarify scope with
    the user **before** locking the spec.
 2. **Then implement** what the spec describes — nothing more.
-3. **Commit between phases.** Each sub-version (`vX.Y.Z`) is its own commit,
+3. **Commit on `dev`, not `master`.** `master` is production — Vercel
+   (web) and DO App Platform (server) auto-deploy from it. All phase work
+   is committed on the long-lived `dev` branch; releasing = merging `dev`
+   into `master` and pushing (ADR 0039). Check your branch before
+   committing.
+4. **Commit between phases.** Each sub-version (`vX.Y.Z`) is its own commit,
    with the version in the message matching `manifest.json` (ADR 0002). Slice
    the work (backend / client / close-out) the way the spec lays out — don't
    batch a whole feature into one commit, and don't defer all commits to the

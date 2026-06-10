@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-06-10" />
+    <title>ADR 0039 — Split production (master) and development (dev) branches</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>ADR 0039 — Split production (master) and development (dev) branches</h1>
+
+    <h2>Context</h2>
+    <p>
+      Until now the repository had a single branch, <code>master</code>, and
+      every per-phase <code>vX.Y.Z</code> commit landed on it directly. That
+      was fine pre-launch, but two of the three deliverables now
+      <strong>auto-deploy from <code>master</code></strong>:
+    </p>
+    <ul>
+      <li><code>web/</code> — Vercel builds and publishes its production
+        branch on every push (ww-extension.hyoseo.dev).</li>
+      <li><code>server/</code> — DigitalOcean App Platform redeploys the
+        FastAPI backend on every push to its tracked branch.</li>
+      <li><code>ext/</code> — unaffected by branching; the Web Store only
+        receives what <code>package.sh</code> zips and the user uploads
+        manually.</li>
+    </ul>
+    <p>
+      With the product live (extension approved 2026-06-04, web app and
+      backend serving real accounts and credits), pushing an in-progress
+      phase commit to <code>master</code> ships it to production users
+      immediately. Development needs somewhere to accumulate commits that is
+      not a deploy trigger.
+    </p>
+
+    <h2>Decision</h2>
+    <ul>
+      <li><strong><code>master</code> is production.</strong> It stays the
+        branch Vercel and DO App Platform track. Pushing it is a deliberate
+        deploy action, not a side effect of saving work.</li>
+      <li><strong><code>dev</code> is the long-lived development branch</strong>,
+        created from <code>master</code> at v8.2.0. All per-phase
+        <code>vX.Y.Z</code> commits land on <code>dev</code>; the per-phase
+        commit discipline (ADR 0002) is unchanged, only the branch moves.</li>
+      <li><strong>Release = merge <code>dev</code> into <code>master</code></strong>
+        and push, once a version (or batch of phases) is verified. Prefer a
+        plain merge; no rebasing of pushed history (consistent with the
+        user's no-force-push preference).</li>
+      <li>Short-lived topic branches off <code>dev</code> are allowed but not
+        required — for a solo project, committing phases directly on
+        <code>dev</code> is the default.</li>
+    </ul>
+
+    <h2>Consequences</h2>
+    <ul>
+      <li>Production deploys become intentional and batched; half-done phases
+        can be committed and pushed (to <code>dev</code>) without touching
+        users.</li>
+      <li>Vercel builds free preview deployments for pushes to
+        <code>dev</code>, giving a staging URL for the web app at no cost.</li>
+      <li><strong>The database does not branch.</strong> Both branches point
+        at the same Supabase instance, so schema migrations applied while
+        developing on <code>dev</code> affect production data immediately.
+        Branch discipline protects code paths, not the schema — migrations
+        must stay backward-compatible with whatever <code>master</code> is
+        running.</li>
+      <li>The Vercel production-branch setting and the DO App Platform branch
+        setting live in their dashboards, not in the repo; both must be
+        confirmed pinned to <code>master</code> (and Vercel preview deploys
+        of <code>dev</code> must not be treated as production).</li>
+      <li>Agents must check which branch they are on before committing;
+        committing phase work straight to <code>master</code> is now a
+        process error. CLAUDE.md records the rule.</li>
+    </ul>
+
+    <h2>Alternatives considered</h2>
+    <ul>
+      <li><strong>Keep single-branch <code>master</code></strong> — status quo;
+        rejected because every push is a production deploy of web and
+        server.</li>
+      <li><strong>Full git-flow (develop/release/hotfix branches)</strong> —
+        rejected as ceremony a solo project does not need; two branches give
+        the entire benefit.</li>
+      <li><strong>Decouple deploys instead (deploy by tag or manual promote
+        in Vercel/DO)</strong> — viable, but moves the safety mechanism into
+        two third-party dashboards instead of one visible repo convention;
+        can be layered on later without superseding this ADR.</li>
+    </ul>
+  </body>
+</html>
