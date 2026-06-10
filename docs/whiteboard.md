@@ -23,22 +23,22 @@ moved out or dropped.
 
 ## Existing Bugs
 
-- (2026-06-06, security review) **`user_profile` direct-write hardening.**
-  The RLS policy `user_profile_modify_own` (`for all`) lets an authenticated
-  user write their own profile row directly via PostgREST with the anon key,
-  bypassing the FastAPI backend's Pydantic validation/normalization. Not a
-  vulnerability (own-row only), but consider narrowing it to `for select` so
-  the backend (service-role, direct Postgres conn) is the sole writer.
-  Touches `server/migrations/0003_user_profile.sql`.
-
 ## Future features
 
-- Diffrent models (Gemini pro, Claude Haiku, Sonnet, Opus, Gpt 5.5, mini ...)
-- re-score feature
+- cover letter writer
+- feedback loop of user
+- extension also available on “Employer-Student Direct” page (currently only "Full Cycle Service" page)
 
 ## fixes needed
 
+- better Match preferences page UX. — *in progress: v8.4 shipped the setup
+  wizard + simplified editor; the criteria structure itself (weight model)
+  is being rebuilt next.*
+- reduce texts from getting-started page
+
 ## Possible questions
+
+- subscription model / term pass (unlimited scan for certain period)
 
 ## Solved
 
@@ -57,3 +57,15 @@ moved out or dropped.
 - ~~JavaScript to TypeScript~~ — dropped (v7.5.2, ADR 0037): the extension
   ships fine in JS; the migration had zero Web-Store benefit and would add a
   build step superseding ADR 0026. De-committed to roadmap "Further out".
+
+- ~~`user_profile` direct-write hardening (RLS)~~ — shipped (v8.3.2):
+  migration 0011 drops `user_profile_modify_own`; backend is the sole
+  writer. Applied to production Supabase 2026-06-10.
+
+- ~~smaller delete account button~~ — shipped: compact (v8.3.1), then merged
+  with Download-my-data into one "Your data" card, side by side (v8.4.5).
+
+- ~~dashboard get-started: scan is the finale, not a step~~ — shipped
+  (v8.4.6): steps are install → upload application package → preferences
+  wizard; completing all three reveals a "You're ready — scan your jobs!"
+  button. Card still retires after the first scan.

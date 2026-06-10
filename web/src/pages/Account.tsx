@@ -62,13 +62,11 @@ function GettingStarted({
   extDone,
   cvReady,
   prefsReady,
-  hasScanned,
   onAckInstall,
 }: {
   extDone: boolean;
   cvReady: boolean;
   prefsReady: boolean;
-  hasScanned: boolean;
   onAckInstall: () => void;
 }) {
   return (
@@ -79,10 +77,20 @@ function GettingStarted({
       </div>
       <div className="flex-1">
         <StepRow n={1} done={extDone} label="Install the extension" href={CHROME_STORE_URL} />
-        <StepRow n={2} done={cvReady} label="Set up your profile" to="/profile" />
-        <StepRow n={3} done={prefsReady} label="Set your match preferences" to="/preferences/setup" />
-        <StepRow n={4} done={hasScanned} label="Run your first scan" href={WW_JOBS_URL} />
+        <StepRow n={2} done={cvReady} label="Upload your application package" to="/profile" />
+        <StepRow n={3} done={prefsReady} label="Finish the preferences wizard" to="/preferences/setup" />
       </div>
+      {extDone && cvReady && prefsReady && (
+        <a
+          href={WW_JOBS_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-sm flex items-center justify-center gap-xs rounded-lg bg-primary px-md py-sm font-label-md text-label-md text-on-primary transition-colors hover:bg-accent-hover"
+        >
+          <Icon name="bolt" className="text-[18px]" />
+          You're ready — scan your jobs!
+        </a>
+      )}
       <div className="mt-md flex items-center justify-between">
         <Link to="/getting-started" className="font-label-sm text-label-sm text-primary transition-colors hover:text-accent-hover">
           Full guide →
@@ -326,7 +334,7 @@ export default function Account() {
         {/* Getting started — sits under Profile snapshot, beside Recent
             activity, at the same 1-column width (v8.1.2). */}
         {showOnboarding && (
-          <GettingStarted extDone={extDone} cvReady={cvReady} prefsReady={prefsReady} hasScanned={hasScanned} onAckInstall={ackInstall} />
+          <GettingStarted extDone={extDone} cvReady={cvReady} prefsReady={prefsReady} onAckInstall={ackInstall} />
         )}
       </div>
 
