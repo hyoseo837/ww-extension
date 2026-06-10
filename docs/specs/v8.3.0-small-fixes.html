@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v8.3.0" />
+    <meta name="status" content="in-progress" />
+    <meta name="last-updated" content="2026-06-10" />
+    <title>v8.3.0 — Small fixes: quieter data buttons + user_profile RLS hardening</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>v8.3.0 — Small fixes: quieter data buttons + user_profile RLS hardening</h1>
+
+    <h2>Goal</h2>
+    <p>
+      Two small items promoted from <code>docs/whiteboard.md</code> by the
+      owner (2026-06-10). First v8 phase developed under the new branch model
+      (<a href="../decisions/0039-prod-dev-branch-split.html">ADR 0039</a>):
+      commits land on <code>dev</code>, merge to <code>master</code> deploys.
+    </p>
+    <ol>
+      <li><strong>Quieter data-rights buttons</strong> (web). On
+        <code>/account</code>, "Download my data" and "Delete account" render
+        as full-size outlined buttons with icons — the same visual weight as
+        primary actions. Both are rare, once-ever actions; shrink them to
+        compact buttons (smaller padding and label, smaller icon). The
+        type-DELETE confirm dialog (v6.9) remains the real safety gate for
+        deletion and is unchanged.</li>
+      <li><strong><code>user_profile</code> RLS hardening</strong> (server).
+        Drop the <code>user_profile_modify_own</code> policy
+        (<code>for all</code>) so authenticated users can no longer write
+        their own profile row directly via PostgREST with the anon key,
+        bypassing FastAPI's Pydantic validation. Verified 2026-06-10: no
+        client touches <code>user_profile</code> via PostgREST — the web app
+        goes through <code>PUT /profile</code> and the extension never
+        references the table — and the backend writes via service-role /
+        direct Postgres, which bypasses RLS. Read access
+        (<code>user_profile_select_own</code>) is kept as forward-compat.</li>
+    </ol>
+
+    <h2>Files</h2>
+    <ul>
+      <li><code>web/src/pages/Account.tsx</code> — compact classes on the two
+        buttons; no logic change.</li>
+      <li><code>server/migrations/0011_user_profile_rls_backend_writes.sql</code>
+        — new migration, idempotent; drops <code>user_profile_modify_own</code>.
+        Migration files are immutable history — <code>0003</code> is not
+        edited.</li>
+      <li><code>server/pyproject.toml</code> — patch bump (server-touching
+        commit, ADR 0010).</li>
+    </ul>
+
+    <h2>Slices</h2>
+    <ul>
+      <li><code>v8.3.0</code> — docs: this spec.</li>
+      <li><code>v8.3.1</code> — web: compact Download-my-data / Delete-account
+        buttons.</li>
+      <li><code>v8.3.2</code> — server: migration 0011 + pyproject bump.</li>
+    </ul>
+
+    <h2>Verify</h2>
+    <ul>
+      <li>Web: on <code>/account</code>, both buttons render visibly smaller
+        than the page's primary actions; download and delete flows still work
+        (delete still gated by the type-DELETE dialog).</li>
+      <li>Server: after applying 0011 in the Supabase SQL editor, a PostgREST
+        <code>PATCH /rest/v1/user_profile</code> with a user JWT + anon key
+        affects 0 rows, while <code>GET</code> of the own row still works and
+        <code>PUT /profile</code> through the API still saves.</li>
+    </ul>
+
+    <h2>Notes</h2>
+    <ul>
+      <li>Applying the migration is a production database change regardless of
+        git branch (ADR 0039 consequence) — it only removes an unused write
+        path, so it is safe to apply when merged.</li>
+      <li>The third whiteboard fix ("better Match preferences page UX") is
+        deliberately excluded: it is a redesign with open product questions,
+        scheduled as its own phase (v8.4) once scoped with the owner.</li>
+    </ul>
+  </body>
+</html>
