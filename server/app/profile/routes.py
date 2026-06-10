@@ -39,6 +39,10 @@ class MatchCriteria(BaseModel):
     # Eligibility fact, not a preference — no weight/tiers. Unset = unknown.
     work_authorization: Literal["citizen", "pr", "international", "other"] | None = None
 
+    # ISO timestamp set by the web setup wizard on completion (ADR 0040).
+    # Onboarding state, not a scoring input — the prompt ignores it.
+    wizard_completed_at: str | None = None
+
     # Weighted, graded preferences. Each defaults to an empty criterion
     # (no preference, no effect).
     preferred_locations: WeightedCriterion = WeightedCriterion()
