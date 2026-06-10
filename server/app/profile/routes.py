@@ -15,41 +15,31 @@ from app.profile import db as profile_db
 router = APIRouter()
 
 
-# ── Structured match criteria (v5.0.0, ADR 0013) ────────────────────────────
+# ── Structured match criteria v2 (v8.5.0, ADR 0041; supersedes ADR 0013) ────
 #
 # Stored as the `match_criteria` JSONB column. Shape owned/validated here;
-# the DB only guarantees valid JSON. All fields optional/defaulted so a
-# partial object is valid and an empty {} round-trips. The free-form
-# `preferences` text (below) is re-purposed unchanged as "additional notes".
-
-
-class WeightedCriterion(BaseModel):
-    """One graded preference: how heavily it counts (weight) plus up to four
-    value tiers the LLM maps a posting against. Values are user-entered
-    strings (e.g. "West Canada"), so no enum constrains them."""
-
-    weight: Literal["must", "strong", "nice-to-have"] = "nice-to-have"
-    preferred: list[str] = []   # ideal — full marks
-    acceptable: list[str] = []  # fine — no penalty
-    avoid: list[str] = []       # allowed but penalized
-    excluded: list[str] = []    # never — basis for a future hard Skip (#4)
+# the DB only guarantees valid JSON. Concrete facts only — no weights or
+# tiers; importance lives in the free-form `preferences` text ("in your own
+# words"), inferred by the scorer from phrasing. Legacy v1 (weighted
+# criterion) rows are converted at read time in profile/db.py. All fields
+# optional/defaulted so a partial object is valid and an empty {} round-trips.
 
 
 class MatchCriteria(BaseModel):
-    # Eligibility fact, not a preference — no weight/tiers. Unset = unknown.
+    # Eligibility fact. Unset = unknown.
     work_authorization: Literal["citizen", "pr", "international", "other"] | None = None
 
     # ISO timestamp set by the web setup wizard on completion (ADR 0040).
     # Onboarding state, not a scoring input — the prompt ignores it.
     wizard_completed_at: str | None = None
 
-    # Weighted, graded preferences. Each defaults to an empty criterion
-    # (no preference, no effect).
-    preferred_locations: WeightedCriterion = WeightedCriterion()
-    work_modes: WeightedCriterion = WeightedCriterion()
-    target_term: WeightedCriterion = WeightedCriterion()
-    target_length: WeightedCriterion = WeightedCriterion()
-    languages: WeightedCriterion = WeightedCriterion()  # spoken/working, not programming
+    # Facts about the job the candidate is looking for. User-entered strings
+    # (e.g. "West Canada"), so no enum constrains them.
+    locations: list[str] = []
+    work_modes: list[str] = []     # e.g. Remote / Hybrid / On-site
+    target_term: str = ""          # e.g. "Fall 2026"
+    term_lengths: list[str] = []   # e.g. 4-month / 8-month
+    languages: list[str] = []      # spoken/working, not programming
 
 
 # ── Structured profile (v5.1.0, ADR 0015) ──────────────────────────────────

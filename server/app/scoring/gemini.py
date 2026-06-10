@@ -78,58 +78,38 @@ def _require_client() -> httpx.AsyncClient:
     return _client
 
 
-# Human-readable labels for the structured criteria block. Deterministic
-# serialization only — the prompt rewrite (v5 thread #3) reworks how the model
-# is told to *use* weights/tiers; v5.0.0 just states them faithfully.
+# Human-readable labels for the criteria-v2 fact block (ADR 0041).
+# Deterministic serialization only — importance is not annotated here; the
+# model infers it from the candidate's notes.
 _AUTH_LABELS = {
     "citizen": "Canadian citizen",
     "pr": "permanent resident",
     "international": "international student (study permit)",
     "other": "other",
 }
-_CRITERION_LABELS = {
-    "preferred_locations": "Location",
-    "work_modes": "Work mode",
+_FACT_LABELS = {
+    "locations": "Locations",
+    "work_modes": "Work modes",
     "target_term": "Target term",
-    "target_length": "Term length",
+    "term_lengths": "Term lengths",
     "languages": "Languages",
 }
-_TIER_LABELS = (
-    ("preferred", "prefer"),
-    ("acceptable", "ok"),
-    ("avoid", "avoid"),
-    ("excluded", "never"),
-)
-
-
-def _format_criterion(label: str, c: dict) -> str | None:
-    """One line like 'Location [strong]: prefer Toronto; ok Ontario; avoid
-    West Canada; never outside Canada'. Returns None when no tier is filled."""
-    tiers = [
-        f"{verb} {', '.join(c[key])}"
-        for key, verb in _TIER_LABELS
-        if c.get(key)
-    ]
-    if not tiers:
-        return None
-    weight = c.get("weight")
-    suffix = f" [{weight}]" if weight else ""
-    return f"{label}{suffix}: " + "; ".join(tiers)
 
 
 def _format_criteria(match_criteria: dict) -> str:
-    """Serialize populated criteria into a short labelled block. Only
-    non-empty fields appear, so empty criteria emit nothing."""
+    """Serialize populated facts into a short labelled block. Only non-empty
+    fields appear, so empty criteria emit nothing."""
     lines: list[str] = []
     auth = match_criteria.get("work_authorization")
     if auth:
         lines.append(f"Work authorization: {_AUTH_LABELS.get(auth, auth)}")
-    for field, label in _CRITERION_LABELS.items():
-        c = match_criteria.get(field)
-        if isinstance(c, dict):
-            line = _format_criterion(label, c)
-            if line:
-                lines.append(line)
+    for field, label in _FACT_LABELS.items():
+        v = match_criteria.get(field)
+        if isinstance(v, str):
+            if v:
+                lines.append(f"{label}: {v}")
+        elif isinstance(v, list) and v:
+            lines.append(f"{label}: {', '.join(str(x) for x in v)}")
     return "\n".join(lines)
 
 

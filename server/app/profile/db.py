@@ -31,13 +31,38 @@ def _loads(raw: Any, default: Any) -> Any:
     return json.loads(raw) if raw else default
 
 
+# Legacy v1 criteria (ADR 0013): weighted-criterion dicts under these keys.
+# v2 (ADR 0041) keeps flat fact lists; map v1 `preferred` values onto them.
+_V1_TO_V2 = {
+    "preferred_locations": "locations",
+    "work_modes": "work_modes",
+    "target_term": "target_term",
+    "target_length": "term_lengths",
+    "languages": "languages",
+}
+
+
+def _criteria_v2(mc: dict[str, Any]) -> dict[str, Any]:
+    """Read-time v1→v2 conversion (ADR 0041). Weights and the
+    acceptable/avoid/excluded tiers are dropped by decision; v2 rows (no
+    criterion dicts) pass through untouched."""
+    if not any(isinstance(mc.get(k), dict) for k in _V1_TO_V2):
+        return mc
+    out = {k: v for k, v in mc.items() if k not in _V1_TO_V2}
+    for old, new in _V1_TO_V2.items():
+        v1 = mc.get(old)
+        preferred = v1.get("preferred") or [] if isinstance(v1, dict) else []
+        out[new] = (preferred[0] if preferred else "") if new == "target_term" else preferred
+    return out
+
+
 def _row_to_profile(row: asyncpg.Record | None) -> dict[str, Any]:
     if row is None:
         return {**_EMPTY, "profile_supplement": []}  # fresh list, not the shared default
     return {
         "cv_text": row["cv_text"],
         "preferences": row["preferences"],
-        "match_criteria": _loads(row["match_criteria"], {}),
+        "match_criteria": _criteria_v2(_loads(row["match_criteria"], {})),
         "profile_json": _loads(row["profile_json"], {}),
         "profile_supplement": _loads(row["profile_supplement"], []),
     }
