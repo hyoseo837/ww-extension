@@ -1,27 +1,18 @@
 // Mirrors the backend Profile contract (server/app/profile/routes.py, ADRs 0013/0015).
 
-export type Weight = "must" | "strong" | "nice-to-have";
-export type Tier = "preferred" | "acceptable" | "avoid" | "excluded";
-
-export type WeightedCriterion = {
-  weight: Weight;
-  preferred: string[];
-  acceptable: string[];
-  avoid: string[];
-  excluded: string[];
-};
-
 export type WorkAuth = "citizen" | "pr" | "international" | "other" | null;
 
+// Criteria v2 (ADR 0041): concrete facts only. Importance lives in the
+// free-form `preferences` notes, inferred by the scorer from phrasing.
 export type MatchCriteria = {
   work_authorization: WorkAuth;
   // Set by the setup wizard on completion (ADR 0040); onboarding state, not a scoring input.
   wizard_completed_at: string | null;
-  preferred_locations: WeightedCriterion;
-  work_modes: WeightedCriterion;
-  target_term: WeightedCriterion;
-  target_length: WeightedCriterion;
-  languages: WeightedCriterion;
+  locations: string[];
+  work_modes: string[];
+  target_term: string;
+  term_lengths: string[];
+  languages: string[];
 };
 
 export type EducationEntry = {
@@ -57,28 +48,20 @@ export type Profile = {
 };
 
 // Setup gate (ADR 0040): the wizard flag, or grandfathered pre-wizard criteria
-// (work auth set, or any preferred values entered on the old page).
+// (work auth set, or any fact entered).
 export const setupDone = (mc: Partial<MatchCriteria> | undefined): boolean => {
   if (!mc) return false;
-  if (mc.wizard_completed_at || mc.work_authorization) return true;
-  return (["preferred_locations", "work_modes", "target_term", "target_length", "languages"] as const)
-    .some((k) => (mc[k]?.preferred.length ?? 0) > 0);
+  if (mc.wizard_completed_at || mc.work_authorization || mc.target_term) return true;
+  return (["locations", "work_modes", "term_lengths", "languages"] as const)
+    .some((k) => (mc[k]?.length ?? 0) > 0);
 };
-
-export const emptyCriterion = (): WeightedCriterion => ({
-  weight: "nice-to-have",
-  preferred: [],
-  acceptable: [],
-  avoid: [],
-  excluded: [],
-});
 
 export const emptyMatchCriteria = (): MatchCriteria => ({
   work_authorization: null,
   wizard_completed_at: null,
-  preferred_locations: emptyCriterion(),
-  work_modes: emptyCriterion(),
-  target_term: emptyCriterion(),
-  target_length: emptyCriterion(),
-  languages: emptyCriterion(),
+  locations: [],
+  work_modes: [],
+  target_term: "",
+  term_lengths: [],
+  languages: [],
 });

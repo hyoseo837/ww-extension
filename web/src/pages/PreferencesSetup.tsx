@@ -3,24 +3,19 @@ import { useNavigate } from "react-router-dom";
 import { apiGet, apiPut } from "../api";
 import Icon from "../Icon";
 import { emptyMatchCriteria } from "../types";
-import type { MatchCriteria, Profile, Weight, WorkAuth } from "../types";
+import type { MatchCriteria, Profile, WorkAuth } from "../types";
 
-// First-run preferences wizard (v8.4, ADR 0040). Renders outside the app
-// shell; the shell gate redirects here until it's completed. One question per
-// step, everything but work authorization skippable. Writes the same
-// match_criteria jsonb as /preferences.
+// First-run preferences wizard (v8.4, ADR 0040; criteria v2 per ADR 0041).
+// Renders outside the app shell; the shell gate redirects here until it's
+// completed. One question per step, everything but work authorization
+// skippable. Facts only — importance is captured in the user's own words on
+// the final step. Writes the same match_criteria jsonb as /preferences.
 
 const WORK_AUTH: { value: Exclude<WorkAuth, null>; label: string; hint: string }[] = [
   { value: "citizen", label: "Canadian citizen", hint: "Eligible for any posting" },
   { value: "pr", label: "Permanent resident", hint: "Eligible for most postings" },
   { value: "international", label: "International (study permit)", hint: "Some postings require citizenship/PR — we'll flag those" },
   { value: "other", label: "Other / not sure", hint: "We'll be conservative about eligibility flags" },
-];
-
-const IMPORTANCE: { value: Weight; label: string }[] = [
-  { value: "nice-to-have", label: "Nice to have" },
-  { value: "strong", label: "Important" },
-  { value: "must", label: "Must-have" },
 ];
 
 const WORK_MODES = ["Remote", "Hybrid", "On-site"];
@@ -43,21 +38,6 @@ function ChipToggle({ options, selected, onChange }: {
           {o}
         </button>
       ))}
-    </div>
-  );
-}
-
-function ImportancePicker({ value, onChange }: { value: Weight; onChange: (w: Weight) => void }) {
-  return (
-    <div className="flex flex-col gap-xs">
-      <span className="font-label-sm text-label-sm text-text-muted">How much does this matter?</span>
-      <div className="flex flex-wrap gap-sm">
-        {IMPORTANCE.map((i) => (
-          <button key={i.value} type="button" onClick={() => onChange(i.value)} className={value === i.value ? CHIP_ON : CHIP_OFF}>
-            {i.label}
-          </button>
-        ))}
-      </div>
     </div>
   );
 }
@@ -105,7 +85,7 @@ function TagInput({ values, onChange, placeholder }: {
   );
 }
 
-const STEPS = ["Eligibility", "Locations", "Work mode", "Timing", "Anything else"];
+const STEPS = ["Eligibility", "Locations", "Work mode", "Timing", "In your own words"];
 
 export default function PreferencesSetup() {
   const navigate = useNavigate();
@@ -126,9 +106,6 @@ export default function PreferencesSetup() {
       .catch(() => {}) // empty defaults are a fine starting point
       .finally(() => setLoaded(true));
   }, []);
-
-  const setCrit = (key: "preferred_locations" | "work_modes" | "target_term" | "target_length", patch: Partial<MatchCriteria["work_modes"]>) =>
-    setMc((prev) => ({ ...prev, [key]: { ...prev[key], ...patch } }));
 
   async function finish() {
     setSaving(true);
@@ -158,9 +135,9 @@ export default function PreferencesSetup() {
   // Whether the current step has any input — flips the button label Skip/Next.
   const stepHasInput = [
     mc.work_authorization !== null,
-    mc.preferred_locations.preferred.length > 0,
-    mc.work_modes.preferred.length > 0,
-    mc.target_term.preferred.length > 0 || mc.target_length.preferred.length > 0,
+    mc.locations.length > 0,
+    mc.work_modes.length > 0,
+    mc.target_term.trim().length > 0 || mc.term_lengths.length > 0,
     notes.trim().length > 0,
   ][step];
 
@@ -214,13 +191,10 @@ export default function PreferencesSetup() {
                 Add cities or regions — press Enter after each. Leave empty if you're open to anywhere.
               </p>
               <TagInput
-                values={mc.preferred_locations.preferred}
-                onChange={(v) => setCrit("preferred_locations", { preferred: v })}
+                values={mc.locations}
+                onChange={(v) => setMc((prev) => ({ ...prev, locations: v }))}
                 placeholder="e.g. Toronto, Vancouver, West Canada"
               />
-              {mc.preferred_locations.preferred.length > 0 && (
-                <ImportancePicker value={mc.preferred_locations.weight} onChange={(w) => setCrit("preferred_locations", { weight: w })} />
-              )}
             </>
           )}
 
@@ -230,12 +204,9 @@ export default function PreferencesSetup() {
               <p className="font-body-md text-body-md text-text-secondary">Pick any that suit you.</p>
               <ChipToggle
                 options={WORK_MODES}
-                selected={mc.work_modes.preferred}
-                onChange={(v) => setCrit("work_modes", { preferred: v })}
+                selected={mc.work_modes}
+                onChange={(v) => setMc((prev) => ({ ...prev, work_modes: v }))}
               />
-              {mc.work_modes.preferred.length > 0 && (
-                <ImportancePicker value={mc.work_modes.weight} onChange={(w) => setCrit("work_modes", { weight: w })} />
-              )}
             </>
           )}
 
@@ -245,39 +216,32 @@ export default function PreferencesSetup() {
               <p className="font-body-md text-body-md text-text-secondary">
                 Which work term are you targeting, and what term length works for you?
               </p>
-              <TagInput
-                values={mc.target_term.preferred}
-                onChange={(v) => setCrit("target_term", { preferred: v })}
+              <input
+                value={mc.target_term}
+                onChange={(e) => setMc((prev) => ({ ...prev, target_term: e.target.value }))}
                 placeholder="e.g. Fall 2026"
+                className="rounded-lg border border-border bg-surface px-sm py-sm font-body-md text-body-md outline-none focus:border-primary"
               />
               <ChipToggle
                 options={TERM_LENGTHS}
-                selected={mc.target_length.preferred}
-                onChange={(v) => setCrit("target_length", { preferred: v })}
+                selected={mc.term_lengths}
+                onChange={(v) => setMc((prev) => ({ ...prev, term_lengths: v }))}
               />
-              {(mc.target_term.preferred.length > 0 || mc.target_length.preferred.length > 0) && (
-                <ImportancePicker
-                  value={mc.target_term.weight}
-                  onChange={(w) => {
-                    setCrit("target_term", { weight: w });
-                    setCrit("target_length", { weight: w });
-                  }}
-                />
-              )}
             </>
           )}
 
           {step === 4 && (
             <>
-              <h1 className="font-headline-md text-headline-md text-on-surface">Anything else the scorer should know?</h1>
+              <h1 className="font-headline-md text-headline-md text-on-surface">In your own words — what matters most?</h1>
               <p className="font-body-md text-body-md text-text-secondary">
-                Dealbreakers, interests, context — free-form, weighed alongside everything above.
+                The scorer reads this literally: "non-negotiable" dominates, "would be nice" nudges, "never" rules
+                postings out. This is where dealbreakers and emphasis live.
               </p>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={5}
-                placeholder="e.g. Prefer frontend roles at mid-size startups. Never pure QA. Strong interest in teams that mentor co-ops."
+                placeholder="e.g. Remote is non-negotiable. I'd love a startup but it's not a dealbreaker. Never pure QA."
                 className="rounded-lg border border-border bg-surface px-sm py-sm font-body-md text-body-md outline-none focus:border-primary"
               />
             </>

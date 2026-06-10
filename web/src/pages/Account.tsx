@@ -239,8 +239,8 @@ export default function Account() {
   const name = email ? email.split("@")[0] : "";
   const pj = profile?.profile_json;
   const cvReady = !!(pj && (pj.summary || pj.experience.length || profile?.cv_text));
-  const topLocation = profile?.match_criteria.preferred_locations.preferred[0];
-  const targetTerm = profile?.match_criteria.target_term.preferred[0];
+  const topLocation = profile?.match_criteria.locations?.[0];
+  const targetTerm = profile?.match_criteria.target_term;
 
   // Onboarding (ADR 0038): a scan proves the extension is installed; before
   // that, fall back to the manual ack. The card retires once fully set up.

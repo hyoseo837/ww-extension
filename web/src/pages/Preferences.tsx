@@ -1,32 +1,26 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiGet, apiPut } from "../api";
 import { emptyMatchCriteria } from "../types";
-import type { MatchCriteria, Profile, Weight, WeightedCriterion, WorkAuth } from "../types";
+import type { MatchCriteria, Profile, WorkAuth } from "../types";
+
+// Criteria v2 editor (v8.5, ADR 0041): concrete facts + one "in your own
+// words" box. No weights, no tiers — the scorer infers importance from how
+// the user phrases their notes.
 
 const CARD = "rounded-xl border border-border bg-surface p-lg shadow-[0_2px_8px_rgba(41,38,31,0.04)]";
+const INPUT = "rounded-lg border border-border bg-surface px-sm py-sm font-body-md text-body-md outline-none focus:border-primary";
 
-// Plain-language vocabulary over the stored schema (ADR 0040): weight reads
-// as importance; the avoid/excluded tiers read as "Would rather not"/"Never".
-// The stored `acceptable` tier has no UI — carried through untouched.
-const WEIGHTS: { value: Weight; label: string }[] = [
-  { value: "nice-to-have", label: "Nice to have" },
-  { value: "strong", label: "Important" },
-  { value: "must", label: "Must-have" },
-];
-const FINE_TUNE: { tier: "avoid" | "excluded"; label: string }[] = [
-  { tier: "avoid", label: "Would rather not — scored lower" },
-  { tier: "excluded", label: "Never — ruled out" },
+const WORK_AUTH: { value: string; label: string }[] = [
+  { value: "", label: "Unspecified" },
+  { value: "citizen", label: "Canadian citizen" },
+  { value: "pr", label: "Permanent resident" },
+  { value: "international", label: "International (study permit)" },
+  { value: "other", label: "Other" },
 ];
 
-type WeightedKey = "preferred_locations" | "work_modes" | "target_term" | "target_length" | "languages";
-const CRITERIA: { key: WeightedKey; label: string; placeholder: string; presets?: string[] }[] = [
-  { key: "preferred_locations", label: "Locations", placeholder: "e.g. Toronto" },
-  { key: "work_modes", label: "Work mode", placeholder: "", presets: ["Remote", "Hybrid", "On-site"] },
-  { key: "target_term", label: "Target term", placeholder: "e.g. Fall 2026" },
-  { key: "target_length", label: "Term length", placeholder: "", presets: ["4-month", "8-month"] },
-  { key: "languages", label: "Spoken languages", placeholder: "e.g. English" },
-];
+const WORK_MODES = ["Remote", "Hybrid", "On-site"];
+const TERM_LENGTHS = ["4-month", "8-month"];
 
 const CHIP_ON = "rounded-full bg-primary px-md py-xs font-label-md text-label-md text-on-primary";
 const CHIP_OFF = "rounded-full border border-border bg-surface px-md py-xs font-label-md text-label-md text-text-secondary transition-colors hover:border-primary hover:text-primary";
@@ -49,23 +43,11 @@ function ChipToggle({ options, selected, onChange }: {
   );
 }
 
-const WORK_AUTH: { value: string; label: string }[] = [
-  { value: "", label: "Unspecified" },
-  { value: "citizen", label: "Canadian citizen" },
-  { value: "pr", label: "Permanent resident" },
-  { value: "international", label: "International (study permit)" },
-  { value: "other", label: "Other" },
-];
-
-const INPUT = "rounded-lg border border-border bg-surface px-sm py-base font-label-md text-label-md";
-
-// Input row (with an optional `trailing` slot, used for the weight select) on
-// top; the added-keyword chips wrap onto their own line below it.
-function TagInput({ values, onChange, placeholder, trailing }: {
+// Type a value, Enter/comma/blur adds a removable chip.
+function TagInput({ values, onChange, placeholder }: {
   values: string[];
   onChange: (v: string[]) => void;
   placeholder: string;
-  trailing?: ReactNode;
 }) {
   const [draft, setDraft] = useState("");
   const commit = () => {
@@ -75,22 +57,19 @@ function TagInput({ values, onChange, placeholder, trailing }: {
   };
   return (
     <div className="flex flex-col gap-xs">
-      <div className="flex items-center gap-sm">
-        <input
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === ",") {
-              e.preventDefault();
-              commit();
-            }
-          }}
-          onBlur={commit}
-          placeholder={placeholder}
-          className="min-w-0 flex-grow rounded-lg border border-border bg-surface px-sm py-xs font-body-md text-body-md outline-none focus:border-primary"
-        />
-        {trailing}
-      </div>
+      <input
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === ",") {
+            e.preventDefault();
+            commit();
+          }
+        }}
+        onBlur={commit}
+        placeholder={placeholder}
+        className={INPUT}
+      />
       {values.length > 0 && (
         <div className="flex flex-wrap gap-xs">
           {values.map((v) => (
@@ -107,56 +86,11 @@ function TagInput({ values, onChange, placeholder, trailing }: {
   );
 }
 
-function CriterionEditor({ label, placeholder, presets, value, onChange }: {
-  label: string;
-  placeholder: string;
-  presets?: string[];
-  value: WeightedCriterion;
-  onChange: (c: WeightedCriterion) => void;
-}) {
-  const hasMore = value.avoid.length > 0 || value.excluded.length > 0;
-  const [more, setMore] = useState(hasMore);
-  const set = (patch: Partial<WeightedCriterion>) => onChange({ ...value, ...patch });
-
-  const weightSelect = (
-    <select
-      value={value.weight}
-      onChange={(e) => set({ weight: e.target.value as Weight })}
-      className={`${INPUT} shrink-0`}
-      aria-label={`${label} importance`}
-    >
-      {WEIGHTS.map((w) => (
-        <option key={w.value} value={w.value}>{w.label}</option>
-      ))}
-    </select>
-  );
-
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-sm border-b border-border py-md last:border-0">
-      <div className="flex items-center justify-between">
-        <span className="font-label-md text-label-md text-on-surface">{label}</span>
-        <button type="button" onClick={() => setMore((m) => !m)} className="font-label-sm text-label-sm text-text-secondary hover:text-primary">
-          {more ? "Hide fine-tune" : "Fine-tune (avoid / never)"}
-        </button>
-      </div>
-      {presets ? (
-        <div className="flex items-center justify-between gap-sm">
-          <ChipToggle options={presets} selected={value.preferred} onChange={(v) => set({ preferred: v })} />
-          {weightSelect}
-        </div>
-      ) : (
-        <TagInput values={value.preferred} onChange={(v) => set({ preferred: v })} placeholder={placeholder} trailing={weightSelect} />
-      )}
-      {more && (
-        <>
-          {FINE_TUNE.map(({ tier, label: hint }) => (
-            <div key={tier}>
-              <label className="mb-base block font-label-sm text-label-sm text-text-muted">{hint}</label>
-              <TagInput values={value[tier]} onChange={(v) => set({ [tier]: v } as Partial<WeightedCriterion>)} placeholder="Add and press Enter" />
-            </div>
-          ))}
-        </>
-      )}
+    <div className="flex flex-col gap-base border-b border-border py-md last:border-0">
+      <span className="font-label-md text-label-md text-on-surface">{label}</span>
+      {children}
     </div>
   );
 }
@@ -177,8 +111,6 @@ export default function Preferences() {
       })
       .catch((e) => setStatus(`Could not load preferences: ${e}`));
   }, []);
-
-  const setCriterion = (key: WeightedKey, c: WeightedCriterion) => setMc((prev) => ({ ...prev, [key]: c }));
 
   async function save() {
     setSaving(true);
@@ -206,7 +138,7 @@ export default function Preferences() {
       <header className="flex flex-col gap-xs">
         <h1 className="font-display-lg text-display-lg text-on-surface">Match preferences</h1>
         <p className="font-body-lg text-body-lg text-text-secondary">
-          Tell the AI what you're looking for in a co-op so it scores postings against your criteria.
+          The facts of what you're looking for, plus what matters most in your own words.
         </p>
         <Link to="/preferences/setup" className="self-start font-label-sm text-label-sm text-primary transition-colors hover:text-accent-hover">
           Re-run the setup wizard →
@@ -231,33 +163,44 @@ export default function Preferences() {
       </section>
 
       <section className={CARD}>
-        <h2 className="mb-xs font-headline-md text-headline-md text-on-surface">Preferences</h2>
+        <h2 className="mb-xs font-headline-md text-headline-md text-on-surface">What you're looking for</h2>
         <p className="mb-sm font-label-sm text-label-sm text-text-muted">
-          Add what you're looking for and say how much it matters. "Fine-tune" lets you list things to score lower or rule out entirely.
+          Just the facts — say how much each one matters in the box below.
         </p>
-        {CRITERIA.map((f) => (
-          <CriterionEditor
-            key={f.key}
-            label={f.label}
-            placeholder={f.placeholder}
-            presets={f.presets}
-            value={mc[f.key]}
-            onChange={(c) => setCriterion(f.key, c)}
+        <Field label="Locations">
+          <TagInput values={mc.locations} onChange={(v) => setMc((p) => ({ ...p, locations: v }))} placeholder="e.g. Toronto — press Enter to add" />
+        </Field>
+        <Field label="Work mode">
+          <ChipToggle options={WORK_MODES} selected={mc.work_modes} onChange={(v) => setMc((p) => ({ ...p, work_modes: v }))} />
+        </Field>
+        <Field label="Target term">
+          <input
+            value={mc.target_term}
+            onChange={(e) => setMc((p) => ({ ...p, target_term: e.target.value }))}
+            placeholder="e.g. Fall 2026"
+            className={`${INPUT} max-w-[240px]`}
           />
-        ))}
+        </Field>
+        <Field label="Term length">
+          <ChipToggle options={TERM_LENGTHS} selected={mc.term_lengths} onChange={(v) => setMc((p) => ({ ...p, term_lengths: v }))} />
+        </Field>
+        <Field label="Spoken languages">
+          <TagInput values={mc.languages} onChange={(v) => setMc((p) => ({ ...p, languages: v }))} placeholder="e.g. English — press Enter to add" />
+        </Field>
       </section>
 
       <section className={`${CARD} flex flex-col gap-sm`}>
-        <h2 className="font-headline-md text-headline-md text-on-surface">Additional notes</h2>
+        <h2 className="font-headline-md text-headline-md text-on-surface">In your own words, what matters most?</h2>
         <p className="font-label-sm text-label-sm text-text-muted">
-          Free-form context the scorer weighs alongside the structured criteria above.
+          The scorer reads this literally — "remote is non-negotiable" makes remote dominate, "a startup would be
+          nice" is a small nudge, and "never pure QA" rules postings out.
         </p>
         <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          rows={5}
-          placeholder="e.g. Prefer frontend roles at mid-size startups; strong interest in teams that mentor co-ops."
-          className="rounded-lg border border-border bg-surface px-sm py-sm font-body-md text-body-md"
+          rows={6}
+          placeholder="e.g. Remote is non-negotiable. I'd love a startup but it's not a dealbreaker. Never pure QA."
+          className={INPUT}
         />
       </section>
 
