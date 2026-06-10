@@ -7,7 +7,7 @@ import HistoryList, { type Entry } from "../HistoryList";
 import Icon from "../Icon";
 import { creditUnit, fmtBalance } from "../format";
 import { CHROME_STORE_URL, WW_JOBS_URL } from "../links";
-import { setupDone } from "../types";
+import { coerceCriteria, setupDone } from "../types";
 import type { Profile } from "../types";
 
 const CARD = "rounded-xl border border-border bg-surface p-lg shadow-[0_2px_8px_rgba(0,0,0,0.02)]";
@@ -200,7 +200,9 @@ export default function Account() {
       .then((d) => setRecent(d.entries))
       .catch(() => setRecentError(true))
       .finally(() => setLoadingRecent(false));
-    apiGet<Profile>("/profile").then(setProfile).catch(() => {});
+    apiGet<Profile>("/profile")
+      .then((p) => setProfile({ ...p, match_criteria: coerceCriteria(p.match_criteria) }))
+      .catch(() => {});
   }, []);
 
   async function downloadData() {

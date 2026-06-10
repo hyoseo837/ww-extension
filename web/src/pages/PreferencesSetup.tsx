@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiGet, apiPut } from "../api";
 import Icon from "../Icon";
-import { emptyMatchCriteria } from "../types";
+import { coerceCriteria, emptyMatchCriteria } from "../types";
 import type { MatchCriteria, Profile, WorkAuth } from "../types";
 
 // First-run preferences wizard (v8.4, ADR 0040; criteria v2 per ADR 0041).
@@ -100,7 +100,7 @@ export default function PreferencesSetup() {
   useEffect(() => {
     apiGet<Profile>("/profile")
       .then((p) => {
-        setMc({ ...emptyMatchCriteria(), ...p.match_criteria });
+        setMc(coerceCriteria(p.match_criteria));
         setNotes(p.preferences || "");
       })
       .catch(() => {}) // empty defaults are a fine starting point

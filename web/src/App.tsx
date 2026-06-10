@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { apiGet } from "./api";
-import { setupDone } from "./types";
+import { coerceCriteria, setupDone } from "./types";
 import type { Profile as ProfileData } from "./types"; // page component Profile is imported below
 import { useSession } from "./useSession";
 import Layout from "./Layout";
@@ -25,7 +25,7 @@ function SetupGate({ children }: { children: ReactNode }) {
   const [done, setDone] = useState<boolean | null>(null);
   useEffect(() => {
     apiGet<ProfileData>("/profile")
-      .then((p) => setDone(setupDone(p.match_criteria)))
+      .then((p) => setDone(setupDone(coerceCriteria(p.match_criteria))))
       .catch(() => setDone(true));
   }, []);
   if (done === null) {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiGet, apiPut } from "../api";
-import { emptyMatchCriteria } from "../types";
+import { coerceCriteria, emptyMatchCriteria } from "../types";
 import type { MatchCriteria, Profile, WorkAuth } from "../types";
 
 // Criteria v2 editor (v8.5, ADR 0041): concrete facts + one "in your own
@@ -105,7 +105,7 @@ export default function Preferences() {
   useEffect(() => {
     apiGet<Profile>("/profile")
       .then((p) => {
-        setMc({ ...emptyMatchCriteria(), ...p.match_criteria });
+        setMc(coerceCriteria(p.match_criteria));
         setNotes(p.preferences || "");
         setLoaded(true);
       })

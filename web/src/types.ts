@@ -56,6 +56,28 @@ export const setupDone = (mc: Partial<MatchCriteria> | undefined): boolean => {
     .some((k) => (mc[k]?.length ?? 0) > 0);
 };
 
+// v1→v2 criteria coercion, mirroring server/app/profile/db.py (ADR 0041).
+// Kept web-side too so the new UI works against a backend that hasn't been
+// redeployed yet (deploy skew) — a v1 row's `preferred` values become facts.
+type V1Criterion = { preferred?: string[] };
+export const coerceCriteria = (mc: unknown): MatchCriteria => {
+  const m = (mc ?? {}) as Record<string, unknown>;
+  const isV1 = ["preferred_locations", "work_modes", "target_term", "target_length", "languages"]
+    .some((k) => typeof m[k] === "object" && m[k] !== null && !Array.isArray(m[k]));
+  if (!isV1) return { ...emptyMatchCriteria(), ...(m as Partial<MatchCriteria>) };
+  const pref = (k: string): string[] => ((m[k] as V1Criterion | undefined)?.preferred ?? []);
+  return {
+    ...emptyMatchCriteria(),
+    work_authorization: (m.work_authorization as WorkAuth) ?? null,
+    wizard_completed_at: (m.wizard_completed_at as string | null) ?? null,
+    locations: pref("preferred_locations"),
+    work_modes: pref("work_modes"),
+    target_term: pref("target_term")[0] ?? "",
+    term_lengths: pref("target_length"),
+    languages: pref("languages"),
+  };
+};
+
 export const emptyMatchCriteria = (): MatchCriteria => ({
   work_authorization: null,
   wizard_completed_at: null,
