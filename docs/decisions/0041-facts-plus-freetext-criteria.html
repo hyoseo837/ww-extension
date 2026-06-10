@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-06-10" />
+    <title>ADR 0041 — Match criteria become facts + free text; weights and tiers retired</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>ADR 0041 — Match criteria become facts + free text; weights and tiers retired</h1>
+
+    <h2>Context</h2>
+    <p>
+      The weighted-criteria schema (ADR 0013): five categories, each with a
+      <code>must / strong / nice-to-have</code> weight and four value tiers.
+      v8.4 simplified its vocabulary (ADR 0040) but kept the structure, and
+      the owner rejected it (2026-06-10): rating <em>categories</em> by
+      importance is an abstract question users can't naturally answer.
+      Choosing among bucket-based, ranked, and facts-based models, the owner
+      picked <strong>facts + free text</strong>.
+    </p>
+
+    <h2>Decision</h2>
+    <ul>
+      <li><strong><code>match_criteria</code> v2 — concrete facts only, no
+        importance controls:</strong>
+        <code>work_authorization</code>, <code>locations[]</code>,
+        <code>work_modes[]</code>, <code>target_term</code> (single string),
+        <code>term_lengths[]</code>, <code>languages[]</code>,
+        <code>wizard_completed_at</code>. Same jsonb column; the new keys
+        don't collide with v1's.</li>
+      <li><strong>Importance lives in the user's own words.</strong> The
+        existing <code>preferences</code> notes column is re-titled
+        <em>"In your own words, what matters most?"</em> and becomes the sole
+        carrier of emphasis, dealbreakers, and exclusions. The scoring prompt
+        is rewritten to infer weight from phrasing ("non-negotiable"
+        dominates; "would be nice" nudges) instead of from
+        <code>[must]</code> annotations and a "never" tier.</li>
+      <li><strong>Legacy v1 rows are converted at read time</strong>
+        (server-side, where the profile row is loaded): each category's
+        <code>preferred</code> values become the v2 fact list. Weights and
+        the acceptable/avoid/excluded tiers are dropped — accepted loss; the
+        user base is days old and tier data is effectively unset.</li>
+      <li>ADR 0013's schema and ADR 0040's tier-vocabulary decision are
+        <strong>superseded</strong>; ADR 0040's wizard, gate, and
+        <code>wizard_completed_at</code> decisions stand.</li>
+    </ul>
+
+    <h2>Consequences</h2>
+    <ul>
+      <li>The wizard and editor lose every importance/tier control — pure
+        facts plus one text box. Nothing left to misunderstand.</li>
+      <li>Scoring explainability shifts to the LLM: how heavily something
+        counts now depends on Gemini reading phrasing. The breakdown points
+        in the response remain the audit trail. If inference proves
+        unreliable, the structured-importance idea returns via a new ADR.</li>
+      <li>A hard-exclusion ("never") now reaches the scorer only through
+        prose; the prompt's <code>excluded</code> gate keys on
+        work-authorization conflicts and explicit user statements.</li>
+      <li>Read-time conversion means no SQL migration; v1 jsonb stays on disk
+        until the user's next save overwrites it.</li>
+    </ul>
+
+    <h2>Alternatives considered</h2>
+    <ul>
+      <li><strong>Three buckets (must / nice / never), item-level</strong> —
+        recommended by the agent for keeping hard gates structured; owner
+        preferred fewer controls and more trust in the LLM.</li>
+      <li><strong>Ranked category priorities</strong> — category-level
+        abstraction again; rejected.</li>
+      <li><strong>Keep v1 with better labels</strong> — the v8.4 attempt;
+        rejected by the owner.</li>
+    </ul>
+  </body>
+</html>

@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v8.5.0" />
+    <meta name="status" content="in-progress" />
+    <meta name="last-updated" content="2026-06-10" />
+    <title>v8.5.0 — Criteria v2: facts + free text</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>v8.5.0 — Criteria v2: facts + free text</h1>
+
+    <h2>Goal</h2>
+    <p>
+      Implement <a href="../decisions/0041-facts-plus-freetext-criteria.html">ADR
+      0041</a>: <code>match_criteria</code> v2 holds concrete facts only
+      (work auth, locations, work modes, target term, term lengths,
+      languages); all importance/dealbreaker signal moves to the
+      <code>preferences</code> text ("In your own words, what matters
+      most?"), which the scoring prompt reads with importance inferred from
+      phrasing. Weights and tiers disappear from schema, prompt, wizard, and
+      editor. Legacy v1 rows convert at read time server-side.
+    </p>
+
+    <h2>Files</h2>
+    <ul>
+      <li><code>server/app/profile/routes.py</code> — <code>MatchCriteria</code>
+        v2 (replaces <code>WeightedCriterion</code> fields).</li>
+      <li><code>server/app/profile/db.py</code> — read-time v1→v2 conversion
+        where the row is loaded (preferred values → fact lists), so every
+        consumer (profile API, scorer) sees v2.</li>
+      <li><code>server/app/scoring/gemini.py</code> — criteria serializer
+        emits fact lines; tier/weight formatting removed.</li>
+      <li><code>server/app/scoring/prompts.py</code> — weigh notes by
+        phrasing; <code>excluded</code> gate = work-auth conflict or explicit
+        user statement (no tier reference).</li>
+      <li><code>server/pyproject.toml</code> — minor bump (behavior change).</li>
+      <li><code>web/src/types.ts</code> — v2 types, <code>setupDone</code> on
+        facts.</li>
+      <li><code>web/src/pages/PreferencesSetup.tsx</code> — wizard steps lose
+        importance pickers; final step becomes "In your own words".</li>
+      <li><code>web/src/pages/Preferences.tsx</code> — facts editor + the one
+        text box; fine-tune tiers and importance selects removed.</li>
+      <li><code>web/src/pages/Account.tsx</code> — snapshot rows read v2
+        keys.</li>
+    </ul>
+
+    <h2>Slices</h2>
+    <ul>
+      <li><code>v8.5.0</code> — docs: this spec + ADR 0041.</li>
+      <li><code>v8.5.1</code> — server: schema v2 + conversion + prompt.</li>
+      <li><code>v8.5.2</code> — web: wizard + editor + types on v2.</li>
+    </ul>
+
+    <h2>Verify</h2>
+    <ul>
+      <li>GET /profile on a row saved under v1 returns v2 facts (preferred
+        values carried over); saving from the new UI round-trips.</li>
+      <li>A scan prompt (log/inspect) shows fact lines + notes, no
+        <code>[must]</code>/tier text anywhere.</li>
+      <li>Wizard and editor render no importance/tier controls; gate and
+        checklist still derive correctly for old, new, and empty
+        profiles.</li>
+      <li>tsc + web build clean; server imports clean.</li>
+    </ul>
+
+    <h2>Notes</h2>
+    <ul>
+      <li>Conversion is lossy by decision (weights/tiers dropped) — ADR 0041
+        consequences.</li>
+      <li>The scorer behavior change ships to production only when
+        <code>dev</code> merges to <code>master</code> (ADR 0039); no DB
+        migration involved.</li>
+    </ul>
+  </body>
+</html>
