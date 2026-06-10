@@ -81,8 +81,9 @@ export default function GettingStarted() {
         >
           Scoring compares each posting against <em>you</em>. On the <Link to="/profile">Profile</Link> page, upload your
           WaterlooWorks application package (PDF) and we extract a structured profile automatically — review and edit it.
-          Then set your match criteria on <Link to="/preferences">Preferences</Link> (preferred locations, work modes,
-          target term, languages, and anything to avoid or exclude) so scores reflect what you actually want.
+          Your match preferences (where, how, and when you want to work) are captured by the short{" "}
+          <Link to="/preferences/setup">setup wizard</Link> on first sign-in and editable any time on{" "}
+          <Link to="/preferences">Preferences</Link>, so scores reflect what you actually want.
         </Step>
 
         <Step

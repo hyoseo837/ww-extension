@@ -1,4 +1,8 @@
-import { Route, Routes } from "react-router-dom";
+import { useEffect, useState, type ReactNode } from "react";
+import { Navigate, Route, Routes } from "react-router-dom";
+import { apiGet } from "./api";
+import { setupDone } from "./types";
+import type { Profile as ProfileData } from "./types"; // page component Profile is imported below
 import { useSession } from "./useSession";
 import Layout from "./Layout";
 import Landing from "./pages/Landing";
@@ -13,6 +17,27 @@ import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 import Privacy from "./pages/legal/Privacy";
 import Terms from "./pages/legal/Terms";
+
+// Setup gate (ADR 0040): shell routes redirect to the wizard until match
+// preferences exist. Fails open on API errors — the gate funnels new users,
+// it must never lock the app.
+function SetupGate({ children }: { children: ReactNode }) {
+  const [done, setDone] = useState<boolean | null>(null);
+  useEffect(() => {
+    apiGet<ProfileData>("/profile")
+      .then((p) => setDone(setupDone(p.match_criteria)))
+      .catch(() => setDone(true));
+  }, []);
+  if (done === null) {
+    return (
+      <div className="center">
+        <p className="muted">Loading…</p>
+      </div>
+    );
+  }
+  if (!done) return <Navigate to="/preferences/setup" replace />;
+  return <>{children}</>;
+}
 
 export default function App() {
   const { session, loading } = useSession();
@@ -48,7 +73,7 @@ export default function App() {
       {/* Legal pages render outside the app shell — identical to logged-out. */}
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/terms" element={<Terms />} />
-      <Route element={<Layout email={session.user.email ?? ""} />}>
+      <Route element={<SetupGate><Layout email={session.user.email ?? ""} /></SetupGate>}>
         <Route path="/account" element={<Account />} />
         <Route path="/getting-started" element={<GettingStarted />} />
         <Route path="/billing" element={<Billing />} />

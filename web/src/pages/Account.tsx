@@ -7,6 +7,7 @@ import HistoryList, { type Entry } from "../HistoryList";
 import Icon from "../Icon";
 import { creditUnit, fmtBalance } from "../format";
 import { CHROME_STORE_URL, WW_JOBS_URL } from "../links";
+import { setupDone } from "../types";
 import type { Profile } from "../types";
 
 const CARD = "rounded-xl border border-border bg-surface p-lg shadow-[0_2px_8px_rgba(0,0,0,0.02)]";
@@ -60,11 +61,13 @@ function StepRow({ n, done, label, to, href }: { n: number; done: boolean; label
 function GettingStarted({
   extDone,
   cvReady,
+  prefsReady,
   hasScanned,
   onAckInstall,
 }: {
   extDone: boolean;
   cvReady: boolean;
+  prefsReady: boolean;
   hasScanned: boolean;
   onAckInstall: () => void;
 }) {
@@ -77,7 +80,8 @@ function GettingStarted({
       <div className="flex-1">
         <StepRow n={1} done={extDone} label="Install the extension" href={CHROME_STORE_URL} />
         <StepRow n={2} done={cvReady} label="Set up your profile" to="/profile" />
-        <StepRow n={3} done={hasScanned} label="Run your first scan" href={WW_JOBS_URL} />
+        <StepRow n={3} done={prefsReady} label="Set your match preferences" to="/preferences/setup" />
+        <StepRow n={4} done={hasScanned} label="Run your first scan" href={WW_JOBS_URL} />
       </div>
       <div className="mt-md flex items-center justify-between">
         <Link to="/getting-started" className="font-label-sm text-label-sm text-primary transition-colors hover:text-accent-hover">
@@ -234,8 +238,9 @@ export default function Account() {
   // that, fall back to the manual ack. The card retires once fully set up.
   const hasScanned = recent.some((e) => e.kind === "scan");
   const extDone = hasScanned || extAck;
+  const prefsReady = setupDone(profile?.match_criteria);
   const onboardingLoaded = !loadingRecent && profile !== null;
-  const showOnboarding = onboardingLoaded && !(cvReady && hasScanned);
+  const showOnboarding = onboardingLoaded && !(cvReady && prefsReady && hasScanned);
 
   function ackInstall() {
     localStorage.setItem(EXT_ACK_KEY, "1");
@@ -321,7 +326,7 @@ export default function Account() {
         {/* Getting started — sits under Profile snapshot, beside Recent
             activity, at the same 1-column width (v8.1.2). */}
         {showOnboarding && (
-          <GettingStarted extDone={extDone} cvReady={cvReady} hasScanned={hasScanned} onAckInstall={ackInstall} />
+          <GettingStarted extDone={extDone} cvReady={cvReady} prefsReady={prefsReady} hasScanned={hasScanned} onAckInstall={ackInstall} />
         )}
       </div>
 
