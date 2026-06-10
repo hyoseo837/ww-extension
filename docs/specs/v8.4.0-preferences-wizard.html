@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v8.4.0" />
+    <meta name="status" content="in-progress" />
+    <meta name="last-updated" content="2026-06-10" />
+    <title>v8.4.0 — Preferences redesign: required setup wizard + simplified editor</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>v8.4.0 — Preferences redesign: required setup wizard + simplified editor</h1>
+
+    <h2>Goal</h2>
+    <p>
+      Replace the hard-to-understand Match preferences UX with the two-surface
+      model of <a href="../decisions/0040-wizard-first-preferences.html">ADR
+      0040</a>: a required plain-language <strong>setup wizard</strong> for
+      first-run capture, and a <strong>simplified single-page editor</strong>
+      for later changes. Scope confirmed by the owner 2026-06-10 ("simplified
+      single page, with guided wizard; make the wizard essential to use this
+      service"). The <code>match_criteria</code> jsonb schema is unchanged;
+      scorer and extension untouched.
+    </p>
+
+    <h2>Wizard — <code>/preferences/setup</code></h2>
+    <p>Renders outside the app shell (focused, like <code>/admin</code>).
+      One question per step, Back/Next, progress indicator. Steps:</p>
+    <ol>
+      <li><strong>Work authorization</strong> — required radio (citizen / PR /
+        international / other). The only non-skippable step; it is an
+        eligibility gate for scoring.</li>
+      <li><strong>Locations</strong> — chip input ("Where do you want to
+        work?") + importance (Nice to have / Important / Must-have →
+        <code>weight</code>). Skippable.</li>
+      <li><strong>Work mode</strong> — preset chips (Remote / Hybrid /
+        On-site) + importance. Skippable.</li>
+      <li><strong>Timing</strong> — target term (text, e.g. "Fall 2026") and
+        term length (preset chips 4-month / 8-month) + one shared importance.
+        Skippable.</li>
+      <li><strong>Anything else</strong> — free textarea for dealbreakers and
+        context, saved to the existing <code>preferences</code> notes field.
+        Skippable.</li>
+    </ol>
+    <p>
+      Finish saves via <code>PUT /profile</code> with
+      <code>wizard_completed_at = now</code> inside
+      <code>match_criteria</code>, then navigates to <code>/account</code>.
+      Languages and the avoid/never tiers are deliberately not in the wizard —
+      they live on the editor page.
+    </p>
+
+    <h2>Simplified editor — <code>/preferences</code> (rebuild)</h2>
+    <ul>
+      <li>Same sections, plain vocabulary: importance select labeled
+        <em>Nice to have / Important / Must-have</em>; tiers shown as
+        <em>Ideal</em> / <em>Would rather not</em> / <em>Never</em>
+        (<code>acceptable</code> dropped from UI, preserved in data).</li>
+      <li>Work mode uses preset chips (Remote / Hybrid / On-site) instead of
+        free text; other criteria keep the tag input.</li>
+      <li>"Would rather not" / "Never" stay collapsed behind a clearly named
+        "Fine-tune (avoid / never)" toggle per criterion.</li>
+      <li>Header links "Re-run setup wizard" → <code>/preferences/setup</code>.</li>
+      <li>Eligibility select, notes textarea, and the fixed save bar stay.</li>
+    </ul>
+
+    <h2>Gate + onboarding integration</h2>
+    <ul>
+      <li><strong>Gate:</strong> the signed-in app shell fetches the profile
+        once; if setup is incomplete (<code>wizard_completed_at</code> unset
+        <em>and</em> no work authorization <em>and</em> no preferred values
+        anywhere), every shell route redirects to
+        <code>/preferences/setup</code>. Legal pages and <code>/admin</code>
+        stay reachable.</li>
+      <li><strong>Checklist:</strong> the dashboard getting-started card
+        (v8.1.2) gains step "Set your match preferences" between profile and
+        first scan (4 steps total); done = the same derivation as the gate.
+        The card's retire condition includes it.</li>
+      <li><strong>/getting-started</strong> page mentions preferences setup in
+        its walkthrough.</li>
+    </ul>
+
+    <h2>Files</h2>
+    <ul>
+      <li><code>server/app/profile/routes.py</code> — add
+        <code>wizard_completed_at</code> to <code>MatchCriteria</code>;
+        <code>server/pyproject.toml</code> bump.</li>
+      <li><code>web/src/types.ts</code> — mirror the field; setup-done helper.</li>
+      <li><code>web/src/pages/PreferencesSetup.tsx</code> — new wizard.</li>
+      <li><code>web/src/pages/Preferences.tsx</code> — simplified editor.</li>
+      <li><code>web/src/App.tsx</code> — route + gate.</li>
+      <li><code>web/src/pages/Account.tsx</code>,
+        <code>web/src/pages/GettingStarted.tsx</code> — checklist step.</li>
+    </ul>
+
+    <h2>Slices</h2>
+    <ul>
+      <li><code>v8.4.0</code> — docs: this spec + ADR 0040.</li>
+      <li><code>v8.4.1</code> — server: accept
+        <code>wizard_completed_at</code> (+ pyproject bump).</li>
+      <li><code>v8.4.2</code> — web: setup wizard page + route + types.</li>
+      <li><code>v8.4.3</code> — web: simplified preferences editor.</li>
+      <li><code>v8.4.4</code> — web: shell gate + checklist step +
+        getting-started mention.</li>
+    </ul>
+
+    <h2>Verify</h2>
+    <ul>
+      <li>New account (or account with empty criteria): signing in lands on
+        the wizard; completing it lands on <code>/account</code> with the
+        preferences checklist step checked; criteria visible on
+        <code>/preferences</code>.</li>
+      <li>Existing account with criteria: no redirect, page works as editor;
+        values round-trip through <code>PUT /profile</code> unchanged
+        (including untouched <code>acceptable</code> data).</li>
+      <li><code>GET /profile</code> returns <code>wizard_completed_at</code>
+        after wizard completion (field survives Pydantic).</li>
+      <li>Web build + tsc clean.</li>
+    </ul>
+
+    <h2>Notes</h2>
+    <ul>
+      <li>Freeform-dealbreakers land in <code>preferences</code> notes — the
+        scorer already weighs that field; no prompt change.</li>
+      <li>If web-side funnelling proves leaky (users scanning with empty
+        criteria anyway), the server-enforced gate option in ADR 0040 is the
+        follow-up.</li>
+    </ul>
+  </body>
+</html>

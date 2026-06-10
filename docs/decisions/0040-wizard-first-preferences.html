@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-06-10" />
+    <title>ADR 0040 — Wizard-first preference capture; jsonb completion flag; schema unchanged</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>ADR 0040 — Wizard-first preference capture; jsonb completion flag; schema unchanged</h1>
+
+    <h2>Context</h2>
+    <p>
+      The Match preferences page (<code>web/src/pages/Preferences.tsx</code>,
+      v6) exposes the raw scoring model: five identical criterion rows, an
+      unlabeled weight select (<code>must / strong / nice-to-have</code>), and
+      four value tiers (<code>preferred / acceptable / avoid / excluded</code>)
+      hidden behind "More options". The owner reports it is hard to understand
+      and dislikes the structure (whiteboard, 2026-06-06; scoped 2026-06-10).
+      Nothing routes a new user through it, so many users likely scan with
+      empty criteria and get generic scores — the product's quality depends on
+      this data existing.
+    </p>
+
+    <h2>Decision</h2>
+    <ul>
+      <li><strong>Two surfaces, one schema.</strong> A <em>guided wizard</em>
+        (<code>/preferences/setup</code>) is the first-run capture path —
+        plain-language, one question per step. The <em>preferences page</em>
+        (<code>/preferences</code>) is rebuilt as the simplified durable
+        editor. Both read/write the existing <code>match_criteria</code>
+        jsonb.</li>
+      <li><strong>The wizard is required.</strong> A signed-in user who has
+        not completed setup is redirected from the app shell to
+        <code>/preferences/setup</code> (web-side gate). Users with
+        pre-existing criteria (work authorization or any preferred values)
+        are grandfathered as set up. No server-side scan blocking — the
+        extension keeps working regardless; the gate funnels, it does not
+        brick.</li>
+      <li><strong>Completion is an explicit flag in the jsonb</strong>:
+        <code>match_criteria.wizard_completed_at</code> (ISO timestamp).
+        Because <code>PUT /profile</code> validates with Pydantic (which
+        drops unknown keys), the field is added to the server's
+        <code>MatchCriteria</code> model — a one-line change, no migration
+        (jsonb column absorbs it).</li>
+      <li><strong>The scoring schema does not change.</strong> Weights and
+        tiers keep their stored names; only the UI vocabulary is simplified —
+        weight reads as <em>Nice to have / Important / Must-have</em>, tiers
+        as <em>Ideal</em> (preferred), <em>Would rather not</em> (avoid),
+        <em>Never</em> (excluded). The <code>acceptable</code> tier is dropped
+        from the UI but preserved in data. Scorer prompt and extension are
+        untouched.</li>
+    </ul>
+
+    <h2>Consequences</h2>
+    <ul>
+      <li>Every new user produces non-empty criteria before their first scan,
+        which is the cheapest available scoring-quality win.</li>
+      <li>The gate lives web-side (consistent with ADR 0038's
+        derive-don't-store approach to onboarding state, except for the one
+        explicit completion flag). A user who never opens the web app after
+        sign-up is not forced through it — accepted; sign-up itself happens
+        on the web.</li>
+      <li>Wizard answers that don't fit the structured criteria (free-form
+        dealbreakers, context) land in the existing <code>preferences</code>
+        notes field, which the scorer already weighs.</li>
+      <li>Dropping <code>acceptable</code> from the UI means that tier can no
+        longer be edited, only carried; if it proves dead weight, removing it
+        from the schema is a future server-side cleanup.</li>
+    </ul>
+
+    <h2>Alternatives considered</h2>
+    <ul>
+      <li><strong>Freeform description + LLM extraction</strong> — lowest
+        friction, but adds an LLM call and a review/correct loop; owner chose
+        the deterministic wizard + page pair instead.</li>
+      <li><strong>Simplified page only (no wizard)</strong> — fixes
+        comprehension but not the empty-criteria problem; nothing would still
+        route new users through it.</li>
+      <li><strong>Server-enforced gate (refuse <code>POST /scan</code> without
+        criteria)</strong> — strongest guarantee, but breaks scanning for
+        existing users and couples scoring availability to web onboarding.
+        Rejected; can be revisited if web-side funnelling proves leaky.</li>
+      <li><strong>localStorage completion flag</strong> — no server change,
+        but per-browser: the wizard would re-trigger on every new device.
+        Rejected in favour of the jsonb field.</li>
+    </ul>
+  </body>
+</html>
