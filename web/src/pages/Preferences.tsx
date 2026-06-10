@@ -1,26 +1,53 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { Link } from "react-router-dom";
 import { apiGet, apiPut } from "../api";
 import { emptyMatchCriteria } from "../types";
-import type { MatchCriteria, Profile, Tier, Weight, WeightedCriterion, WorkAuth } from "../types";
+import type { MatchCriteria, Profile, Weight, WeightedCriterion, WorkAuth } from "../types";
 
 const CARD = "rounded-xl border border-border bg-surface p-lg shadow-[0_2px_8px_rgba(41,38,31,0.04)]";
 
-const WEIGHTS: Weight[] = ["nice-to-have", "strong", "must"];
-const TIER_HINTS: Record<Tier, string> = {
-  preferred: "Preferred — ideal",
-  acceptable: "Acceptable — no penalty",
-  avoid: "Avoid — penalized",
-  excluded: "Excluded — never",
-};
+// Plain-language vocabulary over the stored schema (ADR 0040): weight reads
+// as importance; the avoid/excluded tiers read as "Would rather not"/"Never".
+// The stored `acceptable` tier has no UI — carried through untouched.
+const WEIGHTS: { value: Weight; label: string }[] = [
+  { value: "nice-to-have", label: "Nice to have" },
+  { value: "strong", label: "Important" },
+  { value: "must", label: "Must-have" },
+];
+const FINE_TUNE: { tier: "avoid" | "excluded"; label: string }[] = [
+  { tier: "avoid", label: "Would rather not — scored lower" },
+  { tier: "excluded", label: "Never — ruled out" },
+];
 
 type WeightedKey = "preferred_locations" | "work_modes" | "target_term" | "target_length" | "languages";
-const CRITERIA: { key: WeightedKey; label: string; placeholder: string }[] = [
+const CRITERIA: { key: WeightedKey; label: string; placeholder: string; presets?: string[] }[] = [
   { key: "preferred_locations", label: "Locations", placeholder: "e.g. Toronto" },
-  { key: "work_modes", label: "Work mode", placeholder: "e.g. remote, hybrid" },
+  { key: "work_modes", label: "Work mode", placeholder: "", presets: ["Remote", "Hybrid", "On-site"] },
   { key: "target_term", label: "Target term", placeholder: "e.g. Fall 2026" },
-  { key: "target_length", label: "Term length", placeholder: "e.g. 4-month" },
+  { key: "target_length", label: "Term length", placeholder: "", presets: ["4-month", "8-month"] },
   { key: "languages", label: "Spoken languages", placeholder: "e.g. English" },
 ];
+
+const CHIP_ON = "rounded-full bg-primary px-md py-xs font-label-md text-label-md text-on-primary";
+const CHIP_OFF = "rounded-full border border-border bg-surface px-md py-xs font-label-md text-label-md text-text-secondary transition-colors hover:border-primary hover:text-primary";
+
+function ChipToggle({ options, selected, onChange }: {
+  options: string[];
+  selected: string[];
+  onChange: (v: string[]) => void;
+}) {
+  const toggle = (o: string) =>
+    onChange(selected.includes(o) ? selected.filter((x) => x !== o) : [...selected, o]);
+  return (
+    <div className="flex flex-wrap gap-sm">
+      {options.map((o) => (
+        <button key={o} type="button" onClick={() => toggle(o)} className={selected.includes(o) ? CHIP_ON : CHIP_OFF}>
+          {o}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 const WORK_AUTH: { value: string; label: string }[] = [
   { value: "", label: "Unspecified" },
@@ -80,27 +107,26 @@ function TagInput({ values, onChange, placeholder, trailing }: {
   );
 }
 
-function CriterionEditor({ label, placeholder, value, onChange }: {
+function CriterionEditor({ label, placeholder, presets, value, onChange }: {
   label: string;
   placeholder: string;
+  presets?: string[];
   value: WeightedCriterion;
   onChange: (c: WeightedCriterion) => void;
 }) {
-  const hasMore =
-    value.acceptable.length > 0 || value.avoid.length > 0 || value.excluded.length > 0;
+  const hasMore = value.avoid.length > 0 || value.excluded.length > 0;
   const [more, setMore] = useState(hasMore);
   const set = (patch: Partial<WeightedCriterion>) => onChange({ ...value, ...patch });
 
-  // Weight now lives on the input line (out of "More options"), always visible.
   const weightSelect = (
     <select
       value={value.weight}
       onChange={(e) => set({ weight: e.target.value as Weight })}
       className={`${INPUT} shrink-0`}
-      aria-label={`${label} weight`}
+      aria-label={`${label} importance`}
     >
       {WEIGHTS.map((w) => (
-        <option key={w} value={w}>{w}</option>
+        <option key={w.value} value={w.value}>{w.label}</option>
       ))}
     </select>
   );
@@ -110,19 +136,23 @@ function CriterionEditor({ label, placeholder, value, onChange }: {
       <div className="flex items-center justify-between">
         <span className="font-label-md text-label-md text-on-surface">{label}</span>
         <button type="button" onClick={() => setMore((m) => !m)} className="font-label-sm text-label-sm text-text-secondary hover:text-primary">
-          {more ? "Fewer options" : "More options"}
+          {more ? "Hide fine-tune" : "Fine-tune (avoid / never)"}
         </button>
       </div>
-      <div>
-        <label className="mb-base block font-label-sm text-label-sm text-text-muted">{TIER_HINTS.preferred}</label>
+      {presets ? (
+        <div className="flex items-center justify-between gap-sm">
+          <ChipToggle options={presets} selected={value.preferred} onChange={(v) => set({ preferred: v })} />
+          {weightSelect}
+        </div>
+      ) : (
         <TagInput values={value.preferred} onChange={(v) => set({ preferred: v })} placeholder={placeholder} trailing={weightSelect} />
-      </div>
+      )}
       {more && (
         <>
-          {(["acceptable", "avoid", "excluded"] as Tier[]).map((t) => (
-            <div key={t}>
-              <label className="mb-base block font-label-sm text-label-sm text-text-muted">{TIER_HINTS[t]}</label>
-              <TagInput values={value[t]} onChange={(v) => set({ [t]: v } as Partial<WeightedCriterion>)} placeholder="Add and press Enter" />
+          {FINE_TUNE.map(({ tier, label: hint }) => (
+            <div key={tier}>
+              <label className="mb-base block font-label-sm text-label-sm text-text-muted">{hint}</label>
+              <TagInput values={value[tier]} onChange={(v) => set({ [tier]: v } as Partial<WeightedCriterion>)} placeholder="Add and press Enter" />
             </div>
           ))}
         </>
@@ -178,6 +208,9 @@ export default function Preferences() {
         <p className="font-body-lg text-body-lg text-text-secondary">
           Tell the AI what you're looking for in a co-op so it scores postings against your criteria.
         </p>
+        <Link to="/preferences/setup" className="self-start font-label-sm text-label-sm text-primary transition-colors hover:text-accent-hover">
+          Re-run the setup wizard →
+        </Link>
       </header>
 
       <section className={`${CARD} flex flex-col gap-sm`}>
@@ -200,13 +233,14 @@ export default function Preferences() {
       <section className={CARD}>
         <h2 className="mb-xs font-headline-md text-headline-md text-on-surface">Preferences</h2>
         <p className="mb-sm font-label-sm text-label-sm text-text-muted">
-          Add values and set a weight per criterion. "More options" reveals the acceptable / avoid / excluded tiers.
+          Add what you're looking for and say how much it matters. "Fine-tune" lets you list things to score lower or rule out entirely.
         </p>
         {CRITERIA.map((f) => (
           <CriterionEditor
             key={f.key}
             label={f.label}
             placeholder={f.placeholder}
+            presets={f.presets}
             value={mc[f.key]}
             onChange={(c) => setCriterion(f.key, c)}
           />
