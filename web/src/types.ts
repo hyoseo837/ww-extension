@@ -78,6 +78,26 @@ export const coerceCriteria = (mc: unknown): MatchCriteria => {
   };
 };
 
+// The next `count` co-op terms after the current one (Winter Jan–Apr,
+// Spring May–Aug, Fall Sep–Dec), e.g. ["Fall 2026", "Winter 2027", …].
+// Computed from today's date so the choices never go stale.
+export const upcomingTerms = (count = 4): string[] => {
+  const now = new Date();
+  const names = ["Winter", "Spring", "Fall"];
+  let year = now.getFullYear();
+  let idx = now.getMonth() < 4 ? 0 : now.getMonth() < 8 ? 1 : 2;
+  const out: string[] = [];
+  while (out.length < count) {
+    idx++;
+    if (idx === 3) {
+      idx = 0;
+      year++;
+    }
+    out.push(`${names[idx]} ${year}`);
+  }
+  return out;
+};
+
 export const emptyMatchCriteria = (): MatchCriteria => ({
   work_authorization: null,
   wizard_completed_at: null,

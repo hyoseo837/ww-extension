@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiGet, apiPut } from "../api";
 import Icon from "../Icon";
-import { coerceCriteria, emptyMatchCriteria } from "../types";
+import { coerceCriteria, emptyMatchCriteria, upcomingTerms } from "../types";
 import type { MatchCriteria, Profile, WorkAuth } from "../types";
 
 // First-run preferences wizard (v8.4, ADR 0040; criteria v2 per ADR 0041).
@@ -23,6 +23,25 @@ const TERM_LENGTHS = ["4-month", "8-month"];
 
 const CHIP_ON = "rounded-full bg-primary px-md py-xs font-label-md text-label-md text-on-primary";
 const CHIP_OFF = "rounded-full border border-border bg-surface px-md py-xs font-label-md text-label-md text-text-secondary transition-colors hover:border-primary hover:text-primary";
+
+// Single-select chips (click again to clear). A stored value not in the
+// options (legacy free text) is shown as an extra chip so it stays visible.
+function ChipSelect({ options, value, onChange }: {
+  options: string[];
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const all = value && !options.includes(value) ? [value, ...options] : options;
+  return (
+    <div className="flex flex-wrap gap-sm">
+      {all.map((o) => (
+        <button key={o} type="button" onClick={() => onChange(value === o ? "" : o)} className={value === o ? CHIP_ON : CHIP_OFF}>
+          {o}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 function ChipToggle({ options, selected, onChange }: {
   options: string[];
@@ -216,17 +235,22 @@ export default function PreferencesSetup() {
               <p className="font-body-md text-body-md text-text-secondary">
                 Which work term are you targeting, and what term length works for you?
               </p>
-              <input
-                value={mc.target_term}
-                onChange={(e) => setMc((prev) => ({ ...prev, target_term: e.target.value }))}
-                placeholder="e.g. Fall 2026"
-                className="rounded-lg border border-border bg-surface px-sm py-sm font-body-md text-body-md outline-none focus:border-primary"
-              />
-              <ChipToggle
-                options={TERM_LENGTHS}
-                selected={mc.term_lengths}
-                onChange={(v) => setMc((prev) => ({ ...prev, term_lengths: v }))}
-              />
+              <div className="flex flex-col gap-xs">
+                <span className="font-label-sm text-label-sm text-text-muted">Target term</span>
+                <ChipSelect
+                  options={upcomingTerms()}
+                  value={mc.target_term}
+                  onChange={(v) => setMc((prev) => ({ ...prev, target_term: v }))}
+                />
+              </div>
+              <div className="flex flex-col gap-xs">
+                <span className="font-label-sm text-label-sm text-text-muted">Term length</span>
+                <ChipToggle
+                  options={TERM_LENGTHS}
+                  selected={mc.term_lengths}
+                  onChange={(v) => setMc((prev) => ({ ...prev, term_lengths: v }))}
+                />
+              </div>
             </>
           )}
 

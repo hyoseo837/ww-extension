@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiGet, apiPut } from "../api";
-import { coerceCriteria, emptyMatchCriteria } from "../types";
+import { coerceCriteria, emptyMatchCriteria, upcomingTerms } from "../types";
 import type { MatchCriteria, Profile, WorkAuth } from "../types";
 
 // Criteria v2 editor (v8.5, ADR 0041): concrete facts + one "in your own
@@ -82,6 +82,25 @@ function TagInput({ values, onChange, placeholder }: {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+// Single-select chips (click again to clear). A stored value not in the
+// options (legacy free text) is shown as an extra chip so it stays visible.
+function ChipSelect({ options, value, onChange }: {
+  options: string[];
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const all = value && !options.includes(value) ? [value, ...options] : options;
+  return (
+    <div className="flex flex-wrap gap-sm">
+      {all.map((o) => (
+        <button key={o} type="button" onClick={() => onChange(value === o ? "" : o)} className={value === o ? CHIP_ON : CHIP_OFF}>
+          {o}
+        </button>
+      ))}
     </div>
   );
 }
@@ -174,12 +193,7 @@ export default function Preferences() {
           <ChipToggle options={WORK_MODES} selected={mc.work_modes} onChange={(v) => setMc((p) => ({ ...p, work_modes: v }))} />
         </Field>
         <Field label="Target term">
-          <input
-            value={mc.target_term}
-            onChange={(e) => setMc((p) => ({ ...p, target_term: e.target.value }))}
-            placeholder="e.g. Fall 2026"
-            className={`${INPUT} max-w-[240px]`}
-          />
+          <ChipSelect options={upcomingTerms()} value={mc.target_term} onChange={(v) => setMc((p) => ({ ...p, target_term: v }))} />
         </Field>
         <Field label="Term length">
           <ChipToggle options={TERM_LENGTHS} selected={mc.term_lengths} onChange={(v) => setMc((p) => ({ ...p, term_lengths: v }))} />
