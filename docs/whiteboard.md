@@ -25,15 +25,22 @@ moved out or dropped.
 
 ## Future features
 
-- cover letter writer
-- feedback loop of user
+- cover letter writer (very low priority)
+- feedback loop of user — *(shaped 2026-06-10)* 👍/👎 per scored posting in
+  the extension's score panel, optional one-line "what was wrong?" on 👎.
+  New `scan_feedback` endpoint keyed to the existing scan row; store the full
+  posting description **only on 👎** (needed to debug, tiny volume); list it
+  in the admin page. Loop closes by hand: collect → review → tune prompt →
+  re-test against flagged set. Real value = a growing gold set of
+  (profile, criteria, posting, score, user verdict) to calibrate prompt
+  changes against — incl. validating v8.5's phrasing-inferred importance.
+  Deliberately NOT yet: per-user score adjustment, implicit signals
+  (save/apply tracking), any tie to credit refunds. Slot after the two quick
+  fixes below.
 - extension also available on “Employer-Student Direct” page (currently only "Full Cycle Service" page)
 
 ## fixes needed
 
-- better Match preferences page UX. — *in progress: v8.4 shipped the setup
-  wizard + simplified editor; the criteria structure itself (weight model)
-  is being rebuilt next.*
 - reduce texts from getting-started page
 
 ## Possible questions
@@ -64,6 +71,12 @@ moved out or dropped.
 
 - ~~smaller delete account button~~ — shipped: compact (v8.3.1), then merged
   with Download-my-data into one "Your data" card, side by side (v8.4.5).
+
+- ~~better Match preferences page UX~~ — shipped & launched 2026-06-10:
+  v8.4 added the required setup wizard + gate (ADR 0040); v8.5 rebuilt the
+  criteria as facts + "in your own words" with no weights/tiers (ADR 0041),
+  term chips, and a research-hardened scoring prompt. Live as of the
+  v8.5.7 merge to master.
 
 - ~~dashboard get-started: scan is the finale, not a step~~ — shipped
   (v8.4.6): steps are install → upload application package → preferences

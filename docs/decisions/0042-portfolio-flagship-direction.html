@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-06-10" />
+    <title>ADR 0042 — Project direction: portfolio flagship; v8 is the final major for now; effort shifts to marketing</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>ADR 0042 — Project direction: portfolio flagship; v8 is the final major for now; effort shifts to marketing</h1>
+
+    <h2>Context</h2>
+    <p>
+      With v8.5.7 launched (2026-06-10) the product is complete and live:
+      extension on the Web Store, web app deployed, backend serving accounts
+      and credits, required onboarding wizard, rebuilt preferences, hardened
+      scoring prompt. What it does not have is <strong>real users</strong>.
+      The build-up since v1 always had an obvious next step; for the first
+      time the next step is a strategic choice between (1) running it as a
+      niche micro-business for UWaterloo co-op students, (2) treating it as a
+      portfolio flagship whose primary payoff is the owner's career, or
+      (3) generalizing beyond WaterlooWorks.
+    </p>
+
+    <h2>Decision</h2>
+    <ul>
+      <li><strong>Direction 2 — portfolio flagship — is the floor.</strong>
+        The product's primary value is as a complete, shipped, documented,
+        revenue-capable artifact. Engineering quality and documentation
+        discipline continue to matter for that reason.</li>
+      <li><strong>v8 is the final major version for now.</strong> No v9 is
+        planned. Feature development is frozen; remaining work is small
+        polish (the open whiteboard fixes) and anything required to keep the
+        deployed product healthy. The vX.Y.Z scheme continues unchanged for
+        whatever maintenance ships.</li>
+      <li><strong>Effort shifts from code to marketing and user
+        acquisition</strong> — outside the codebase: visibility among
+        UWaterloo co-op students, with the September 2026 recruiting wave
+        (Fall applications for Winter 2027) as the natural distribution
+        moment.</li>
+      <li><strong>The business question gets one fair test.</strong> Revisit
+        direction at the end of Fall term 2026 (December) with real adoption
+        data. Meaningful organic use → reopen feature work (a v9) around
+        growth; otherwise the project stays a maintained portfolio piece.
+        The whiteboard's subscription / term-pass question is explicitly
+        deferred to that December review.</li>
+    </ul>
+
+    <h2>Consequences</h2>
+    <ul>
+      <li>Parked feature ideas (feedback loop, cover letters, re-score on
+        demand, Employer-Student-Direct page reach) stay on the whiteboard /
+        roadmap "Further out" — none are scheduled. The feedback loop is the
+        first candidate to un-park if marketing produces users worth
+        listening to.</li>
+      <li>Maintenance commits still follow the phase rules (spec for
+        anything non-trivial, version bumps, dev → master releases per
+        ADR 0039).</li>
+      <li>The scraping-fragility risk (WaterlooWorks DOM, no official
+        blessing) is accepted as-is — it caps the business upside but does
+        not threaten the portfolio value.</li>
+      <li>Marketing artifacts (write-ups, demo media, store-listing copy)
+        are owner-driven; the repo documents the product, not the
+        campaign.</li>
+    </ul>
+
+    <h2>Alternatives considered</h2>
+    <ul>
+      <li><strong>Niche micro-business now</strong> — premature with zero
+        users; the December checkpoint keeps this open as an earned upgrade
+        rather than a bet.</li>
+      <li><strong>Generalize beyond WaterlooWorks</strong> — rejected:
+        trades the only structural advantage (deep WW integration, a niche
+        the owner inhabits) for a crowded market.</li>
+      <li><strong>Keep building features (open v9)</strong> — rejected for
+        now: features don't fix a zero-user product; distribution might.</li>
+    </ul>
+  </body>
+</html>
