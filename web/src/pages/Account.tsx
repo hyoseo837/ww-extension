@@ -335,9 +335,9 @@ export default function Account() {
           <button
             onClick={downloadData}
             disabled={downloading}
-            className="inline-flex items-center gap-xs rounded-lg border border-border bg-surface-bright px-lg py-sm font-label-md text-label-md text-primary transition-colors hover:bg-surface-container-low disabled:opacity-60"
+            className="inline-flex items-center gap-xs rounded-lg border border-border bg-surface-bright px-sm py-xs font-label-sm text-label-sm text-primary transition-colors hover:bg-surface-container-low disabled:opacity-60"
           >
-            <Icon name="download" className="text-[18px]" />
+            <Icon name="download" className="text-[16px]" />
             {downloading ? "Preparing…" : "Download my data"}
           </button>
           {dataError && <span className="font-label-sm text-label-sm text-negative">{dataError}</span>}
@@ -355,9 +355,9 @@ export default function Account() {
             setDeleteError(null);
             setConfirmDelete(true);
           }}
-          className="inline-flex items-center gap-xs rounded-lg border border-negative px-lg py-sm font-label-md text-label-md text-negative transition-colors hover:bg-negative/10"
+          className="inline-flex items-center gap-xs rounded-lg border border-negative px-sm py-xs font-label-sm text-label-sm text-negative transition-colors hover:bg-negative/10"
         >
-          <Icon name="delete" className="text-[18px]" />
+          <Icon name="delete" className="text-[16px]" />
           Delete account
         </button>
       </section>
