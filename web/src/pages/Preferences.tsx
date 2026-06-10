@@ -170,7 +170,7 @@ export default function Preferences() {
         <select
           value={mc.work_authorization ?? ""}
           onChange={(e) => setMc((prev) => ({ ...prev, work_authorization: (e.target.value || null) as WorkAuth }))}
-          className={`${INPUT} self-start`}
+          className={`${INPUT} self-start pr-[36px]`}
         >
           {WORK_AUTH.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>

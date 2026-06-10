@@ -349,7 +349,7 @@ export default function Profile() {
                   <select
                     value={e.kind}
                     onChange={(ev) => setEntry(i, { kind: ev.target.value as "experience" | "project" })}
-                    className="rounded-lg border border-border bg-surface px-sm py-base font-label-md text-label-md"
+                    className="rounded-lg border border-border bg-surface px-sm py-base pr-[36px] font-label-md text-label-md"
                   >
                     <option value="experience">Experience</option>
                     <option value="project">Project</option>
