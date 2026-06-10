@@ -330,13 +330,14 @@ export default function Account() {
         )}
       </div>
 
-      {/* Your data */}
+      {/* Your data — rarely-used data-rights actions, one quiet row (v8.4.5).
+          Deletion safety lives in the type-DELETE dialog, not the button. */}
       <section className={CARD}>
         <h3 className="mb-xs font-headline-md text-headline-md text-on-surface">Your data</h3>
         <p className="mb-md font-body-md text-body-md text-text-secondary">
-          Download everything we store about you — account, credit history, scans, and profile — as a JSON file.
+          Export everything we store about you as JSON, or permanently delete your account and all its data.
         </p>
-        <div className="flex items-center gap-md">
+        <div className="flex flex-wrap items-center gap-sm">
           <button
             onClick={downloadData}
             disabled={downloading}
@@ -345,26 +346,18 @@ export default function Account() {
             <Icon name="download" className="text-[16px]" />
             {downloading ? "Preparing…" : "Download my data"}
           </button>
+          <button
+            onClick={() => {
+              setDeleteError(null);
+              setConfirmDelete(true);
+            }}
+            className="inline-flex items-center gap-xs rounded-lg border border-negative px-sm py-xs font-label-sm text-label-sm text-negative transition-colors hover:bg-negative/10"
+          >
+            <Icon name="delete" className="text-[16px]" />
+            Delete account
+          </button>
           {dataError && <span className="font-label-sm text-label-sm text-negative">{dataError}</span>}
         </div>
-      </section>
-
-      {/* Danger zone */}
-      <section className={CARD}>
-        <h3 className="mb-xs font-headline-md text-headline-md text-negative">Danger zone</h3>
-        <p className="mb-md font-body-md text-body-md text-text-secondary">
-          Permanently delete your account and all associated data. This can't be undone.
-        </p>
-        <button
-          onClick={() => {
-            setDeleteError(null);
-            setConfirmDelete(true);
-          }}
-          className="inline-flex items-center gap-xs rounded-lg border border-negative px-sm py-xs font-label-sm text-label-sm text-negative transition-colors hover:bg-negative/10"
-        >
-          <Icon name="delete" className="text-[16px]" />
-          Delete account
-        </button>
       </section>
 
       {confirmDelete && (
