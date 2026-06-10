@@ -7,6 +7,7 @@ import Billing from "./pages/Billing";
 import Buy from "./pages/Buy";
 import Profile from "./pages/Profile";
 import Preferences from "./pages/Preferences";
+import PreferencesSetup from "./pages/PreferencesSetup";
 import GettingStarted from "./pages/GettingStarted";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
@@ -42,6 +43,8 @@ export default function App() {
     <Routes>
       {/* Admin console — its own shell, gated server-side (403 → access denied). */}
       <Route path="/admin" element={<Admin />} />
+      {/* Setup wizard — focused full-screen flow outside the shell (ADR 0040). */}
+      <Route path="/preferences/setup" element={<PreferencesSetup />} />
       {/* Legal pages render outside the app shell — identical to logged-out. */}
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/terms" element={<Terms />} />

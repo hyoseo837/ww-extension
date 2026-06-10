@@ -15,6 +15,8 @@ export type WorkAuth = "citizen" | "pr" | "international" | "other" | null;
 
 export type MatchCriteria = {
   work_authorization: WorkAuth;
+  // Set by the setup wizard on completion (ADR 0040); onboarding state, not a scoring input.
+  wizard_completed_at: string | null;
   preferred_locations: WeightedCriterion;
   work_modes: WeightedCriterion;
   target_term: WeightedCriterion;
@@ -54,6 +56,15 @@ export type Profile = {
   profile_supplement: SupplementEntry[];
 };
 
+// Setup gate (ADR 0040): the wizard flag, or grandfathered pre-wizard criteria
+// (work auth set, or any preferred values entered on the old page).
+export const setupDone = (mc: Partial<MatchCriteria> | undefined): boolean => {
+  if (!mc) return false;
+  if (mc.wizard_completed_at || mc.work_authorization) return true;
+  return (["preferred_locations", "work_modes", "target_term", "target_length", "languages"] as const)
+    .some((k) => (mc[k]?.preferred.length ?? 0) > 0);
+};
+
 export const emptyCriterion = (): WeightedCriterion => ({
   weight: "nice-to-have",
   preferred: [],
@@ -64,6 +75,7 @@ export const emptyCriterion = (): WeightedCriterion => ({
 
 export const emptyMatchCriteria = (): MatchCriteria => ({
   work_authorization: null,
+  wizard_completed_at: null,
   preferred_locations: emptyCriterion(),
   work_modes: emptyCriterion(),
   target_term: emptyCriterion(),
