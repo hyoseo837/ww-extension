@@ -119,16 +119,21 @@ def build_job_part(
     preferences: str,
     match_criteria: dict | None = None,
 ) -> str:
+    # XML-tagged sections matching SYSTEM_TEXT's input contract: clear
+    # data/instruction boundaries (the posting text is untrusted input).
     blocks: list[str] = []
     criteria = _format_criteria(match_criteria) if match_criteria else ""
     if criteria:
-        blocks.append(f"Candidate Match Criteria:\n{criteria}")
+        blocks.append(f"<match_criteria>\n{criteria}\n</match_criteria>")
     if preferences:
-        blocks.append(f"Additional Notes:\n{preferences}")
+        blocks.append(f"<candidate_notes>\n{preferences}\n</candidate_notes>")
     prefix = "\n\n".join(blocks) + "\n\n" if blocks else ""
     title = meta.get("title", "")
     org = meta.get("org", "")
-    return f"{prefix}Job: {title} at {org}\nDescription:\n{description_text}"
+    return (
+        f"{prefix}<job_posting>\nJob: {title} at {org}\n"
+        f"Description:\n{description_text}\n</job_posting>"
+    )
 
 
 def _join(values: list) -> str:
@@ -254,7 +259,7 @@ async def score(
             "contents": [
                 {
                     "role": "user",
-                    "parts": [{"text": f"Candidate Profile:\n{cv_text}\n\n{job_part}"}],
+                    "parts": [{"text": f"<candidate_profile>\n{cv_text}\n</candidate_profile>\n\n{job_part}"}],
                 }
             ],
             "generationConfig": generation_config,
