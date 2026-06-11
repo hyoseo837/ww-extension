@@ -6,7 +6,9 @@ import HistoryList, { type Entry } from "../HistoryList";
 import { fmtBalance } from "../format";
 
 const CARD = "rounded-xl border border-border bg-surface p-lg shadow-[0_2px_8px_rgba(41,38,31,0.04)]";
-const PAGE = 25;
+// One scan batch easily exceeds 25 ledger items, so 25 made the first view
+// feel truncated; 100 is the server-side cap (billing/routes.py).
+const PAGE = 100;
 
 export default function Billing() {
   const { balance, refetchBalance } = useDashboard();
