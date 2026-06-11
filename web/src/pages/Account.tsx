@@ -282,7 +282,7 @@ export default function Account() {
                 </>
               )}
             </div>
-            <p className="mb-xl font-body-md text-body-md text-text-secondary">About 1 credit per scan.</p>
+            <p className="mb-xl font-body-md text-body-md text-text-secondary">About 2 credits per scan.</p>
           </div>
           <Link
             to="/buy"
