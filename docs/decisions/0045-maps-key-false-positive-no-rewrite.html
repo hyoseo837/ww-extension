@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-06-11" />
+    <title>ADR 0045 — Secret-scanning alert on captured WW page is a false positive; keep pushed history</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>ADR 0045 — Secret-scanning alert on captured WW page is a false positive; keep pushed history</h1>
+
+    <h2>Context</h2>
+    <p>
+      v8.7.0 added <code>docs/reference/ww-dom-direct-full.html</code> — a
+      full DOM capture of the Employer-Student Direct board, saved as
+      reference while building the Direct-board support. Unlike the original
+      capture (<code>ww-dom-full.html</code>, gitignored from the start),
+      this one was committed and pushed (commits v8.7.0–v8.7.2, on both
+      <code>dev</code> and <code>master</code>).
+    </p>
+    <p>
+      On 2026-06-10 GitHub secret scanning emailed that the repository might
+      contain a secret API key. The owner, assuming the leaked key was the
+      Gemini key, rotated it immediately, then gitignored the capture
+      (v8.7.2) and deleted it from the tree (v8.7.3).
+    </p>
+    <p>
+      Investigation on 2026-06-11 (pattern search over every commit in
+      history) found exactly one key ever committed:
+      <code>AIzaSyBStl…</code> inside a
+      <code>&lt;script src="https://maps.googleapis.com/maps/api/js?key=…"&gt;</code>
+      tag at line 3868 of the capture. That is <strong>WaterlooWorks' own
+      Google Maps embed key</strong> — a third-party, client-side key the WW
+      site serves to every visitor's browser, public by design. Both Gemini
+      and Maps keys share the <code>AIza…</code> prefix, which is why the
+      scanner (and the owner) read it as a possible Gemini key. The
+      project's actual Gemini key lives only in <code>server/.env</code>
+      (gitignored) and was never committed; its rotation was harmless but
+      unnecessary.
+    </p>
+
+    <h2>Decision</h2>
+    <ul>
+      <li><strong>Do not rewrite pushed history.</strong> The key stays
+        reachable in commits v8.7.0–v8.7.2. It is not our secret and was
+        already public; the v8.7.3 deletion is sufficient.</li>
+      <li><strong>Dismiss the GitHub secret-scanning alert</strong> as a
+        false positive ("used in tests / not a secret").</li>
+      <li><strong>Rule going forward: full DOM captures are gitignored
+        <em>before</em> they are saved.</strong> Captured third-party pages
+        carry whatever the site embeds (keys, session tokens, CSRF nonces)
+        and must never be committed. <code>.gitignore</code> already lists
+        both capture filenames; any future capture gets its entry first.</li>
+    </ul>
+
+    <h2>Consequences</h2>
+    <ul>
+      <li><code>dev</code> and <code>master</code> keep their published
+        history; no force-push against the auto-deploying
+        <code>master</code> (Vercel + DO, ADR 0039).</li>
+      <li>Anyone re-encountering the alert (or the key in old commits) has
+        this record: it is WaterlooWorks' public Maps key, not a project
+        credential.</li>
+      <li>The current Gemini key has never appeared in git history.</li>
+    </ul>
+
+    <h2>Alternatives considered</h2>
+    <ul>
+      <li><strong>Rewrite history to scrub the file</strong> (filter-repo +
+        force-push) — rejected: the key is third-party and public, and the
+        rewrite would have to hit both long-lived branches, including the
+        production branch that auto-deploys. All risk, no benefit.</li>
+      <li><strong>Treat as a real leak and rotate</strong> — moot: the
+        rotation already happened as a precaution, and the key that leaked
+        was never ours to rotate.</li>
+    </ul>
+  </body>
+</html>
