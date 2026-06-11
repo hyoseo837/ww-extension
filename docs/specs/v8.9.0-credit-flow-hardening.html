@@ -5,7 +5,7 @@
     <meta name="project" content="ww-extension" />
     <meta name="type" content="spec" />
     <meta name="version" content="v8.9.0" />
-    <meta name="status" content="in-progress" />
+    <meta name="status" content="done" />
     <meta name="last-updated" content="2026-06-11" />
     <title>v8.9 — Credit-flow hardening</title>
     <link rel="stylesheet" href="../style.css" />
@@ -77,10 +77,11 @@
         <code>description_text</code> fails validation (422 at the API
         boundary); same for an oversized <code>pdf_b64</code> /
         <code>comment</code>.</li>
-      <li>CI (v8.8.2 workflow) green on push.</li>
-      <li>Live after deploy: a normal scan batch still works end-to-end
-        (lock is invisible at human timescales); <code>/health</code>
-        version reports 8.9.x.</li>
+      <li>CI (v8.8.2 workflow) green on push. <em>Local run 2026-06-11:
+        59 passed (53 ledger/pricing/scoring + 6 input-cap).</em></li>
+      <li>Live after deploy (checked at the next dev→master release): a
+        normal scan batch still works end-to-end (lock is invisible at
+        human timescales); <code>/health</code> version reports 8.9.x.</li>
     </ul>
 
     <h2>Notes</h2>

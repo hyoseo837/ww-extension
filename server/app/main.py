@@ -1,7 +1,8 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.account.routes import router as account_router
 from app.admin.routes import router as admin_router
@@ -31,6 +32,29 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="ww-extension-backend", lifespan=lifespan)
+
+# Reject oversized bodies before FastAPI buffers and parses them (audit
+# 2026-06-11 #5). 8 MiB clears the largest legal body — a 5 MB PDF as
+# base64 plus JSON overhead.
+_MAX_BODY_BYTES = 8 * 1024 * 1024
+
+
+def body_too_large(content_length: str | None) -> bool:
+    return bool(
+        content_length
+        and content_length.isdigit()
+        and int(content_length) > _MAX_BODY_BYTES
+    )
+
+
+# Registered before CORSMiddleware so CORS stays outermost and a 413 still
+# carries the CORS headers the web app needs to read it.
+@app.middleware("http")
+async def limit_body_size(request: Request, call_next):
+    if body_too_large(request.headers.get("content-length")):
+        return JSONResponse(status_code=413, content={"detail": "request_too_large"})
+    return await call_next(request)
+
 
 # CORS for the web app (v6.1). Bearer-token auth, no cookies → credentials off.
 app.add_middleware(

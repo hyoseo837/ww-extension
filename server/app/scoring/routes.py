@@ -24,22 +24,28 @@ router = APIRouter()
 log = logging.getLogger("ww.scan")
 
 _MAX_PDF_BYTES = 5 * 1024 * 1024
+# Server-side input caps (v8.9, audit #5) — the client caps were the only
+# bound before. 6000 mirrors the extension's DESC_CHAR_CAP; pdf_b64 is the
+# 5 MB PDF cap in base64 (4/3×) with slack.
+_MAX_DESC_CHARS = 6000
+_MAX_META_CHARS = 300
+_MAX_PDF_B64_CHARS = 7_000_000
 
 
 # ── /scan ─────────────────────────────────────────────────────────────────────
 
 
 class ScanMeta(BaseModel):
-    title: str = ""
-    org: str = ""
+    title: str = Field("", max_length=_MAX_META_CHARS)
+    org: str = Field("", max_length=_MAX_META_CHARS)
 
 
 class ScanRequest(BaseModel):
     scan_id: UUID
     model: str
     meta: ScanMeta
-    description_text: str
-    posting_id: str
+    description_text: str = Field(..., max_length=_MAX_DESC_CHARS)
+    posting_id: str = Field(..., max_length=32)
     batch_id: UUID | None = None  # groups scans from one Scan run (v6.2)
 
 
@@ -199,14 +205,15 @@ async def scan(req: ScanRequest, user: CurrentUser):
 
 
 _MAX_COMMENT_CHARS = 500
-_MAX_DESC_CHARS = 6000  # matches the extension's DESC_CHAR_CAP
 
 
 class FeedbackRequest(BaseModel):
     scan_id: UUID
     rating: Literal["up", "down"]
-    comment: str = ""
-    description_text: str = ""
+    # Parse-time caps reject abuse; the friendlier truncation to
+    # _MAX_COMMENT_CHARS / _MAX_DESC_CHARS below still applies.
+    comment: str = Field("", max_length=2000)
+    description_text: str = Field("", max_length=8000)
 
 
 @router.post("/scan/feedback")
@@ -256,7 +263,9 @@ async def scan_feedback(req: FeedbackRequest, user: CurrentUser) -> dict:
 class ExtractRequest(BaseModel):
     scan_id: UUID
     model: str = pricing.DEFAULT_MODEL
-    pdf_b64: str = Field(..., description="Base64 PDF (no data: prefix)")
+    pdf_b64: str = Field(
+        ..., max_length=_MAX_PDF_B64_CHARS, description="Base64 PDF (no data: prefix)"
+    )
 
 
 class ExtractResponse(BaseModel):
