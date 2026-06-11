@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-06-11" />
+    <title>ADR 0047 — Reconcile stranded pending scans at app startup</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>ADR 0047 — Reconcile stranded pending scans at app startup</h1>
+
+    <h2>Context</h2>
+    <p>
+      A scan debits credits in transaction 1, calls Gemini with no DB lock
+      held, then settles (partial refund + success row) in transaction 2.
+      If the process dies between the two — realistically a DigitalOcean
+      deploy restart during the 1–10&nbsp;s Gemini call — the scan row stays
+      <code>pending</code> forever and the debit is never refunded (audit
+      2026-06-11 #2). ADR 0046 schedules the fix for v8.9 but leaves the
+      mechanism open. Candidates: a periodic background task, lazy
+      reconciliation when a replayed <code>scan_id</code> hits the pending
+      row, or a one-shot pass at app startup.
+    </p>
+
+    <h2>Decision</h2>
+    <p>
+      Reconcile at <strong>app startup</strong>, in <code>lifespan</code>
+      right after the pool initializes: every scan still
+      <code>pending</code> after a 10-minute cutoff gets its unrefunded
+      <code>scan_debit</code> refunded (amount taken from the actual debit
+      ledger rows, not the scan row) and is marked
+      <code>failed</code> with <code>error='stranded'</code>, in one
+      set-based transaction.
+    </p>
+
+    <h2>Consequences</h2>
+    <ul>
+      <li>Stranding and recovery are the same event: a scan can only
+        strand when the process dies, and the platform restarts the process
+        — so the refund lands at the moment the cause occurred, with no
+        scheduler, no new dependency, and no per-request cost.</li>
+      <li>The 10-minute cutoff guarantees no in-flight scan (seconds long)
+        can be swept; refunds keyed to actual debit rows and guarded by a
+        no-existing-refund check make a re-run a no-op.</li>
+      <li>Limitation accepted: with a single app instance (current DO
+        setup), a stranded debit stays unrefunded until the next restart or
+        deploy — for this project's deploy cadence that window is short,
+        and the admin grant path remains the manual override. If the app
+        ever runs multiple instances or restarts become rare, revisit with
+        a periodic task (supersede this ADR).</li>
+      <li>The replay path keeps returning 409 for a stranded
+        <code>scan_id</code> until reconciliation runs; the extension never
+        reuses scan ids, so no client behaviour depends on it.</li>
+    </ul>
+  </body>
+</html>

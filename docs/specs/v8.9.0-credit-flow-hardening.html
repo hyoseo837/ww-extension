@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v8.9.0" />
+    <meta name="status" content="in-progress" />
+    <meta name="last-updated" content="2026-06-11" />
+    <title>v8.9 — Credit-flow hardening</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>v8.9 — Credit-flow hardening</h1>
+
+    <h2>Goal</h2>
+    <p>
+      Close the three credit-flow holes from the 2026-06-11 audit
+      (<a href="../reference/audit-2026-06-11.html">findings</a> #2, #3, #5;
+      ordering per <a href="../decisions/0046-september-hardening-initiative.html">ADR
+      0046</a>), now that v8.8's test suite makes money code safe to touch:
+    </p>
+    <ol>
+      <li><strong>Stranded-scan reconciliation</strong> — a server death
+        between the debit transaction and settlement leaves the scan row
+        <code>pending</code> forever and the user's debit unrefunded. At app
+        startup, refund the unrefunded <code>scan_debit</code> of every
+        <code>pending</code> scan older than 10 minutes and mark the row
+        <code>failed</code> (<code>error='stranded'</code>). Mechanism
+        decision in <a href="../decisions/0047-startup-stranded-scan-reconciliation.html">ADR
+        0047</a>.</li>
+      <li><strong>Per-user debit lock</strong> — the balance check is
+        read-committed, so the extension's 5 concurrent workers can all pass
+        it before any debit commits, driving the balance negative.
+        Take <code>pg_advisory_xact_lock</code> keyed on the user id inside
+        transaction 1, immediately before the balance check, in both
+        <code>/scan</code> and <code>/profile/extract</code>. The lock
+        releases at commit and never spans the Gemini call.</li>
+      <li><strong>Server-side input caps</strong> — request fields were
+        unbounded (the 6000-char description cap lived only in the
+        extension). Add pydantic <code>max_length</code> caps on
+        <code>/scan</code>, <code>/profile/extract</code>, and
+        <code>/scan/feedback</code> inputs, plus a Content-Length middleware
+        rejecting bodies over 8&nbsp;MiB with 413.</li>
+    </ol>
+
+    <h2>Files</h2>
+    <ul>
+      <li><code>server/app/billing/db.py</code> —
+        <code>reconcile_stranded_scans()</code>,
+        <code>lock_user_for_debit()</code>.</li>
+      <li><code>server/app/main.py</code> — call reconciliation in
+        <code>lifespan</code> after <code>init_pool()</code>; body-size
+        middleware.</li>
+      <li><code>server/app/scoring/routes.py</code> — lock before the
+        balance check in both endpoints; <code>max_length</code> on
+        <code>ScanRequest</code> / <code>ExtractRequest</code> /
+        <code>FeedbackRequest</code> fields.</li>
+      <li><code>server/tests/test_ledger.py</code> — reconciliation tests;
+        <code>test_concurrent_debits_can_overdraw</code> flips to
+        <code>…cannot_overdraw</code> (its docstring already demands this).</li>
+      <li><code>server/tests/test_input_caps.py</code> — added: field-cap
+        validation + body-size-limit unit tests (no DB).</li>
+      <li><code>server/pyproject.toml</code>, <code>ext/manifest.json</code> —
+        version bumps per commit.</li>
+    </ul>
+
+    <h2>Verify</h2>
+    <ul>
+      <li><code>pytest</code> green on the disposable Postgres
+        (<code>TEST_DATABASE_URL</code>), including: a pending scan older
+        than the cutoff is refunded exactly once and marked failed; a second
+        reconciliation run is a no-op; a fresh pending scan is untouched;
+        two concurrent debit transactions on one user serialize — the second
+        sees the first's debit and gets rejected, balance never negative.</li>
+      <li><code>ScanRequest</code> with a 6001-char
+        <code>description_text</code> fails validation (422 at the API
+        boundary); same for an oversized <code>pdf_b64</code> /
+        <code>comment</code>.</li>
+      <li>CI (v8.8.2 workflow) green on push.</li>
+      <li>Live after deploy: a normal scan batch still works end-to-end
+        (lock is invisible at human timescales); <code>/health</code>
+        version reports 8.9.x.</li>
+    </ul>
+
+    <h2>Notes</h2>
+    <ul>
+      <li>Caps chosen: <code>description_text</code> 6000 (mirrors the
+        extension's <code>DESC_CHAR_CAP</code>), <code>title</code>/<code>org</code>
+        300, <code>posting_id</code> 32, <code>pdf_b64</code> 7,000,000
+        chars (≈ the 5&nbsp;MB PDF cap in base64), feedback
+        <code>comment</code> 2000 parse-cap (the existing truncate-to-500
+        behaviour is kept), feedback <code>description_text</code> 8000.
+        Body middleware 8&nbsp;MiB &gt; the largest legal body
+        (<code>pdf_b64</code> + JSON overhead).</li>
+      <li>The advisory lock key is
+        <code>hashtextextended(user_id::text, 0)</code>; a hash collision
+        between two users merely serializes their transaction-1s —
+        harmless.</li>
+      <li>A stranded scan's 409-on-replay remains until reconciliation
+        flips the row to <code>failed</code>; the extension never reuses a
+        <code>scan_id</code> (fresh UUID per attempt), so no client change
+        is needed — after the refund, the next batch simply re-scans the
+        posting.</li>
+    </ul>
+  </body>
+</html>
