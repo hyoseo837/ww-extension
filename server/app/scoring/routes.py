@@ -121,6 +121,9 @@ async def scan(req: ScanRequest, user: CurrentUser):
             if existing is not None:
                 return await _replay(existing, user_id)
 
+            # Serialize concurrent debits per user so the balance check
+            # can't be raced past (v8.9); released at commit.
+            await billing_db.lock_user_for_debit(conn, user_id)
             remaining = await billing_db.balance_after_estimate(conn, user_id, estimate)
             if remaining < 0:
                 await billing_db.update_scan_failed(
@@ -307,6 +310,7 @@ async def extract(req: ExtractRequest, user: CurrentUser):
             if existing is not None:
                 return await _replay_extract(existing, user_id)
 
+            await billing_db.lock_user_for_debit(conn, user_id)
             remaining = await billing_db.balance_after_estimate(conn, user_id, estimate)
             if remaining < 0:
                 await billing_db.update_scan_failed(

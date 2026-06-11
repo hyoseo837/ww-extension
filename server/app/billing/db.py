@@ -1,3 +1,4 @@
+import logging
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
@@ -7,6 +8,7 @@ import asyncpg
 from app.core.config import settings
 
 _pool: asyncpg.Pool | None = None
+log = logging.getLogger("ww.billing")
 
 
 async def init_pool() -> None:
@@ -166,6 +168,66 @@ async def export_user(user_id: str) -> dict | None:
             for s in scans
         ],
     }
+
+
+async def lock_user_for_debit(conn: asyncpg.Connection, user_id: str) -> None:
+    """Serialize the debit transaction per user (audit 2026-06-11 #3).
+
+    Call inside transaction 1, before the balance check — the lock releases
+    at commit, so it never spans the Gemini call. A hash collision between
+    two users merely serializes them; harmless.
+    """
+    await conn.execute(
+        "select pg_advisory_xact_lock(hashtextextended($1::text, 0))",
+        user_id,
+    )
+
+
+async def reconcile_stranded_scans(cutoff_minutes: int = 10) -> int:
+    """Refund scans stranded 'pending' by a process death (ADR 0047).
+
+    A scan left 'pending' past the cutoff can only mean the process died
+    between the debit and settlement — refund its unrefunded scan_debit
+    (amount from the actual ledger rows, not the scan row) and mark it
+    failed. Set-based and idempotent: a re-run finds nothing to do.
+    Runs once at app startup. Returns the number of rows reconciled.
+    """
+    async with pool().acquire() as conn:
+        async with conn.transaction():
+            rows = await conn.fetch(
+                """
+                with stranded as (
+                    select id, user_id from scan
+                    where status = 'pending'
+                      and created_at < now() - make_interval(mins => $1)
+                ),
+                owed as (
+                    select st.id, st.user_id, -sum(l.delta) as refund
+                    from stranded st
+                    join credit_ledger_entry l
+                      on l.ref = st.id::text and l.kind = 'scan_debit'
+                    where not exists (
+                        select 1 from credit_ledger_entry r
+                        where r.ref = st.id::text and r.kind = 'scan_refund'
+                    )
+                    group by st.id, st.user_id
+                    having sum(l.delta) < 0
+                ),
+                refunded as (
+                    insert into credit_ledger_entry (user_id, delta, kind, ref)
+                    select user_id, refund, 'scan_refund', id::text from owed
+                )
+                update scan s
+                set status = 'failed', error = 'stranded', completed_at = now()
+                from stranded st
+                where s.id = st.id
+                returning s.id
+                """,
+                cutoff_minutes,
+            )
+    if rows:
+        log.info("reconciled %d stranded pending scan(s)", len(rows))
+    return len(rows)
 
 
 async def balance_after_estimate(

@@ -18,6 +18,10 @@ from app.scoring.routes import router as scoring_router
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await billing_db.init_pool()
+    # Refund any scan stranded 'pending' by the previous process's death —
+    # stranding only happens when the process dies, so startup is exactly
+    # when the recovery is due (ADR 0047).
+    await billing_db.reconcile_stranded_scans()
     await gemini.init_client()
     try:
         yield
