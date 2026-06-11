@@ -26,7 +26,7 @@ moved out or dropped.
 ## Future features
 
 - cover letter writer (very low priority)
-- feedback loop of user — *(shaped 2026-06-10)* 👍/👎 per scored posting in
+- feedback loop of user — _(shaped 2026-06-10)_ 👍/👎 per scored posting in
   the extension's score panel, optional one-line "what was wrong?" on 👎.
   New `scan_feedback` endpoint keyed to the existing scan row; store the full
   posting description **only on 👎** (needed to debug, tiny volume); list it
@@ -37,11 +37,13 @@ moved out or dropped.
   Deliberately NOT yet: per-user score adjustment, implicit signals
   (save/apply tracking), any tie to credit refunds. Slot after the two quick
   fixes below.
-- extension also available on “Employer-Student Direct” page (currently only "Full Cycle Service" page)
+- extension also available on “Employer-Student Direct” page (currently only
+  "Full Cycle Service" page) — _next up; blocked on info the owner will
+  provide: the Direct board's URL and its job-table HTML (the extension
+  hardcodes `/myAccount/co-op/full/jobs.htm` in the manifest match,
+  content.js fetch, and page-bridge POST)_
 
 ## fixes needed
-
-- reduce texts from getting-started page
 
 ## Possible questions
 
@@ -82,3 +84,13 @@ moved out or dropped.
   (v8.4.6): steps are install → upload application package → preferences
   wizard; completing all three reveals a "You're ready — scan your jobs!"
   button. Card still retires after the first scan.
+
+- ~~reduce texts from getting-started page~~ — shipped (v8.6.1): steps cut
+  to 1–2 sentences; also dropped the FAQ's stale "Never criteria skipped
+  free" claim, which led to removing the dead client pre-filter entirely
+  (v8.6.3, ADR 0043 supersedes 0018).
+
+- ~~update plan messages: emphasize it's not expensive (Tim's coffee /
+  warrior burger comparisons)~~ — tried (v8.6.2), didn't like it; rolled
+  back to minimal pricing cards instead (v8.6.4): terse pack notes, plain
+  Buy button, "1 credit ≈ 1 scan" header.
