@@ -390,8 +390,10 @@
   padding: 8px 20px;
   font: 12px 'WW Sans', system-ui, sans-serif;
   color: var(--s-on-dim);
-  min-height: 30px;
 }
+/* No reserved strip when there's nothing to say — the status line only
+   takes space while a scan message is showing. */
+#ww-ext-progress:empty { display: none; }
 #ww-ext-progress.ww-ext-error { color: var(--s-error); font-weight: 500; }
 
 /* ── Results list ────────────────────────────────────────────────────────────── */
