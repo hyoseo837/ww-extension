@@ -126,11 +126,17 @@
       <code>$.post</code> (session cookies are sent automatically):
       <code>/myAccount/co-op/full/jobs.htm</code> on the Full-Cycle board,
       <code>/myAccount/co-op/direct/jobs.htm</code> on Employer-Student Direct.
-      The two boards are otherwise structurally identical — same table markup,
-      pagination, inline functions, token shape, and
-      <code>dataViewerApp</code> root (verified against the 2026-06-10 capture
-      <code>ww-dom-direct-full.html</code>; v8.7.0) — so the extension posts to
-      <code>location.pathname</code>.
+      The two boards share table markup, pagination, inline functions, token
+      shape, and <code>dataViewerApp</code> root (verified against the
+      2026-06-10 capture <code>ww-dom-direct-full.html</code>; v8.7.0) — so the
+      extension posts to <code>location.pathname</code>.
+      <strong>But the column order differs</strong> (found v8.8.4): Full-Cycle
+      columns are <em>ID, Job Title, Organization, Division, Openings, City,
+      Level, Apps, App Deadline</em>; Direct leads with a <em>Term</em> column
+      (<em>Term, ID, Job Title, Organization, …</em>), so the Job Title is
+      <strong>not</strong> the first <code>td.table__value</code> there. Find
+      the title cell via its anchor — it is the only linked column on both
+      boards — never by cell index.
       <strong>Action tokens are session-specific</strong> — extract fresh on each scan,
       never cache or hardcode.
     </p>

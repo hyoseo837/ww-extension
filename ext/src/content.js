@@ -185,27 +185,34 @@ function scheduleFlush() {
 
 // ── Score inline in title cell ────────────────────────────────────────────────
 
+// The Job Title link is the only anchored cell on both boards, but the boards
+// order their columns differently (Direct leads with Term, shifting the title
+// out of cells[0]) — locate the anchor rather than assume a position.
+function findTitleAnchor(row) {
+  return row.querySelector('td.table__value a');
+}
+
 function injectRowScores() {
   let sidebarDirty = false;
   document.querySelectorAll(ROW_SEL).forEach(row => {
     const id = row.querySelector('input[name="dataViewerSelection"]')?.value;
     if (!id || !scores.has(id)) return;
 
+    const anchor = findTitleAnchor(row);
+    if (!anchor) return;
+    const titleCell = anchor.closest('td.table__value');
+
     const entry = scores.get(id);
     if (!entry.title || entry.title === `#${id}`) {
-      const cells = row.querySelectorAll('td.table__value');
-      const title = cells[0]?.querySelector('a')?.textContent.trim();
-      const org   = cells[1]?.querySelector('span')?.textContent.trim();
+      const title = anchor.textContent.trim();
+      const org   = titleCell.nextElementSibling?.querySelector('span')?.textContent.trim();
       if (title) {
         scores.set(id, { ...entry, title, org: org || entry.org });
         sidebarDirty = true;
       }
     }
 
-    const titleCell = row.querySelectorAll('td.table__value')[0];
-    if (!titleCell || titleCell.querySelector('.ww-ext-badge')) return;
-    const anchor = titleCell.querySelector('a');
-    if (!anchor) return;
+    if (titleCell.querySelector('.ww-ext-badge')) return;
     const { score, verdict } = scores.get(id);
     const span = document.createElement('span');
     span.className = `ww-ext-badge ww-ext-badge--${verdictSlug(verdict)}`;
@@ -535,10 +542,11 @@ async function fetchPostingText(postingId) {
 function indexVisibleRows() {
   const map = {};
   document.querySelectorAll(ROW_SEL).forEach(row => {
-    const id    = row.querySelector('input[name="dataViewerSelection"]')?.value;
-    const cells = row.querySelectorAll('td.table__value');
-    const title = cells[0]?.querySelector('a')?.textContent.trim() ?? '';
-    const org   = cells[1]?.querySelector('span')?.textContent.trim() ?? '';
+    const id     = row.querySelector('input[name="dataViewerSelection"]')?.value;
+    const anchor = findTitleAnchor(row);
+    const title  = anchor?.textContent.trim() ?? '';
+    const org    = anchor?.closest('td.table__value').nextElementSibling
+      ?.querySelector('span')?.textContent.trim() ?? '';
     if (id) map[id] = { title: title || `#${id}`, org };
   });
   return map;
