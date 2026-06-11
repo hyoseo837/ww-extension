@@ -361,11 +361,11 @@ function confirmDialog({ title, msg, goLabel }) {
 }
 
 async function scanAllJobs() {
+  // One button doubles as Stop while a scan runs (the click handler checks
+  // the ww-ext-scanning class).
   const scanBtn = document.getElementById('ww-ext-scan');
-  const stopBtn = document.getElementById('ww-ext-stop');
-
-  scanBtn.disabled = true;
-  stopBtn.disabled = false;
+  scanBtn.classList.add('ww-ext-scanning');
+  scanBtn.textContent = 'Stop';
   aborted = false;
 
   // One id for this whole Scan run, sent on every /scan so the web app's
@@ -502,8 +502,9 @@ async function scanAllJobs() {
   } catch (e) {
     setProgress(`Error: ${e.message}`, true);
   } finally {
+    scanBtn.classList.remove('ww-ext-scanning');
+    scanBtn.textContent = 'Scan All Jobs';
     scanBtn.disabled = false;
-    stopBtn.disabled = true;
   }
 }
 
@@ -829,15 +830,15 @@ function injectSidebar() {
     </div>
     <div id="ww-ext-controls">
       <div class="ww-ext-section">
-        <div class="ww-ext-section-label">Scan</div>
         <button id="ww-ext-scan">Scan All Jobs</button>
-        <button id="ww-ext-stop" disabled>Stop</button>
       </div>
-      <div class="ww-ext-section">
-        <div class="ww-ext-section-label">
+      <div class="ww-ext-section" id="ww-ext-save-section">
+        <div class="ww-ext-section-label" id="ww-ext-save-toggle">
           Save to Folder
           <button class="ww-ext-help-btn" data-help="folder" title="What is this?">?</button>
+          <span id="ww-ext-save-chevron">▾</span>
         </div>
+        <div id="ww-ext-save-body">
         <div id="ww-ext-save-row">
           <label for="ww-ext-min-score">Score &ge;</label>
           <input id="ww-ext-min-score" type="number" min="1" max="20" value="14">
@@ -865,6 +866,7 @@ function injectSidebar() {
         <div id="ww-ext-action-row">
           <button id="ww-ext-save-all">Save to Folder</button>
           <button id="ww-ext-clear">Clear</button>
+        </div>
         </div>
       </div>
       <div id="ww-ext-progress"></div>
@@ -927,8 +929,28 @@ function injectSidebar() {
   document.getElementById('ww-ext-settings').addEventListener('click', () => {
     chrome.runtime.sendMessage({ type: 'openOptions' });
   });
-  document.getElementById('ww-ext-scan').addEventListener('click', scanAllJobs);
-  document.getElementById('ww-ext-stop').addEventListener('click', () => { aborted = true; });
+  const scanBtn = document.getElementById('ww-ext-scan');
+  scanBtn.addEventListener('click', () => {
+    if (scanBtn.classList.contains('ww-ext-scanning')) {
+      aborted = true;
+      scanBtn.disabled = true;
+      scanBtn.textContent = 'Stopping…';
+    } else {
+      scanAllJobs();
+    }
+  });
+
+  // Save-to-Folder section collapses to "Score ≥ n  [Save to Folder]";
+  // collapsed is the default so the results list gets the room.
+  const saveSection = document.getElementById('ww-ext-save-section');
+  chrome.storage.local.get('ww_save_collapsed', d => {
+    saveSection.classList.toggle('ww-ext-collapsed', d.ww_save_collapsed !== false);
+  });
+  document.getElementById('ww-ext-save-toggle').addEventListener('click', e => {
+    if (e.target.closest('.ww-ext-help-btn')) return;
+    const collapsed = saveSection.classList.toggle('ww-ext-collapsed');
+    chrome.storage.local.set({ ww_save_collapsed: collapsed });
+  });
   document.getElementById('ww-ext-save-all').addEventListener('click', () => {
     const min = Number(document.getElementById('ww-ext-min-score').value);
     const verdicts = new Set(

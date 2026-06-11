@@ -53,9 +53,13 @@
   <body>
     <div class="preview-note">
       <h1>Scan-feedback preview</h1>
-      <p>The real <code>sidebar.css</code> with the v8.6 feedback footer.
-        Try <b>👍</b> (marks the card), <b>👎</b> (opens the optional
-        "what was wrong?" line — Enter or <b>Send</b> submits, Esc or
+      <p>The real <code>sidebar.css</code> with the v8.6 feedback footer and
+        the compact controls: one Scan button that becomes <b>Stop</b> while
+        scanning (click it to see), and a collapsible Save-to-Folder section —
+        collapsed by default to one "Score ≥ n [Save to Folder]" line; click
+        its header to expand the verdict toggles and Clear.</p>
+      <p>Feedback: try <b>👍</b> (marks the card), <b>👎</b> (opens the
+        optional "what was wrong?" line — Enter or <b>Send</b> submits, Esc or
         <b>✕</b> cancels). The second card starts already-rated 👍; the last
         card has no <code>scanId</code> (pre-v8.6 cache) so it offers no
         feedback at all. Sends are simulated — nothing leaves the page.</p>
@@ -76,12 +80,15 @@
       </div>
       <div id="ww-ext-controls">
         <div class="ww-ext-section">
-          <div class="ww-ext-section-label">Scan</div>
           <button id="ww-ext-scan">Scan All Jobs</button>
-          <button id="ww-ext-stop" disabled>Stop</button>
         </div>
-        <div class="ww-ext-section">
-          <div class="ww-ext-section-label">Save to Folder</div>
+        <div class="ww-ext-section ww-ext-collapsed" id="ww-ext-save-section">
+          <div class="ww-ext-section-label" id="ww-ext-save-toggle">
+            Save to Folder
+            <button class="ww-ext-help-btn" data-help="folder" title="What is this?">?</button>
+            <span id="ww-ext-save-chevron">▾</span>
+          </div>
+          <div id="ww-ext-save-body">
           <div id="ww-ext-save-row">
             <label for="ww-ext-min-score">Score &ge;</label>
             <input id="ww-ext-min-score" type="number" min="1" max="20" value="14" />
@@ -97,6 +104,7 @@
           <div id="ww-ext-action-row">
             <button id="ww-ext-save-all">Save to Folder</button>
             <button id="ww-ext-clear">Clear</button>
+          </div>
           </div>
         </div>
         <div id="ww-ext-progress"></div>
@@ -264,6 +272,25 @@
       });
 
       document.getElementById('reset').addEventListener('click', () => { scores = SAMPLE.map(s => ({ ...s })); render(); });
+
+      // Save-to-Folder collapse (mirrors content.js; collapsed by default).
+      const saveSection = document.getElementById('ww-ext-save-section');
+      document.getElementById('ww-ext-save-toggle').addEventListener('click', e => {
+        if (e.target.closest('.ww-ext-help-btn')) return;
+        saveSection.classList.toggle('ww-ext-collapsed');
+      });
+
+      // Single scan button doubles as Stop while scanning (simulated).
+      const scanBtn = document.getElementById('ww-ext-scan');
+      scanBtn.addEventListener('click', () => {
+        if (scanBtn.classList.contains('ww-ext-scanning')) {
+          scanBtn.classList.remove('ww-ext-scanning');
+          scanBtn.textContent = 'Scan All Jobs';
+        } else {
+          scanBtn.classList.add('ww-ext-scanning');
+          scanBtn.textContent = 'Stop';
+        }
+      });
 
       scores = SAMPLE.map(s => ({ ...s }));
       render();
