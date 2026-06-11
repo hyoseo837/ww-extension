@@ -19,7 +19,13 @@ const SVG_FOLDER = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" 
 const SVG_X = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
 const SVG_GEAR = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
 
-const scores = new Map(); // postingId → {score, verdict, reason, breakdown, title, org}
+// Which WW job board this page is (v8.7.1). Entries are tagged at scan time;
+// the sidebar list and bulk save only show the current board's jobs. Entries
+// without a board tag predate v8.7 and were necessarily scanned on full.
+const BOARD = location.pathname.includes('/co-op/direct/') ? 'direct' : 'full';
+const onBoard = entry => (entry.board ?? 'full') === BOARD;
+
+const scores = new Map(); // postingId → {score, verdict, reason, breakdown, title, org, board}
 let allPostingIds = [];   // ordered list from selectAll — used for page navigation
 let aborted = false;
 let detectedPageSize = 50; // refined upward from observed row counts
@@ -446,7 +452,7 @@ async function scanAllJobs() {
       });
 
       if (reply?.ok) {
-        scores.set(postingId, { ...reply.result, scanId: reply.scanId, title: meta.title, org: meta.org });
+        scores.set(postingId, { ...reply.result, scanId: reply.scanId, board: BOARD, title: meta.title, org: meta.org });
         injectRowScores();
         scheduleFlush();
         return { ok: true };
@@ -543,7 +549,10 @@ function indexVisibleRows() {
 function renderSidebarList() {
   const ul = document.getElementById('ww-ext-results');
   if (!ul) return;
-  if (!scores.size) {
+  // Only this board's scored jobs (v8.7.1) — full-cycle and direct each get
+  // their own list, even though the cache (and credits) are shared.
+  const boardEntries = [...scores.entries()].filter(([, e]) => onBoard(e));
+  if (!boardEntries.length) {
     ul.innerHTML = `
       <li class="ww-ext-empty">
         <div class="ww-ext-guide-title">Get started</div>
@@ -572,7 +581,7 @@ function renderSidebarList() {
     return;
   }
   // Sort: score desc → verdict ladder (Strong Apply → Skip) → title asc, for stable rendering.
-  const sorted = [...scores.entries()].sort(([, a], [, b]) =>
+  const sorted = boardEntries.sort(([, a], [, b]) =>
     ((b.score ?? -1) - (a.score ?? -1)) ||
     ((VERDICT_ORDER[a.verdict] ?? 9) - (VERDICT_ORDER[b.verdict] ?? 9)) ||
     String(a.title).localeCompare(String(b.title))
@@ -958,7 +967,8 @@ function injectSidebar() {
       [...document.querySelectorAll('#ww-ext-verdict-row input:checked')].map(c => c.dataset.verdict)
     );
     const ids = [...scores.entries()]
-      .filter(([, { score, verdict }]) => (verdict === 'Excluded' || score >= min) && verdicts.has(verdict))
+      .filter(([, entry]) => onBoard(entry)
+        && (entry.verdict === 'Excluded' || entry.score >= min) && verdicts.has(entry.verdict))
       .map(([id]) => id);
     if (!ids.length) { setProgress('No jobs match the filter.', true); return; }
     sendBridge('openFolderSidebarBulk', { postingIds: ids });
