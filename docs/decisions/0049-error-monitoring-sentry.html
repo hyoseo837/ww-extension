@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-06-11" />
+    <title>ADR 0049 — Error monitoring via Sentry's free tier, env-gated and errors-only</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>ADR 0049 — Error monitoring via Sentry's free tier, env-gated and errors-only</h1>
+
+    <h2>Context</h2>
+    <p>
+      The 2026-06-11 audit (#9) found failures exist only in DigitalOcean's
+      log stream and web-app errors vanish entirely — with marketing about
+      to bring users (ADR 0042), breakage would be discovered by email, not
+      by the owner. ADR 0046 scheduled error monitoring for v8.10 but gated
+      the tool choice on an owner decision, because it adds the project's
+      first external observability service and a new data flow (error
+      payloads leave our infrastructure). Candidates: Sentry (hosted free
+      tier), GlitchTip (open-source Sentry-compatible), or deferring.
+    </p>
+
+    <h2>Decision</h2>
+    <p>
+      Use <strong>Sentry's hosted free tier</strong> (owner decision,
+      2026-06-11): <code>sentry-sdk[fastapi]</code> on the server,
+      <code>@sentry/react</code> on the web app. Both are
+      <strong>errors-only</strong> (no performance tracing, no session
+      replay) and <strong>env-gated</strong> — initialized only when
+      <code>SENTRY_DSN</code> / <code>VITE_SENTRY_DSN</code> is set, with
+      <code>send_default_pii=False</code> server-side, so local dev, CI,
+      and any clone of the public repo run with Sentry fully inert.
+    </p>
+
+    <h2>Consequences</h2>
+    <ul>
+      <li>Server exceptions and web-app crashes become visible with stack
+        traces, releases tagged by version, and email alerts — breakage is
+        heard about before users write in.</li>
+      <li>New external account and data flow: error payloads (stack traces,
+        request metadata — not request bodies, not PII fields) go to
+        Sentry's cloud. The privacy policy's subprocessor story should
+        mention this at the next legal-page touch.</li>
+      <li>Free-tier quota (~5k events/month) is far above expected volume;
+        if an error storm ever burns it, events drop — monitoring degrades,
+        the product does not.</li>
+      <li>Errors-only keeps the integration one
+        <code>init()</code> per side; choosing tracing/replay later is a
+        new decision, not creep into this one.</li>
+      <li>GlitchTip remains the escape hatch: it speaks the Sentry SDK
+        protocol, so switching is a DSN swap, not a code change.</li>
+    </ul>
+  </body>
+</html>

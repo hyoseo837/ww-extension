@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v8.10.0" />
+    <meta name="status" content="in-progress" />
+    <meta name="last-updated" content="2026-06-11" />
+    <title>v8.10 — Server resilience</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>v8.10 — Server resilience</h1>
+
+    <h2>Goal</h2>
+    <p>
+      Close the four resilience gaps from the 2026-06-11 audit
+      (<a href="../reference/audit-2026-06-11.html">findings</a> #6–#9;
+      ordering per <a href="../decisions/0046-september-hardening-initiative.html">ADR
+      0046</a>): the free endpoints can be hammered, one transient Gemini
+      blip means one user-visible failed scan, <code>/health</code> reports
+      ok with a dead connection pool, and failures live only in DO's log
+      stream while web-app errors vanish entirely.
+    </p>
+    <ol>
+      <li><strong>Rate limiting</strong> — in-memory per-user fixed-window
+        counters (no new dependency; correct for the single DO instance) on
+        the three free-to-hammer authenticated endpoints:
+        <code>/credits/checkout</code> 5/min, <code>/account/export</code>
+        3/min, <code>/scan/feedback</code> 30/min. Over-limit requests get
+        429 <code>{"detail": "rate_limited"}</code>.</li>
+      <li><strong>Gemini retry</strong> — the raw POST in
+        <code>score()</code> / <code>extract_profile()</code> moves to a
+        shared helper that retries <em>once</em> after a short backoff
+        (0.8&nbsp;s) on transient failures only: network errors and HTTP
+        429 / 5xx. Parse and shape errors never retry.</li>
+      <li><strong>Honest <code>/health</code></strong> — the endpoint runs
+        <code>select 1</code> on the pool (5&nbsp;s timeout) and returns 503
+        <code>{"status": "db_unavailable"}</code> when it fails, so platform
+        health checks catch the most likely real outage.</li>
+      <li><strong>Error monitoring — Sentry free tier</strong>
+        (<a href="../decisions/0049-error-monitoring-sentry.html">ADR
+        0049</a>, owner-chosen 2026-06-11): <code>sentry-sdk[fastapi]</code>
+        on the server and <code>@sentry/react</code> on the web app, both
+        errors-only and env-gated (<code>SENTRY_DSN</code> /
+        <code>VITE_SENTRY_DSN</code>; absent = SDK never initializes, so
+        dev and CI run exactly as before).</li>
+    </ol>
+
+    <h2>Files</h2>
+    <ul>
+      <li><code>server/app/core/ratelimit.py</code> — added: the
+        fixed-window limiter.</li>
+      <li><code>server/app/billing/routes.py</code>,
+        <code>server/app/account/routes.py</code>,
+        <code>server/app/scoring/routes.py</code> — limit checks on
+        checkout / export / feedback.</li>
+      <li><code>server/app/scoring/gemini.py</code> — shared
+        <code>_post_gemini()</code> with the single retry.</li>
+      <li><code>server/app/core/health.py</code> — DB check.</li>
+      <li><code>server/app/core/config.py</code>, <code>server/app/main.py</code>,
+        <code>server/pyproject.toml</code> — <code>sentry_dsn</code> setting
+        (default empty) + init.</li>
+      <li><code>web/src/main.tsx</code>, <code>web/package.json</code> —
+        Sentry React init behind <code>VITE_SENTRY_DSN</code>.</li>
+      <li><code>server/tests/test_ratelimit.py</code> — added; retry-decision
+        coverage joins <code>test_scoring_logic.py</code>.</li>
+    </ul>
+
+    <h2>Verify</h2>
+    <ul>
+      <li>pytest green: limiter allows up to the limit in a window, rejects
+        past it, resets on window roll, keys per user; retry decision
+        retries network/429/5xx once and never retries 4xx-other or parse
+        failures.</li>
+      <li>CI green on push.</li>
+      <li>With no DSN set, server starts and web builds with Sentry fully
+        inert (local + CI behave as before).</li>
+      <li><strong>Owner runbook (live):</strong> create a Sentry org with
+        two projects (FastAPI server, React web); set <code>SENTRY_DSN</code>
+        on the DO app and <code>VITE_SENTRY_DSN</code> on Vercel; after the
+        next release, confirm a thrown test error reaches both projects, and
+        that <code>/health</code> still reports ok with the new version.</li>
+    </ul>
+
+    <h2>Notes</h2>
+    <ul>
+      <li>The limiter is in-memory and per-process — exactly right for the
+        single-instance DO deployment, and it resets on deploy. If the app
+        ever scales out, move the counters to Postgres or a shared store
+        (and revisit ADR 0047's startup reconciliation in the same pass).</li>
+      <li><code>/scan</code> itself stays unlimited: it is credit-bounded,
+        and v8.9's per-user debit lock already serializes its spend.</li>
+      <li>Stripe's webhook is not rate-limited — it is signature-verified
+        and replay-idempotent (migration 0004's partial unique index).</li>
+    </ul>
+  </body>
+</html>
