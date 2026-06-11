@@ -3,6 +3,7 @@
 node_modules/
 dist/
 docs/reference/ww-dom-full.html
+docs/reference/ww-dom-direct-full.html
 ww-extension-v*.zip
 
 # server/ (FastAPI backend)
