@@ -8,6 +8,7 @@ The model-facing prompts and response schemas live in `prompts.py`
 module is the transport + serialization + parsing/validation logic.
 """
 
+import asyncio
 import json
 
 import httpx
@@ -215,6 +216,43 @@ def build_profile_context(
     return "\n\n".join(parts)
 
 
+_RETRY_BACKOFF_S = 0.8
+
+
+def _transient(status_code: int) -> bool:
+    """Worth one retry (v8.10, audit #7): rate-limit or server-side blips."""
+    return status_code == 429 or status_code >= 500
+
+
+async def _post_gemini(url: str, body: dict) -> httpx.Response:
+    """POST to Gemini with one retry on transient failures only — network
+    errors and 429/5xx. Other 4xx and everything after the response (parse,
+    shape) never retry."""
+    client = _require_client()
+    headers = {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": settings.gemini_api_key,
+    }
+    for attempt in (1, 2):
+        try:
+            res = await client.post(url, headers=headers, json=body)
+        except httpx.HTTPError as exc:
+            if attempt == 2:
+                raise GeminiError(f"network: {exc}") from exc
+            await asyncio.sleep(_RETRY_BACKOFF_S)
+            continue
+        if res.status_code >= 400:
+            if attempt == 1 and _transient(res.status_code):
+                await asyncio.sleep(_RETRY_BACKOFF_S)
+                continue
+            snippet = res.text[:200] if res.text else ""
+            raise GeminiError(
+                f"http {res.status_code}: {snippet}", status_code=res.status_code
+            )
+        return res
+    raise AssertionError("unreachable")  # both attempts return or raise
+
+
 class GeminiError(Exception):
     """Raised when Gemini returns a non-2xx or an unparseable response."""
 
@@ -236,7 +274,6 @@ async def score(
     derives "verdict"); usage_metadata is Gemini's raw usageMetadata dict so the
     caller can compute actual cost.
     """
-    client = _require_client()
     url = f"{_GEMINI_BASE}/models/{model}:generateContent"
 
     generation_config = {
@@ -265,23 +302,7 @@ async def score(
             "generationConfig": generation_config,
         }
 
-    try:
-        res = await client.post(
-            url,
-            headers={
-                "Content-Type": "application/json",
-                "X-Goog-Api-Key": settings.gemini_api_key,
-            },
-            json=body,
-        )
-    except httpx.HTTPError as exc:
-        raise GeminiError(f"network: {exc}") from exc
-
-    if res.status_code >= 400:
-        snippet = res.text[:200] if res.text else ""
-        raise GeminiError(
-            f"http {res.status_code}: {snippet}", status_code=res.status_code
-        )
+    res = await _post_gemini(url, body)
 
     data = res.json()
     usage = data.get("usageMetadata", {}) or {}
@@ -311,7 +332,6 @@ async def extract_profile(
 ) -> tuple[dict, dict]:
     """Extract a structured profile from a PDF via Gemini multimodal.
     Returns (profile_dict, usage)."""
-    client = _require_client()
     url = f"{_GEMINI_BASE}/models/{model}:generateContent"
     body = {
         "contents": [
@@ -330,23 +350,7 @@ async def extract_profile(
             "responseSchema": PROFILE_SCHEMA,
         },
     }
-    try:
-        res = await client.post(
-            url,
-            headers={
-                "Content-Type": "application/json",
-                "X-Goog-Api-Key": settings.gemini_api_key,
-            },
-            json=body,
-        )
-    except httpx.HTTPError as exc:
-        raise GeminiError(f"network: {exc}") from exc
-
-    if res.status_code >= 400:
-        snippet = res.text[:200] if res.text else ""
-        raise GeminiError(
-            f"http {res.status_code}: {snippet}", status_code=res.status_code
-        )
+    res = await _post_gemini(url, body)
 
     data = res.json()
     usage = data.get("usageMetadata", {}) or {}

@@ -9,6 +9,7 @@ from pydantic import BaseModel
 
 from app.auth.dependency import CurrentUser
 from app.billing import db, payments
+from app.core import ratelimit
 
 router = APIRouter()
 log = logging.getLogger("ww.billing")
@@ -56,6 +57,9 @@ class CheckoutRequest(BaseModel):
 
 @router.post("/credits/checkout")
 async def checkout(req: CheckoutRequest, user: CurrentUser) -> dict[str, str]:
+    # Each call creates a Stripe session — free to us per call, but not free
+    # to hammer (v8.10, audit #6).
+    ratelimit.check("checkout", user["sub"], limit=5)
     if req.package_id not in payments.CREDIT_PACKAGES:
         raise HTTPException(status_code=400, detail=f"unknown package: {req.package_id}")
     url = await payments.create_checkout_session(user["sub"], req.package_id, req.client)

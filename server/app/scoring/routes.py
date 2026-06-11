@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 
 from app.auth.dependency import CurrentUser
 from app.billing import db as billing_db, pricing
+from app.core import ratelimit
 from app.profile import db as profile_db
 from app.scoring import gemini
 
@@ -224,6 +225,9 @@ async def scan_feedback(req: FeedbackRequest, user: CurrentUser) -> dict:
     is stored only on 👎, where it's needed to debug the score.
     """
     user_id = user["sub"]
+    # Free endpoint; 30/min covers honest voting through a scored batch
+    # (v8.10, audit #6).
+    ratelimit.check("feedback", user_id, limit=30)
     comment = req.comment.strip()[:_MAX_COMMENT_CHARS] or None
     description = (
         req.description_text.strip()[:_MAX_DESC_CHARS] or None

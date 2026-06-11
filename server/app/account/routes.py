@@ -19,6 +19,7 @@ from fastapi import APIRouter, HTTPException, Response
 from app.account import db as account_db
 from app.auth.dependency import CurrentUser
 from app.billing import db as billing_db
+from app.core import ratelimit
 from app.core.config import settings
 from app.profile import db as profile_db
 
@@ -28,6 +29,8 @@ log = logging.getLogger("ww.account")
 
 @router.get("/account/export")
 async def export_account(user: CurrentUser) -> dict:
+    # Heavy multi-table query, free to call (v8.10, audit #6).
+    ratelimit.check("export", user["sub"], limit=3)
     data = await billing_db.export_user(user["sub"])
     if data is None:
         raise HTTPException(status_code=404, detail="user not found")
