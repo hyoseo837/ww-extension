@@ -424,15 +424,7 @@ async function scanAllJobs() {
       let descriptionText = '';
       let extractedTitle  = '';
       try {
-        const html = await sendBridge('fetchOverview', { postingId }, FETCH_TIMEOUT);
-        const doc  = new DOMParser().parseFromString(html, 'text/html');
-        let rawText = doc.body.textContent.replace(/\s+/g, ' ').trim();
-        const summaryIdx = rawText.indexOf('Job Summary');
-        if (summaryIdx > 0) rawText = rawText.slice(summaryIdx);
-        const appInfoIdx = rawText.indexOf('Application Information');
-        if (appInfoIdx > 0) rawText = rawText.slice(0, appInfoIdx).trim();
-        descriptionText = rawText.slice(0, DESC_CHAR_CAP);
-        extractedTitle  = doc.querySelector('h1, h2, h3')?.textContent.trim() ?? '';
+        ({ descriptionText, extractedTitle } = await fetchPostingText(postingId));
       } catch (e) {
         return { ok: false, error: `fetch: ${e.message}` };
       }
@@ -452,7 +444,7 @@ async function scanAllJobs() {
       });
 
       if (reply?.ok) {
-        scores.set(postingId, { ...reply.result, title: meta.title, org: meta.org });
+        scores.set(postingId, { ...reply.result, scanId: reply.scanId, title: meta.title, org: meta.org });
         injectRowScores();
         scheduleFlush();
         return { ok: true };
@@ -515,6 +507,22 @@ async function scanAllJobs() {
   }
 }
 
+// Fetch + trim a posting's overview text. Used by the scan loop and by 👎
+// feedback (ADR 0044), which re-fetches instead of storing descriptions.
+async function fetchPostingText(postingId) {
+  const html = await sendBridge('fetchOverview', { postingId }, FETCH_TIMEOUT);
+  const doc  = new DOMParser().parseFromString(html, 'text/html');
+  let rawText = doc.body.textContent.replace(/\s+/g, ' ').trim();
+  const summaryIdx = rawText.indexOf('Job Summary');
+  if (summaryIdx > 0) rawText = rawText.slice(summaryIdx);
+  const appInfoIdx = rawText.indexOf('Application Information');
+  if (appInfoIdx > 0) rawText = rawText.slice(0, appInfoIdx).trim();
+  return {
+    descriptionText: rawText.slice(0, DESC_CHAR_CAP),
+    extractedTitle:  doc.querySelector('h1, h2, h3')?.textContent.trim() ?? ''
+  };
+}
+
 function indexVisibleRows() {
   const map = {};
   document.querySelectorAll(ROW_SEL).forEach(row => {
@@ -566,7 +574,9 @@ function renderSidebarList() {
     ((VERDICT_ORDER[a.verdict] ?? 9) - (VERDICT_ORDER[b.verdict] ?? 9)) ||
     String(a.title).localeCompare(String(b.title))
   );
-  ul.innerHTML = sorted.map(([id, { score, verdict, reason, breakdown, title, org }]) => `
+  ul.innerHTML = sorted.map(([id, entry]) => {
+    const { score, verdict, reason, breakdown, title, org } = entry;
+    return `
     <li class="ww-ext-card" data-posting-id="${esc(id)}">
       <div class="ww-ext-card-top">
         <div class="ww-ext-card-verdict ww-ext-v--${esc(verdictSlug(verdict))}">
@@ -582,8 +592,66 @@ function renderSidebarList() {
       <div class="ww-ext-card-org">${esc(org)}</div>
       <div class="ww-ext-card-reason">${esc(reason)}</div>
       ${renderBreakdown(breakdown)}
+      ${renderFeedback(entry)}
     </li>
-  `).join('');
+  `;
+  }).join('');
+}
+
+// 👍/👎 footer (ADR 0044). Only for entries that know their scan row —
+// pre-v8.6 cache entries have no scanId and get no buttons.
+function renderFeedback(entry) {
+  if (!entry.scanId) return '';
+  const up   = entry.feedback === 'up';
+  const down = entry.feedback === 'down';
+  return `
+    <div class="ww-ext-card-feedback">
+      <span class="ww-ext-fb-label">${up || down ? 'Thanks for the feedback!' : 'Was this score right?'}</span>
+      <button class="ww-ext-fb-btn ww-ext-fb-up${up ? ' ww-ext-fb-active' : ''}" title="Good score">👍</button>
+      <button class="ww-ext-fb-btn ww-ext-fb-down${down ? ' ww-ext-fb-active' : ''}" title="Bad score">👎</button>
+    </div>`;
+}
+
+// 👎 opens an optional one-liner before sending. Sends the posting text too
+// (re-fetched, free) so a bad score can be debugged server-side.
+function openFeedbackForm(card) {
+  const box = card.querySelector('.ww-ext-card-feedback');
+  if (!box || box.querySelector('input')) return;
+  box.innerHTML = `
+    <input class="ww-ext-fb-input" type="text" maxlength="200"
+           placeholder="What was wrong? (optional)">
+    <button class="ww-ext-fb-btn ww-ext-fb-send" title="Send">Send</button>
+    <button class="ww-ext-fb-btn ww-ext-fb-cancel" title="Cancel">✕</button>`;
+  const input = box.querySelector('input');
+  input.focus();
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') submitFeedback(card.dataset.postingId, 'down', input.value);
+    if (e.key === 'Escape') renderSidebarList();
+  });
+}
+
+async function submitFeedback(postingId, rating, comment = '') {
+  const entry = scores.get(postingId);
+  if (!entry?.scanId) return;
+  let descriptionText = '';
+  if (rating === 'down') {
+    try { ({ descriptionText } = await fetchPostingText(postingId)); }
+    catch { /* description is best-effort context — send feedback anyway */ }
+  }
+  const reply = await chrome.runtime.sendMessage({
+    type: 'sendFeedback',
+    scanId: entry.scanId,
+    rating,
+    comment: comment.trim(),
+    descriptionText
+  });
+  if (reply?.ok) {
+    scores.set(postingId, { ...entry, feedback: rating });
+    saveScores();
+  } else {
+    setProgress('Could not send feedback — try again later.', true);
+  }
+  renderSidebarList();
 }
 
 // Compact gain/loss list under the reason. Each point is prefixed by a
@@ -898,6 +966,25 @@ function injectSidebar() {
       scrollToRow(card.dataset.postingId);
       return;
     }
+    if (e.target.closest('.ww-ext-fb-up')) {
+      const entry = scores.get(card.dataset.postingId);
+      if (entry?.feedback !== 'up') submitFeedback(card.dataset.postingId, 'up');
+      return;
+    }
+    if (e.target.closest('.ww-ext-fb-down')) {
+      openFeedbackForm(card);
+      return;
+    }
+    if (e.target.closest('.ww-ext-fb-send')) {
+      const input = card.querySelector('.ww-ext-fb-input');
+      submitFeedback(card.dataset.postingId, 'down', input?.value || '');
+      return;
+    }
+    if (e.target.closest('.ww-ext-fb-cancel')) {
+      renderSidebarList();
+      return;
+    }
+    if (e.target.closest('.ww-ext-fb-input')) return;
     const reason = e.target.closest('.ww-ext-card-reason');
     if (reason) reason.classList.toggle('ww-ext-expanded');
   });

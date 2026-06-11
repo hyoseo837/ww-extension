@@ -45,6 +45,10 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     backendFetch(msg.path, msg.init).then(sendResponse);
     return true;
   }
+  if (msg.type === "sendFeedback") {
+    sendFeedback(msg).then(sendResponse);
+    return true;
+  }
   if (msg.type === "refreshBalance") {
     refreshBalance().then(sendResponse);
     return true;
@@ -99,7 +103,9 @@ async function scoreJob({ meta, descriptionText, model, postingId, batchId }) {
     if (typeof res.data.balance === "number") {
       chrome.storage.local.set({ creditBalance: res.data.balance });
     }
-    return { ok: true, result: res.data.result };
+    // scan_id rides along so the content script can key feedback to this
+    // exact scan row (ADR 0044).
+    return { ok: true, result: res.data.result, scanId: scan_id };
   }
 
   if (res.status === 0) {
@@ -131,6 +137,21 @@ async function scoreJob({ meta, descriptionText, model, postingId, batchId }) {
     code: "HTTP",
     error: `HTTP ${res.status}: ${JSON.stringify(res.data ?? {}).slice(0, 200)}`,
   };
+}
+
+// 👍/👎 on a scored posting (ADR 0044). Free — no credit interaction.
+async function sendFeedback({ scanId, rating, comment, descriptionText }) {
+  const res = await backendFetch("/scan/feedback", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      scan_id: scanId,
+      rating,
+      comment: comment || "",
+      description_text: descriptionText || "",
+    }),
+  });
+  return res.ok ? { ok: true } : { ok: false, error: `HTTP ${res.status}` };
 }
 
 function fmtBalance(n) {

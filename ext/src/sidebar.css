@@ -622,3 +622,43 @@ tr.ww-ext-highlight th {
 #ww-ext-help-tooltip  { max-width: 260px; }
 #ww-ext-badge-tooltip.visible,
 #ww-ext-help-tooltip.visible { display: block; }
+
+/* ── Scan feedback 👍/👎 (ADR 0044) ──────────────────────────────────────────── */
+
+.ww-ext-card-feedback {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #efece4;
+}
+.ww-ext-fb-label {
+  flex: 1;
+  font: 11px 'WW Sans', system-ui, sans-serif;
+  color: var(--s-on-dim);
+}
+.ww-ext-fb-btn {
+  border: none;
+  background: none;
+  border-radius: 6px;
+  padding: 2px 6px;
+  font: 13px 'WW Sans', system-ui, sans-serif;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 0.15s, background 0.15s;
+}
+.ww-ext-fb-btn:hover { opacity: 1; background: var(--ww-highlight); }
+.ww-ext-fb-active { opacity: 1; background: var(--ww-highlight); }
+.ww-ext-fb-send, .ww-ext-fb-cancel { opacity: 0.8; font-size: 12px; }
+.ww-ext-fb-input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid #e8e5dc;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font: 12px 'WW Sans', system-ui, sans-serif;
+  color: #1e1b15;
+  background: #ffffff;
+}
+.ww-ext-fb-input:focus { outline: none; border-color: #b5704a; }
