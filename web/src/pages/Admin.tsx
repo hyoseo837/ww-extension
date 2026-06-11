@@ -13,6 +13,12 @@ type Scan = {
   org: string | null; title: string | null; cost: number | null; created_at: string;
 };
 type Detail = AdminUser & { profile: { cv_ready: boolean; summary: string | null }; scans: Scan[]; history: Entry[] };
+type Feedback = {
+  scan_id: string; rating: "up" | "down"; comment: string | null;
+  description_text: string | null; updated_at: string; email: string | null;
+  posting_id: string | null; title: string | null; org: string | null;
+  model: string; score: number | null; verdict: string | null;
+};
 
 const CARD = "rounded-xl border border-border bg-surface p-lg shadow-[0_2px_8px_rgba(41,38,31,0.04)]";
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString();
@@ -85,6 +91,8 @@ export default function Admin() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [search, setSearch] = useState("");
   const [detail, setDetail] = useState<Detail | null>(null);
+  const [feedback, setFeedback] = useState<Feedback[]>([]);
+  const [openFeedback, setOpenFeedback] = useState<string | null>(null);
 
   const [giftEmail, setGiftEmail] = useState("");
   const [giftAmount, setGiftAmount] = useState("");
@@ -101,10 +109,15 @@ export default function Admin() {
     setStats(await apiGet<Stats>("/admin/stats"));
   }, []);
 
+  const loadFeedback = useCallback(async () => {
+    const d = await apiGet<{ feedback: Feedback[] }>("/admin/feedback");
+    setFeedback(d.feedback);
+  }, []);
+
   useEffect(() => {
     (async () => {
       try {
-        await Promise.all([loadStats(), loadUsers("")]);
+        await Promise.all([loadStats(), loadUsers(""), loadFeedback()]);
         setAccess("ok");
       } catch (e) {
         setAccess(isForbidden(e) ? "denied" : "error");
@@ -275,6 +288,46 @@ export default function Admin() {
                 </tbody>
               </table>
             </div>
+          </section>
+
+          {/* Scan feedback (ADR 0044) */}
+          <section className={CARD}>
+            <h2 className="mb-md font-headline-md text-headline-md text-on-surface">Scan feedback</h2>
+            {feedback.length === 0 ? (
+              <p className="font-body-md text-body-md text-text-muted">No feedback yet.</p>
+            ) : (
+              <div className="flex flex-col">
+                {feedback.map((f) => (
+                  <div key={f.scan_id} className="border-b border-border py-sm last:border-0">
+                    <div className="flex flex-wrap items-baseline gap-x-md gap-y-xs">
+                      <span className="font-headline-md text-headline-md">{f.rating === "up" ? "👍" : "👎"}</span>
+                      <span className="font-body-md text-body-md text-on-surface">
+                        {f.title || f.posting_id || "—"}{f.org ? ` · ${f.org}` : ""}
+                      </span>
+                      <span className="font-label-sm text-label-sm text-text-muted">
+                        scored {f.score ?? "—"} {f.verdict ? `(${f.verdict})` : ""} · {f.email ?? "—"} · {fmtDate(f.updated_at)}
+                      </span>
+                      {f.description_text && (
+                        <button
+                          onClick={() => setOpenFeedback(openFeedback === f.scan_id ? null : f.scan_id)}
+                          className="font-label-sm text-label-sm text-primary hover:underline"
+                        >
+                          {openFeedback === f.scan_id ? "Hide posting" : "Show posting"}
+                        </button>
+                      )}
+                    </div>
+                    {f.comment && (
+                      <p className="mt-xs font-body-md text-body-md text-text-secondary">“{f.comment}”</p>
+                    )}
+                    {openFeedback === f.scan_id && f.description_text && (
+                      <p className="mt-xs max-h-64 overflow-y-auto whitespace-pre-wrap rounded-lg bg-surface-alt p-md font-body-md text-body-md text-text-secondary">
+                        {f.description_text}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
 
           {/* Gift credits */}

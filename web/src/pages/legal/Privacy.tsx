@@ -19,6 +19,7 @@ export default function Privacy() {
         <li><strong>Account identity</strong> — your email and UWaterloo (Microsoft) account, via UWaterloo sign-in. We never store a password.</li>
         <li><strong>Candidate profile</strong> — the CV text and structured profile you upload (education, experience, skills, projects, languages, and related application materials), plus your match criteria and notes.</li>
         <li><strong>Usage records</strong> — the job postings you scan and their AI results, and your credit ledger (purchases, scan charges and refunds, grants).</li>
+        <li><strong>Score feedback</strong> — if you rate a score 👍/👎, we store the rating, your optional note, and (on 👎 only) the posting text, to improve scoring quality.</li>
         <li><strong>Payment</strong> — handled by Stripe. We store ledger entries and a Stripe reference, not your card number.</li>
       </ul>
 
