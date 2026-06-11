@@ -384,10 +384,11 @@
 }
 #ww-ext-clear:hover { color: var(--s-on-dim); }
 
-/* Status line lives right under the Scan/Stop button, inside its section. */
+/* Status line lives right under the Scan/Stop button, right-aligned. */
 #ww-ext-progress {
   font: 12px 'WW Sans', system-ui, sans-serif;
   color: var(--s-on-dim);
+  text-align: right;
 }
 /* No reserved strip when there's nothing to say — the status line only
    takes space while a scan message is showing. */
