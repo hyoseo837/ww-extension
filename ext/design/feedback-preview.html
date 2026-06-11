@@ -58,11 +58,12 @@
         scanning (click it to see), and a collapsible Save-to-Folder section —
         collapsed by default to one "Score ≥ n [Save to Folder]" line; click
         its header to expand the verdict toggles and Clear.</p>
-      <p>Feedback: try <b>👍</b> (marks the card), <b>👎</b> (opens the
-        optional "what was wrong?" line — Enter or <b>Send</b> submits, Esc or
-        <b>✕</b> cancels). The second card starts already-rated 👍; the last
-        card has no <code>scanId</code> (pre-v8.6 cache) so it offers no
-        feedback at all. Sends are simulated — nothing leaves the page.</p>
+      <p>Feedback: try <b>👍</b> (sends and removes the row), <b>👎</b>
+        (opens the optional "what was wrong?" line — Enter or <b>Send</b>
+        submits, Esc or <b>✕</b> cancels). The second and fourth cards were
+        already rated, so their row is gone; the last card has no
+        <code>scanId</code> (pre-v8.6 cache) so it never offers feedback.
+        Sends are simulated — nothing leaves the page.</p>
       <button id="reset">↻ Restore samples</button>
     </div>
 
@@ -142,16 +143,14 @@
         return `<ul class="ww-ext-card-breakdown">${items}</ul>`;
       }
 
-      // Mirrors content.js renderFeedback() (v8.6.7).
+      // Mirrors content.js renderFeedback(): the row disappears once sent.
       function renderFeedback(entry) {
-        if (!entry.scanId) return '';
-        const up   = entry.feedback === 'up';
-        const down = entry.feedback === 'down';
+        if (!entry.scanId || entry.feedback) return '';
         return `
           <div class="ww-ext-card-feedback">
-            <span class="ww-ext-fb-label">${up || down ? 'Thanks for the feedback!' : 'Was this score right?'}</span>
-            <button class="ww-ext-fb-btn ww-ext-fb-up${up ? ' ww-ext-fb-active' : ''}" title="Good score">👍</button>
-            <button class="ww-ext-fb-btn ww-ext-fb-down${down ? ' ww-ext-fb-active' : ''}" title="Bad score">👎</button>
+            <span class="ww-ext-fb-label">Was this score right?</span>
+            <button class="ww-ext-fb-btn ww-ext-fb-up" title="Good score">👍</button>
+            <button class="ww-ext-fb-btn ww-ext-fb-down" title="Bad score">👎</button>
           </div>`;
       }
 

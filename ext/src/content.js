@@ -600,16 +600,15 @@ function renderSidebarList() {
 }
 
 // 👍/👎 footer (ADR 0044). Only for entries that know their scan row —
-// pre-v8.6 cache entries have no scanId and get no buttons.
+// pre-v8.6 cache entries have no scanId and get no buttons. Once feedback
+// is sent the row disappears (one vote per scan; no re-vote UI).
 function renderFeedback(entry) {
-  if (!entry.scanId) return '';
-  const up   = entry.feedback === 'up';
-  const down = entry.feedback === 'down';
+  if (!entry.scanId || entry.feedback) return '';
   return `
     <div class="ww-ext-card-feedback">
-      <span class="ww-ext-fb-label">${up || down ? 'Thanks for the feedback!' : 'Was this score right?'}</span>
-      <button class="ww-ext-fb-btn ww-ext-fb-up${up ? ' ww-ext-fb-active' : ''}" title="Good score">👍</button>
-      <button class="ww-ext-fb-btn ww-ext-fb-down${down ? ' ww-ext-fb-active' : ''}" title="Bad score">👎</button>
+      <span class="ww-ext-fb-label">Was this score right?</span>
+      <button class="ww-ext-fb-btn ww-ext-fb-up" title="Good score">👍</button>
+      <button class="ww-ext-fb-btn ww-ext-fb-down" title="Bad score">👎</button>
     </div>`;
 }
 
