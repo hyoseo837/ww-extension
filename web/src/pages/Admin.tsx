@@ -117,11 +117,14 @@ export default function Admin() {
   useEffect(() => {
     (async () => {
       try {
-        await Promise.all([loadStats(), loadUsers(""), loadFeedback()]);
+        await Promise.all([loadStats(), loadUsers("")]);
         setAccess("ok");
       } catch (e) {
         setAccess(isForbidden(e) ? "denied" : "error");
       }
+      // Non-fatal: a backend without /admin/feedback yet (deploy skew) just
+      // shows an empty feedback section instead of failing the whole page.
+      loadFeedback().catch(() => {});
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
