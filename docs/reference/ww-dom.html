@@ -122,8 +122,15 @@
       <code>&lt;script src="..."&gt;</code> and communicate via <code>window.postMessage</code>.
     </p>
     <p>
-      All three POST to <code>/myAccount/co-op/full/jobs.htm</code> using jQuery's
-      <code>$.post</code> (session cookies are sent automatically).
+      All three POST to <strong>the board's own path</strong> using jQuery's
+      <code>$.post</code> (session cookies are sent automatically):
+      <code>/myAccount/co-op/full/jobs.htm</code> on the Full-Cycle board,
+      <code>/myAccount/co-op/direct/jobs.htm</code> on Employer-Student Direct.
+      The two boards are otherwise structurally identical — same table markup,
+      pagination, inline functions, token shape, and
+      <code>dataViewerApp</code> root (verified against the 2026-06-10 capture
+      <code>ww-dom-direct-full.html</code>; v8.7.0) — so the extension posts to
+      <code>location.pathname</code>.
       <strong>Action tokens are session-specific</strong> — extract fresh on each scan,
       never cache or hardcode.
     </p>

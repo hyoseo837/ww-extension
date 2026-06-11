@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v8.7.0" />
+    <meta name="status" content="done" />
+    <meta name="last-updated" content="2026-06-10" />
+    <title>v8.7.0 — Extension on the Employer-Student Direct board</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>v8.7.0 — Extension on the Employer-Student Direct board</h1>
+
+    <h2>Goal</h2>
+    <p>
+      The extension currently activates only on the Full-Cycle Service jobs
+      page. Make it work identically on
+      <code>https://waterlooworks.uwaterloo.ca/myAccount/co-op/direct/jobs.htm</code>
+      (Employer-Student Direct), the second WW job board.
+    </p>
+
+    <h2>Evidence</h2>
+    <p>
+      Owner-captured rendered DOM of the Direct board
+      (<code>docs/reference/ww-dom-direct-full.html</code>, 2026-06-10)
+      confirms full structural parity with the Full-Cycle page: identical
+      results-table markup (<code>tr.table__row--body</code>,
+      <code>dataViewerSelection</code> inputs, <code>td.table__value</code>
+      column order), identical pagination, the same inline
+      <code>getPostingOverview</code> / <code>onSelectAll</code> functions with
+      the same <code>action:</code> token shape (the page-bridge token regexes
+      match unchanged), and the same <code>dataViewerApp</code> Vue root with
+      <code>sidebarPostingIds</code> / <code>jobFolderEditSidebar</code> for
+      folder saves. The single difference: the page's AJAX posts target its
+      own path, <code>/myAccount/co-op/direct/jobs.htm</code>.
+    </p>
+
+    <h2>Change</h2>
+    <ul>
+      <li><code>ext/manifest.json</code> — add the Direct URL pattern to the
+        content-script <code>matches</code> (host permission already covers
+        <code>waterlooworks.uwaterloo.ca/*</code>).</li>
+      <li><code>ext/src/content.js</code> — the selectAll list fetch posts to
+        <code>location.pathname</code> instead of the hardcoded Full-Cycle
+        path.</li>
+      <li><code>ext/src/page-bridge.js</code> — <code>fetchOverview</code>
+        posts to <code>location.pathname</code> likewise.</li>
+      <li><code>docs/reference/ww-dom.html</code> — note the Direct board's
+        parity and the posts-to-own-path rule.</li>
+    </ul>
+    <p>
+      The score cache (<code>ww_scores</code>, keyed by posting id) is shared
+      across both boards by design — posting ids are board-global, so a job
+      scored on one board shows its badge on the other.
+    </p>
+
+    <h2>Out of scope</h2>
+    <p>
+      No backend or web-app change. No new ADR — no decision beyond applying
+      the existing architecture to a second URL.
+    </p>
+  </body>
+</html>

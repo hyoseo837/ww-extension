@@ -53,7 +53,8 @@ function fetchOverview(postingId) {
   const { getPostingOverview: token } = getTokens();
   if (!token) return Promise.reject(new Error('getPostingOverview token not found'));
   return new Promise((resolve, reject) => {
-    $.post('/myAccount/co-op/full/jobs.htm', { action: token, postingId })
+    // The board posts to its own path (full/ or direct/ — v8.7.0).
+    $.post(location.pathname, { action: token, postingId })
       .done(resolve)
       .fail(xhr => reject(new Error(`HTTP ${xhr.status}`)));
   });

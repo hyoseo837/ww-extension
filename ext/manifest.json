@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "WW Extension",
-  "version": "8.6.16",
+  "version": "8.7.0",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtEpbnRUqUPfvhLvyFfTbhMV542epgBa837Xj8u1tEgKpC5t7hQ3LbPZJszllt+dRgsH9FZZt/rKLOReRpExTLyOTRVSsPgklzyjZQvxeU3oZgSs3TtAJKamFZxCps5YVrsFQ25H0W1hn78qlg18MEUdUa5QbBa6Gn+LGTWr4ogad29A7OSFBRzaHv+FDIZp4D4+PYokxh271oMDOaX4WEiCG5IJKwKmkM6/50ldigwXA+YpGCBeEyxYLcbokhJ8Wg3eB3LNpGmBMC473Un6jcDWHgV5pH9zWIYVoTm5t6WhVoaffILP9WpQkfARDvjfgGKlXmxceywbTV4flHAa0jwIDAQAB",
   "description": "AI job scorer for WaterlooWorks",
   "permissions": ["storage", "identity"],
@@ -12,7 +12,10 @@
   ],
   "content_scripts": [
     {
-      "matches": ["https://waterlooworks.uwaterloo.ca/myAccount/co-op/full/jobs.htm*"],
+      "matches": [
+        "https://waterlooworks.uwaterloo.ca/myAccount/co-op/full/jobs.htm*",
+        "https://waterlooworks.uwaterloo.ca/myAccount/co-op/direct/jobs.htm*"
+      ],
       "js": ["src/content.js"],
       "css": ["src/sidebar.css"],
       "run_at": "document_idle"

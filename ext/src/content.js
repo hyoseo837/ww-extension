@@ -379,7 +379,9 @@ async function scanAllJobs() {
       return;
     }
 
-    const res = await fetch('/myAccount/co-op/full/jobs.htm', {
+    // Post to the current board's own path — Full-Cycle and Employer-Student
+    // Direct share the page machinery but each posts to its own URL (v8.7.0).
+    const res = await fetch(location.pathname, {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
