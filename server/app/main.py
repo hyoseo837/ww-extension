@@ -1,5 +1,7 @@
 from contextlib import asynccontextmanager
+from importlib.metadata import version
 
+import sentry_sdk
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -14,6 +16,16 @@ from app.core.health import router as health_router
 from app.profile.routes import router as profile_router
 from app.scoring import gemini
 from app.scoring.routes import router as scoring_router
+
+
+# Error monitoring (v8.10, ADR 0049) — errors only, no tracing, inert
+# without a DSN.
+if settings.sentry_dsn:
+    sentry_sdk.init(
+        dsn=settings.sentry_dsn,
+        release=version("ww-extension-backend"),
+        send_default_pii=False,
+    )
 
 
 @asynccontextmanager

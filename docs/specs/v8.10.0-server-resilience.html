@@ -5,7 +5,7 @@
     <meta name="project" content="ww-extension" />
     <meta name="type" content="spec" />
     <meta name="version" content="v8.10.0" />
-    <meta name="status" content="in-progress" />
+    <meta name="status" content="done" />
     <meta name="last-updated" content="2026-06-11" />
     <title>v8.10 — Server resilience</title>
     <link rel="stylesheet" href="../style.css" />
@@ -73,7 +73,7 @@
       <li>pytest green: limiter allows up to the limit in a window, rejects
         past it, resets on window roll, keys per user; retry decision
         retries network/429/5xx once and never retries 4xx-other or parse
-        failures.</li>
+        failures. <em>Local run 2026-06-11: 69 passed.</em></li>
       <li>CI green on push.</li>
       <li>With no DSN set, server starts and web builds with Sentry fully
         inert (local + CI behave as before).</li>

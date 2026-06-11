@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     # Comma-separated Supabase user_ids allowed into the admin surface (v6.6,
     # ADR 0025). Empty = no admins (every /admin/* request gets 403).
     admin_user_ids: str = ""
+    # Sentry error monitoring (v8.10, ADR 0049). Empty = SDK never
+    # initializes — local dev, CI, and forks run with Sentry inert.
+    sentry_dsn: str = ""
 
     @property
     def cors_origin_list(self) -> list[str]:
