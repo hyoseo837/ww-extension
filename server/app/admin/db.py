@@ -61,6 +61,52 @@ async def list_users(search: str, limit: int, offset: int) -> list[dict]:
     ]
 
 
+async def list_feedback(limit: int, offset: int) -> list[dict]:
+    """Recent scan feedback (ADR 0044) joined to its scan row + user email.
+    Score/verdict come from the scan's stored response jsonb."""
+    async with pool().acquire() as conn:
+        rows = await conn.fetch(
+            """
+            select f.scan_id::text          as scan_id,
+                   f.rating                 as rating,
+                   f.comment                as comment,
+                   f.description_text       as description_text,
+                   f.updated_at             as updated_at,
+                   u.email                  as email,
+                   s.posting_id             as posting_id,
+                   s.title                  as title,
+                   s.org                    as org,
+                   s.model                  as model,
+                   (s.response->>'score')   as score,
+                   (s.response->>'verdict') as verdict
+            from scan_feedback f
+            join scan s on s.id = f.scan_id
+            join auth.users u on u.id = f.user_id
+            order by f.updated_at desc
+            limit $1 offset $2
+            """,
+            limit,
+            offset,
+        )
+    return [
+        {
+            "scan_id": r["scan_id"],
+            "rating": r["rating"],
+            "comment": r["comment"],
+            "description_text": r["description_text"],
+            "updated_at": r["updated_at"].isoformat(),
+            "email": r["email"],
+            "posting_id": r["posting_id"],
+            "title": r["title"],
+            "org": r["org"],
+            "model": r["model"],
+            "score": int(r["score"]) if r["score"] is not None else None,
+            "verdict": r["verdict"],
+        }
+        for r in rows
+    ]
+
+
 async def resolve_email(email: str) -> str | None:
     async with pool().acquire() as conn:
         return await conn.fetchval(

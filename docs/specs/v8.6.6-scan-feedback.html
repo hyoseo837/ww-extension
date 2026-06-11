@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v8.6.6" />
+    <meta name="status" content="in-progress" />
+    <meta name="last-updated" content="2026-06-10" />
+    <title>v8.6.6–v8.6.8 — Scan feedback loop</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>v8.6.6–v8.6.8 — Scan feedback loop</h1>
+
+    <h2>Goal</h2>
+    <p>
+      Implement <a href="../decisions/0044-scan-feedback-loop.html">ADR
+      0044</a>: 👍/👎 per scored posting in the extension's score panel, an
+      optional one-line "what was wrong?" on 👎, stored against the exact scan
+      row and reviewed on the admin page. v8.6.0–v8.6.5 were pre-phase
+      maintenance commits; this spec covers the feature slices v8.6.6–v8.6.8.
+    </p>
+
+    <h2>v8.6.6 — backend</h2>
+    <ul>
+      <li><code>server/migrations/0012_scan_feedback.sql</code> — table per
+        ADR 0044 (PK <code>scan_id</code> → <code>scan(id)</code> cascade,
+        <code>user_id</code>, <code>rating</code> check
+        <code>up</code>/<code>down</code>, <code>comment</code>,
+        <code>description_text</code>, <code>created_at</code>/<code>updated_at</code>;
+        RLS select-own, no write policy). Applied manually in the Supabase
+        SQL editor by the owner.</li>
+      <li><code>server/app/scoring/routes.py</code> —
+        <code>POST /scan/feedback</code>: body
+        <code>{scan_id, rating, comment?, description_text?}</code>.
+        404 if the scan row isn't the caller's successful
+        <code>kind='scan'</code> row. Upsert; <code>comment</code> trimmed and
+        capped at 500 chars, <code>description_text</code> capped at 6000
+        (the extension's <code>DESC_CHAR_CAP</code>) and ignored unless
+        rating is <code>down</code>. Returns <code>{"ok": true}</code>.</li>
+      <li><code>server/app/admin/routes.py</code> + <code>admin/db.py</code> —
+        <code>GET /admin/feedback?limit&amp;offset</code>: recent feedback
+        joined to scan (posting id, title, org, model, stored
+        score/verdict) and user email.</li>
+      <li><code>docs/reference/api.html</code> — both endpoints added to the
+        contract.</li>
+      <li><code>server/pyproject.toml</code> — 6.11.0 (new feature).</li>
+    </ul>
+
+    <h2>v8.6.7 — extension</h2>
+    <ul>
+      <li><code>ext/src/background.js</code> — <code>scoreJob</code> returns
+        the generated <code>scan_id</code> alongside the result; new
+        <code>sendFeedback</code> message → <code>POST /scan/feedback</code>.</li>
+      <li><code>ext/src/content.js</code> — cache entries gain
+        <code>scanId</code> (set on scan success) and <code>feedback</code>
+        (<code>'up'</code>/<code>'down'</code>, set after a successful send).
+        Sidebar cards with a <code>scanId</code> render 👍/👎 in the actions
+        row; the active vote is highlighted and can be switched. 👎 reveals an
+        optional one-line input + Send; on send the content script re-fetches
+        the posting overview via the page bridge (same extraction as a scan,
+        free) and includes the trimmed description. Entries without
+        <code>scanId</code> (pre-v8.6 cache) show no buttons. Additive cache
+        change — no <code>SCORING_SCHEMA_VERSION</code> bump.</li>
+      <li><code>ext/src/sidebar.css</code> — feedback button + input styles.</li>
+    </ul>
+
+    <h2>v8.6.8 — web admin + close-out</h2>
+    <ul>
+      <li><code>web/src/pages/Admin.tsx</code> — "Scan feedback" section
+        listing recent feedback (rating, email, posting title/org,
+        score/verdict, comment, date; 👎 rows expandable to the stored
+        description).</li>
+      <li>Close-out: spec status → done; whiteboard entry moved to Solved
+        (with owner's permission); privacy-policy data inventory gains the
+        feedback row.</li>
+    </ul>
+
+    <h2>Out of scope</h2>
+    <p>
+      Per ADR 0044: per-user score adjustment, implicit signals, any credit
+      tie, and automated prompt evaluation. The loop closes by hand.
+    </p>
+  </body>
+</html>

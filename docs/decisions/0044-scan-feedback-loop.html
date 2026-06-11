@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-06-10" />
+    <title>ADR 0044 — Scan feedback loop: 👍/👎 per scored posting, keyed to the scan row</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>ADR 0044 — Scan feedback loop: 👍/👎 per scored posting, keyed to the scan row</h1>
+
+    <h2>Context</h2>
+    <p>
+      ADR 0042 froze feature work and parked the feedback loop until the
+      December 2026 checkpoint — but named it the first candidate to un-park.
+      The owner has decided to un-park it <em>now</em>, ahead of the September
+      2026 recruiting wave: a feedback collector only pays off if it is already
+      in place when marketing brings users, and the wave is the one shot at
+      organic volume before the checkpoint. This amends ADR 0042's parking
+      list, not its direction — v8 stays the final major; this ships as v8.6.
+    </p>
+    <p>
+      The value identified when the feature was shaped (whiteboard,
+      2026-06-10) is a growing gold set of (profile, criteria, posting, score,
+      user verdict) tuples to calibrate prompt changes against — including
+      validating v8.5's phrasing-inferred importance. The loop closes by hand:
+      collect → review in admin → tune prompt → re-test.
+    </p>
+
+    <h2>Decision</h2>
+    <ul>
+      <li><strong>One feedback per scan, keyed to the scan row.</strong> New
+        table <code>public.scan_feedback</code> with
+        <code>scan_id uuid primary key references scan(id) on delete
+        cascade</code>, <code>user_id</code>, <code>rating</code>
+        (<code>'up'</code>/<code>'down'</code>), optional one-line
+        <code>comment</code>, optional <code>description_text</code>,
+        timestamps. Re-submitting upserts — latest verdict wins. The scan row
+        already holds the stored result, posting id, title/org, and model, so
+        feedback adds nothing redundant.</li>
+      <li><strong>Posting description is captured only on 👎, at feedback
+        time.</strong> The scan row deliberately doesn't store descriptions
+        (row bloat); instead the extension re-fetches the posting overview —
+        the same free WW fetch a scan uses — and sends the trimmed text with
+        a 👎. Thumbs-up needs no debugging context and stores none.</li>
+      <li><strong>Backend is the sole writer</strong> (same posture as
+        ADR 0011's <code>user_profile</code> hardening): RLS enables
+        select-own only; writes go through <code>POST /scan/feedback</code>,
+        which verifies the scan row belongs to the caller, is
+        <code>kind='scan'</code>, and <code>status='success'</code>.</li>
+      <li><strong>No credit interaction.</strong> Feedback is free, earns
+        nothing, and refunds nothing — it must stay a zero-stakes signal, not
+        a refund channel users learn to farm.</li>
+      <li><strong>Review surface is the existing admin page</strong>: a
+        recent-feedback list via <code>GET /admin/feedback</code>. No
+        automation — per the shaping, per-user score adjustment and implicit
+        signals (save/apply tracking) are explicitly out of scope.</li>
+    </ul>
+
+    <h2>Consequences</h2>
+    <ul>
+      <li>The extension must learn its <code>scan_id</code>s: the background
+        <code>scoreJob</code> returns the generated UUID and the content
+        script caches it per posting. Cached entries from before v8.6 have no
+        <code>scan_id</code> — those cards simply don't offer feedback
+        buttons (acceptable: real collection starts with new scans).</li>
+      <li>Hard-deleting an account cascades through <code>scan</code> →
+        <code>scan_feedback</code>, so ADR 0027's deletion guarantee holds
+        without new code. The privacy policy's data inventory gains one row
+        (feedback + optional posting text).</li>
+      <li>The gold set lives in Postgres and is reviewed by hand; if volume
+        ever justifies tooling, that's a future decision.</li>
+    </ul>
+
+    <h2>Alternatives considered</h2>
+    <ul>
+      <li><strong>Key by (user, posting)</strong> — rejected: a posting can be
+        scanned again after profile changes; keying to the scan row pins
+        feedback to the exact (profile, criteria, score) that produced it,
+        which is the whole point of the gold set.</li>
+      <li><strong>Store the description on every scan</strong> — rejected
+        (row bloat for data needed only on the rare 👎).</li>
+      <li><strong>Wait for December as ADR 0042 planned</strong> — rejected:
+        the collector must precede the users it collects from.</li>
+    </ul>
+  </body>
+</html>

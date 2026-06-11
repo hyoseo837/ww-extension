@@ -192,6 +192,61 @@ async def scan(req: ScanRequest, user: CurrentUser):
     )
 
 
+# ── /scan/feedback ────────────────────────────────────────────────────────────
+
+
+_MAX_COMMENT_CHARS = 500
+_MAX_DESC_CHARS = 6000  # matches the extension's DESC_CHAR_CAP
+
+
+class FeedbackRequest(BaseModel):
+    scan_id: UUID
+    rating: Literal["up", "down"]
+    comment: str = ""
+    description_text: str = ""
+
+
+@router.post("/scan/feedback")
+async def scan_feedback(req: FeedbackRequest, user: CurrentUser) -> dict:
+    """Record the user's verdict on a scored posting (ADR 0044).
+
+    Upserts one row per scan — latest verdict wins. The posting description
+    is stored only on 👎, where it's needed to debug the score.
+    """
+    user_id = user["sub"]
+    comment = req.comment.strip()[:_MAX_COMMENT_CHARS] or None
+    description = (
+        req.description_text.strip()[:_MAX_DESC_CHARS] or None
+        if req.rating == "down" else None
+    )
+
+    async with billing_db.pool().acquire() as conn:
+        owns = await conn.fetchval(
+            "select 1 from scan "
+            "where id = $1 and user_id = $2::uuid "
+            "  and kind = 'scan' and status = 'success'",
+            req.scan_id, user_id,
+        )
+        if not owns:
+            raise HTTPException(status_code=404, detail="scan not found")
+        await conn.execute(
+            """
+            insert into scan_feedback
+              (scan_id, user_id, rating, comment, description_text)
+            values ($1, $2::uuid, $3, $4, $5)
+            on conflict (scan_id) do update set
+              rating = excluded.rating,
+              comment = excluded.comment,
+              description_text = excluded.description_text,
+              updated_at = now()
+            """,
+            req.scan_id, user_id, req.rating, comment, description,
+        )
+
+    log.info("scan_feedback scan_id=%s rating=%s", req.scan_id, req.rating)
+    return {"ok": True}
+
+
 # ── /profile/extract ──────────────────────────────────────────────────────────
 
 

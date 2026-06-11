@@ -297,6 +297,25 @@
           re-calling Gemini. The PK conflict on
           <code>scan.id</code> is the enforcement.</p>
       </dd>
+
+      <dt id="post-scan-feedback"><code>POST /scan/feedback</code> (v8.6.6)</dt>
+      <dd>
+        <p>Authenticated. Records the user's verdict on a scored posting
+          (ADR 0044). One row per scan — re-submitting upserts, latest
+          verdict wins. No credit cost.</p>
+        <p><strong>Request:</strong></p>
+        <pre><code>{
+  "scan_id": "&lt;uuid of the scan being judged&gt;",
+  "rating": "up" | "down",
+  "comment": "...",            // optional; trimmed, capped at 500 chars
+  "description_text": "..."    // optional; stored only when rating = "down",
+                               //   capped at 6000 chars (DESC_CHAR_CAP)
+}</code></pre>
+        <p><strong>Response:</strong> <code>200 OK</code> —
+          <code>{ "ok": true }</code>.
+          <code>404</code> if the scan row isn't the caller's own successful
+          <code>kind='scan'</code> row.</p>
+      </dd>
     </dl>
 
       <dt id="get-profile"><code>GET /profile</code></dt>
@@ -308,14 +327,14 @@
         <pre><code>{
   "cv_text": "...",
   "preferences": "...",            // free-form "Additional Notes" (v5.0.0)
-  "match_criteria": {              // structured criteria (v5.0.0); {} if unset
+  "match_criteria": {              // criteria v2 — facts only (v8.5, ADR 0041); {} if unset
     "work_authorization": "international" | "citizen" | "pr" | "other" | null,
-    "preferred_locations": { "weight": "strong",
-      "preferred": [...], "acceptable": [...], "avoid": [...], "excluded": [...] },
-    "work_modes":    { ...same WeightedCriterion shape... },
-    "target_term":   { ... },
-    "target_length": { ... },
-    "languages":     { ... }       // spoken/working, not programming
+    "wizard_completed_at": "&lt;ISO timestamp&gt;" | null,   // setup-wizard flag (ADR 0040)
+    "locations":    ["..."],
+    "work_modes":   ["..."],
+    "target_term":  "...",
+    "term_lengths": ["..."],
+    "languages":    ["..."]        // spoken/working, not programming
   },
   "profile_json": {                // structured profile (v5.1.0); {} if not extracted
     "summary": "...",
@@ -332,9 +351,9 @@
     { "kind": "experience" | "project", "title": "...", "description": "..." }
   ]
 }</code></pre>
-        <p><code>weight</code> is one of <code>must</code> |
-          <code>strong</code> | <code>nice-to-have</code>. Shapes are
-          owned/validated by backend Pydantic models (ADR 0013, ADR 0015).
+        <p>Shapes are owned/validated by backend Pydantic models (ADR 0041,
+          ADR 0015). Stored v1 criteria (weighted/tiered, ADR 0013) convert
+          to v2 at read time, so clients only ever see this shape.
           The scan uses <code>profile_json</code> when non-empty, else falls
           back to <code>cv_text</code> (ADR 0015).</p>
       </dd>
@@ -353,7 +372,7 @@
   "profile_json": { ... }      // optional — normally set by /profile/extract;
                                //   accepted here only for a full replace ({} clears)
 }</code></pre>
-        <p>A bad <code>work_authorization</code>, <code>weight</code>, or
+        <p>A bad <code>work_authorization</code> or
           supplement <code>kind</code> is rejected (<code>422</code>).
           <code>match_criteria</code>, <code>profile_supplement</code>, and
           <code>profile_json</code> are each replaced wholesale when present,
@@ -539,6 +558,24 @@
           <code>400</code> <code>{"detail": "credits must be positive"}</code>;
           <code>404</code> <code>{"detail": "no user with email: …"}</code>;
           <code>403</code> if not an admin.</p>
+      </dd>
+
+      <dt id="get-admin-feedback"><code>GET /admin/feedback</code> (v8.6.6)</dt>
+      <dd>
+        <p>Admin. Recent scan feedback (ADR 0044), newest first, joined to
+          the scan row and user email. Query: <code>limit</code> (default 50,
+          max 100), <code>offset</code>.</p>
+        <p><strong>Response:</strong> <code>200 OK</code></p>
+        <pre><code>{
+  "feedback": [
+    { "scan_id": "&lt;uuid&gt;", "rating": "down",
+      "comment": "I can't drive there", "description_text": "...",  // null on "up"
+      "updated_at": "...", "email": "user@uwaterloo.ca",
+      "posting_id": "123456", "title": "SWE", "org": "Apple Inc.",
+      "model": "gemini-2.5-flash", "score": 17, "verdict": "Strong Apply" }
+  ],
+  "limit": 50, "offset": 0
+}</code></pre>
       </dd>
     </dl>
   </body>

@@ -31,6 +31,14 @@ async def users(_: RequireAdmin, search: str = "", limit: int = 50, offset: int 
     return {"users": rows, "limit": limit, "offset": offset}
 
 
+@router.get("/feedback")
+async def feedback(_: RequireAdmin, limit: int = 50, offset: int = 0) -> dict:
+    limit = max(1, min(limit, 100))
+    offset = max(0, offset)
+    rows = await db.list_feedback(limit, offset)
+    return {"feedback": rows, "limit": limit, "offset": offset}
+
+
 @router.get("/users/{user_id}")
 async def inspect(user_id: str, _: RequireAdmin) -> dict:
     detail = await db.inspect_user(user_id)
