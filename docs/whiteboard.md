@@ -26,22 +26,8 @@ moved out or dropped.
 ## Future features
 
 - cover letter writer (very low priority)
-- feedback loop of user — _(shaped 2026-06-10)_ 👍/👎 per scored posting in
-  the extension's score panel, optional one-line "what was wrong?" on 👎.
-  New `scan_feedback` endpoint keyed to the existing scan row; store the full
-  posting description **only on 👎** (needed to debug, tiny volume); list it
-  in the admin page. Loop closes by hand: collect → review → tune prompt →
-  re-test against flagged set. Real value = a growing gold set of
-  (profile, criteria, posting, score, user verdict) to calibrate prompt
-  changes against — incl. validating v8.5's phrasing-inferred importance.
-  Deliberately NOT yet: per-user score adjustment, implicit signals
-  (save/apply tracking), any tie to credit refunds. Slot after the two quick
-  fixes below.
-- extension also available on “Employer-Student Direct” page (currently only
-  "Full Cycle Service" page) — _next up; blocked on info the owner will
-  provide: the Direct board's URL and its job-table HTML (the extension
-  hardcodes `/myAccount/co-op/full/jobs.htm` in the manifest match,
-  content.js fetch, and page-bridge POST)_
+- friend invitation (give bonus credit if invited friend run first scan.)
+  - maybe ask "who invited you?" on sign in. (can be empty, not work for re-signing in account: just like first bonus credit)
 
 ## fixes needed
 
@@ -93,4 +79,18 @@ moved out or dropped.
 - ~~update plan messages: emphasize it's not expensive (Tim's coffee /
   warrior burger comparisons)~~ — tried (v8.6.2), didn't like it; rolled
   back to minimal pricing cards instead (v8.6.4): terse pack notes, plain
-  Buy button, "1 credit ≈ 1 scan" header.
+  Buy button, "1 credit ≈ 1 scan" header (header corrected to ~2
+  credits/scan at v8.9.3, ADR 0048).
+
+- ~~feedback loop of user~~ — shipped (v8.6.6, ADR 0044): 👍/👎 per scored
+  posting, optional one-liner on 👎, description stored only on 👎,
+  admin-page listing. Loop still closes by hand: collect → review → tune
+  prompt → re-test.
+
+- ~~extension also available on "Employer-Student Direct" page~~ — shipped
+  (v8.7): match pattern + posts to `location.pathname`; sidebar list and
+  bulk save board-scoped (v8.7.1).
+
+- ~~extension: cannot see score badge on the job table on Direct page~~ —
+  fixed (v8.8.4): Direct orders columns differently (leads with Term), so
+  the title-cell lookup by index found no anchor; now found by anchor.

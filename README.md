@@ -22,7 +22,7 @@ Score every co-op posting against your profile in seconds. See which jobs are wo
 
 [▶ Full walkthrough on YouTube](https://www.youtube.com/watch?v=YURcZTqKS5U)
 
-![Sidebar in action on WaterlooWorks](screenshots/wwextsidebar.png)
+![Sidebar in action on WaterlooWorks](screenshots/extension/sidebar_scored.png)
 
 ## What it does
 
@@ -39,8 +39,8 @@ Scores appear as inline badges directly in the WaterlooWorks job table and persi
 Scoring runs on a hosted backend, not in your browser — so there's no API key to manage and nothing to configure.
 
 1. **Sign in** with your UWaterloo account (Microsoft) from the extension or the [web app](https://ww-extension.hyoseo.dev). New accounts get **100 free credits**.
-2. **Set up your profile** on the web app: upload your WaterlooWorks application-package PDF and Gemini extracts a structured profile; add weighted match criteria (preferred locations, work modes, target term, languages, work authorization, and things to avoid or exclude).
-3. **Scan** from the WaterlooWorks jobs list. Each posting scored costs roughly one credit against your balance; top up any time.
+2. **Set up your profile** on the web app: upload your WaterlooWorks application-package PDF and Gemini extracts a structured profile; then a short wizard captures your match preferences — the facts (work authorization, locations, work mode, target term, languages) plus what matters most in your own words.
+3. **Scan** from the WaterlooWorks jobs list. Each posting scored costs about 2 credits against your balance; top up any time.
 
 ## Features
 
@@ -49,22 +49,27 @@ Scoring runs on a hosted backend, not in your browser — so there's no API key 
 | **Bulk scan**         | One click scores every posting in your current search and injects badges into the table as results come in.  |
 | **Ranked sidebar**    | A sortable, filterable list of all scored jobs. Click any entry to jump straight to its row.                 |
 | **Profile extraction**| Drop your application-package PDF into the web app — Gemini extracts a structured profile you can edit.       |
-| **Weighted criteria** | Graded match rules with `must` / `strong` / `nice-to-have` weights and preferred / acceptable / avoid / excluded tiers. |
-| **Hard-filter skip**  | Postings that match something you marked **Never** are flagged `Excluded` and skipped without spending a credit. |
+| **Match preferences** | The facts (work authorization, locations, work mode, target term, languages) plus a free-text "what matters most", which the scorer reads literally — "remote is non-negotiable" dominates, "a startup would be nice" nudges. |
+| **Excluded gate**     | Postings that violate a hard requirement (e.g. work authorization, a ruled-out location) are flagged `Excluded` and sorted last. |
 | **Bulk save**         | Filter by score threshold + verdict, then push matching jobs into a WaterlooWorks folder in one shot.        |
-| **Credit balance**    | A simple credit meter — 100 free to start, Stripe top-ups on the web app, full ledger in your billing history. |
-| **Light + dark**      | Theme follows your preference across the extension and the web app.                                          |
+| **Both job boards**   | Works on Full-Cycle Service and Employer-Student Direct; scores follow you across both.                      |
+| **Score feedback**    | 👍/👎 any verdict (with an optional one-liner on 👎) — flagged scores build the set future prompt tuning is tested against. |
+| **Credit balance**    | A simple credit meter — 100 free to start, ~2 credits per scan, Stripe top-ups on the web app, full ledger in your billing history. |
 
 ## Screenshots
 
 <table>
 <tr>
-<td width="50%"><b>Web dashboard — account &amp; credits</b><br/><img src="screenshots/Dashboard.png" alt="Web app dashboard with credit balance" /></td>
-<td width="50%"><b>Profile &amp; criteria setup</b><br/><img src="screenshots/wwextprofile.png" alt="Profile and match-criteria settings" /></td>
+<td width="50%"><b>Web dashboard — credits &amp; profile at a glance</b><br/><img src="screenshots/web/ww-extension.hyoseo.dev_dashboard.png" alt="Web app dashboard with credit balance and profile snapshot" /></td>
+<td width="50%"><b>Match preferences — facts + your own words</b><br/><img src="screenshots/web/ww-extension.hyoseo.dev_preferences.png" alt="Match preferences: eligibility facts and free-text priorities" /></td>
 </tr>
 <tr>
-<td width="50%"><b>Extension — sign-in &amp; settings</b><br/><img src="screenshots/wwextoption.png" alt="Extension options: account sign-in and settings" /></td>
-<td width="50%"><b>Sidebar — ranked results</b><br/><img src="screenshots/wwextsidebar.png" alt="Ranked, filterable sidebar on WaterlooWorks" /></td>
+<td width="50%"><b>Profile — extracted from your application package</b><br/><img src="screenshots/web/ww-extension.hyoseo.dev_profile.png" alt="Structured profile extracted from the application-package PDF" /></td>
+<td width="50%"><b>Billing — full credit history</b><br/><img src="screenshots/web/ww-extension.hyoseo.dev_history.png" alt="Credit history with per-scan ledger" /></td>
+</tr>
+<tr>
+<td width="50%"><b>Extension — options &amp; sign-in</b><br/><img src="screenshots/extension/option_page.png" alt="Extension options: how-to, account sign-in" /></td>
+<td width="50%"><b>On WaterlooWorks — guided from the first click</b><br/><img src="screenshots/extension/ww_jobs_non_login.png" alt="Sidebar get-started guide on the WaterlooWorks jobs table" /></td>
 </tr>
 </table>
 
@@ -86,7 +91,7 @@ git clone https://github.com/hyoseo837/ww-extension.git
 ## Usage
 
 1. Click the extension icon and **sign in** with your UWaterloo account, then set up your profile on the [web app](https://ww-extension.hyoseo.dev).
-2. Open `waterlooworks.uwaterloo.ca/myAccount/co-op/full/jobs.htm` and run a job search.
+2. Open the WaterlooWorks jobs list — Full-Cycle Service (`/myAccount/co-op/full/jobs.htm`) or Employer-Student Direct (`/myAccount/co-op/direct/jobs.htm`) — and run a job search.
 3. Click the **AI Score** tab on the right edge to open the sidebar, then hit **Scan All Jobs**. Badges appear on table rows as each posting finishes scoring.
 4. Filter the sidebar by minimum score and verdict, then click **Save to Folder** to bulk-add matches to a WaterlooWorks folder.
 
@@ -119,7 +124,7 @@ Inside the extension:
 ```
 ext/
 ├── manifest.json         Manifest V3 config
-├── options.html          Options page (sign-in, theme, hard-filter toggle)
+├── options.html          Options page (how-to, sign-in, web-app links)
 └── src/
     ├── content.js        Sidebar UI, table badge injection, pagination
     ├── background.js     Talks to the backend (service worker), session refresh
