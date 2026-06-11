@@ -24,7 +24,7 @@ export default function Buy() {
       <header className="mt-lg flex flex-col items-center gap-sm text-center">
         <h1 className="font-display-lg text-display-lg text-on-surface">Top up your credits</h1>
         <p className="max-w-2xl font-body-lg text-body-lg text-text-secondary">
-          Credits pay for AI scans — about 1 credit each. Bigger packs include bonus credits.
+          A scan costs about 1 credit — a penny per posting. Bigger packs include bonus credits.
         </p>
       </header>
 
