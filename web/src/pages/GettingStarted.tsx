@@ -64,9 +64,8 @@ export default function GettingStarted() {
             </a>
           }
         >
-          WW Scorer is a Chrome extension — install it from the Chrome Web Store in one click. No API keys, nothing to
-          configure. It adds an <strong>AI Score</strong> panel to the WaterlooWorks jobs page; that panel is where
-          scanning happens.
+          One click from the Chrome Web Store — no API keys, nothing to configure. It adds an{" "}
+          <strong>AI Score</strong> panel to the WaterlooWorks jobs page.
         </Step>
 
         <Step
@@ -79,11 +78,9 @@ export default function GettingStarted() {
             </Link>
           }
         >
-          Scoring compares each posting against <em>you</em>. On the <Link to="/profile">Profile</Link> page, upload your
-          WaterlooWorks application package (PDF) and we extract a structured profile automatically — review and edit it.
-          Your match preferences (where, how, and when you want to work) are captured by the short{" "}
-          <Link to="/preferences/setup">setup wizard</Link> on first sign-in and editable any time on{" "}
-          <Link to="/preferences">Preferences</Link>, so scores reflect what you actually want.
+          Upload your WaterlooWorks application package (PDF) on the <Link to="/profile">Profile</Link> page — we
+          extract your profile automatically. The short setup wizard captures what you're looking for; tweak it any
+          time on <Link to="/preferences">Preferences</Link>.
         </Step>
 
         <Step
@@ -96,10 +93,9 @@ export default function GettingStarted() {
             </a>
           }
         >
-          Open the WaterlooWorks co-op jobs list and run a search. Click the <strong>AI Score</strong> tab on the right
-          edge, then <strong>Scan All Jobs</strong>. Each posting gets a 1–20 score and a verdict (Strong Apply → Skip),
-          shown as a badge on the row and in a sortable sidebar. Filter by score and verdict, then bulk-save the best
-          ones to a WaterlooWorks folder.
+          On the WaterlooWorks jobs list, open the <strong>AI Score</strong> tab and hit{" "}
+          <strong>Scan All Jobs</strong>. Every posting gets a 1–20 score and a verdict — filter, sort, and bulk-save
+          the best ones to a folder.
         </Step>
       </section>
 
@@ -110,8 +106,7 @@ export default function GettingStarted() {
           up any time from <Link to="/buy">Buy credits</Link>; bigger packs include bonus credits.
         </Faq>
         <Faq q="What counts as a scan?">
-          One posting scored is about 1 credit. Postings you've already scored aren't charged again, and postings ruled
-          out by your “Never” criteria are skipped without spending a credit.
+          One posting scored is about 1 credit. Postings you've already scored aren't charged again.
         </Faq>
         <Faq q="Do I need my own API key?">
           No. Scoring runs on our backend — there's nothing to set up beyond signing in.
