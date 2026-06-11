@@ -24,7 +24,7 @@ export default function Buy() {
       <header className="mt-lg flex flex-col items-center gap-sm text-center">
         <h1 className="font-display-lg text-display-lg text-on-surface">Top up your credits</h1>
         <p className="max-w-2xl font-body-lg text-body-lg text-text-secondary">
-          A scan costs about 1 credit — a penny per posting. Bigger packs include bonus credits.
+          1 credit ≈ 1 scan.
         </p>
       </header>
 
@@ -51,14 +51,14 @@ export default function Buy() {
               <div className="flex flex-col gap-xs pt-sm">
                 <h2 className={`font-headline-lg text-headline-lg ${highlighted ? "text-primary" : "text-on-surface"}`}>
                   {p.credits.toLocaleString()}
+                  <span className="ml-xs font-body-md text-body-md text-text-muted">credits</span>
                 </h2>
-                <span className="font-label-md text-label-md uppercase tracking-wider text-text-muted">Credits</span>
+                <span className="font-label-sm text-label-sm text-text-muted">{p.note}</span>
               </div>
               <div className="flex items-baseline gap-xs">
                 <span className="font-headline-md text-headline-md text-on-surface">{p.price}</span>
                 <span className="font-body-md text-body-md text-text-secondary">CAD</span>
               </div>
-              <p className="border-b border-border pb-md font-body-md text-body-md text-text-secondary">{p.note}</p>
               <button
                 onClick={() => buy(p.id)}
                 disabled={busy !== null}
@@ -69,7 +69,7 @@ export default function Buy() {
                     : "border border-border bg-surface text-primary hover:bg-surface-alt",
                 ].join(" ")}
               >
-                {busy === p.id ? "Redirecting…" : `Buy ${p.credits.toLocaleString()} credits`}
+                {busy === p.id ? "Redirecting…" : "Buy"}
               </button>
             </article>
           );

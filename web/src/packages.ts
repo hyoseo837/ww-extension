@@ -11,7 +11,7 @@ export type CreditPackage = {
 };
 
 export const PACKAGES: CreditPackage[] = [
-  { id: "credits_300", credits: 300, price: "$3", note: "About 300 scans — costs less than a Tim's iced coffee." },
-  { id: "credits_525", credits: 525, price: "$5", popular: true, note: "500 + 25 bonus credits — a footlong's worth of scanning." },
-  { id: "credits_1100", credits: 1100, price: "$10", note: "1,000 + 100 bonus credits — a whole term of scans for the price of a campus burger combo." },
+  { id: "credits_300", credits: 300, price: "$3", note: "≈ 300 scans" },
+  { id: "credits_525", credits: 525, price: "$5", popular: true, note: "500 + 25 bonus" },
+  { id: "credits_1100", credits: 1100, price: "$10", note: "1,000 + 100 bonus" },
 ];

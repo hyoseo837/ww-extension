@@ -172,14 +172,14 @@ export default function Landing() {
                   <div className="flex flex-col gap-xs pt-sm">
                     <h3 className={`font-headline-lg text-headline-lg ${highlighted ? "text-primary" : "text-on-surface"}`}>
                       {p.credits.toLocaleString()}
+                      <span className="ml-xs font-body-md text-body-md text-text-muted">credits</span>
                     </h3>
-                    <span className="font-label-md text-label-md uppercase tracking-wider text-text-muted">Credits</span>
+                    <span className="font-label-sm text-label-sm text-text-muted">{p.note}</span>
                   </div>
                   <div className="flex items-baseline gap-xs">
                     <span className="font-headline-md text-headline-md text-on-surface">{p.price}</span>
                     <span className="font-body-md text-body-md text-text-secondary">CAD</span>
                   </div>
-                  <p className="border-b border-border pb-md font-body-md text-body-md text-text-secondary">{p.note}</p>
                   <button
                     onClick={() => signInWithMicrosoft()}
                     className={[
