@@ -393,19 +393,6 @@ async function scanAllJobs() {
       return;
     }
 
-    const settings = await chrome.storage.local.get(['hardFilterEnabled']);
-
-    // Hard-exclusion pre-filter (ADR 0018): default on. Fetch the user's
-    // "never"-tier locations once per batch so matching postings skip /scan
-    // entirely (no credit). Any failure → leave null and scan normally.
-    let excludedLocs = null;
-    if (settings.hardFilterEnabled !== false) {
-      try {
-        const pr = await chrome.runtime.sendMessage({ type: 'backendFetch', path: '/profile' });
-        if (pr?.ok) excludedLocs = excludedLocations(pr.data?.match_criteria);
-      } catch { /* leave null → scan normally */ }
-    }
-
     allPostingIds = postingIds.map(String);
     const toScore = allPostingIds.filter(id => !scores.has(id));
     if (!toScore.length) {
@@ -433,23 +420,6 @@ async function scanAllJobs() {
 
     async function scanOne(postingId) {
       const rowInfo = rowMeta[postingId];
-
-      // Hard-exclusion pre-filter (ADR 0018): skip before fetch/score — no
-      // /scan call, no credit. Conservative: fires only on a confident City
-      // match; a missing City falls through to a normal scan.
-      if (excludedLocs?.length) {
-        const gate = hardExclusion(rowInfo, excludedLocs);
-        if (gate) {
-          scores.set(postingId, {
-            score: null, verdict: 'Excluded', reason: gate, breakdown: [],
-            excluded: true,
-            title: rowInfo?.title || `#${postingId}`, org: rowInfo?.org || ''
-          });
-          injectRowScores();
-          scheduleFlush();
-          return { ok: true };
-        }
-      }
 
       let descriptionText = '';
       let extractedTitle  = '';
@@ -552,32 +522,9 @@ function indexVisibleRows() {
     const cells = row.querySelectorAll('td.table__value');
     const title = cells[0]?.querySelector('a')?.textContent.trim() ?? '';
     const org   = cells[1]?.querySelector('span')?.textContent.trim() ?? '';
-    // City column (index 4: Title, Organization, Division, Openings, City …).
-    // Feeds the hard-exclusion pre-filter (ADR 0018); only present for rows on
-    // the currently-visible page — off-page postings fall through to a scan.
-    const city  = (cells[4]?.querySelector('span')?.textContent ?? cells[4]?.textContent ?? '').trim();
-    if (id) map[id] = { title: title || `#${id}`, org, city };
+    if (id) map[id] = { title: title || `#${id}`, org };
   });
   return map;
-}
-
-// ── Hard-exclusion pre-filter (ADR 0018) ──────────────────────────────────────
-
-// The candidate's "never"-tier locations from match_criteria, trimmed.
-function excludedLocations(matchCriteria) {
-  const arr = matchCriteria?.preferred_locations?.excluded;
-  return Array.isArray(arr) ? arr.map(s => String(s).trim()).filter(Boolean) : [];
-}
-
-// Returns a gate reason when the posting's City confidently matches a "never"
-// location, else null. Conservative normalized containment; never fires on a
-// missing City, so it can't wrongly hide a job.
-function hardExclusion(rowInfo, excludedLocs) {
-  const city = (rowInfo?.city || '').trim();
-  if (!city) return null;
-  const cityLc = city.toLowerCase();
-  const hit = excludedLocs.find(loc => cityLc.includes(loc.toLowerCase()));
-  return hit ? `Filtered: location “${city}” is on your never-list (“${hit}”)` : null;
 }
 
 // ── Sidebar list ──────────────────────────────────────────────────────────────

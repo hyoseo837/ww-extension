@@ -3,24 +3,6 @@ const el = id => document.getElementById(id);
 // Web app — account, profile, preferences, billing all live here now (v6.4).
 const WEB_APP_URL = 'https://ww-extension.hyoseo.dev';
 
-// ── Hard-exclusion pre-filter toggle (ADR 0018) ───────────────────────────────
-
-function applyHardFilter(enabled) {
-  const pill = el('hardFilterToggle');
-  if (pill) {
-    pill.classList.toggle('on', enabled);
-    pill.setAttribute('aria-checked', String(enabled));
-  }
-}
-
-el('hardFilterToggle').addEventListener('click', () => {
-  const enabled = !el('hardFilterToggle').classList.contains('on');
-  applyHardFilter(enabled);
-  chrome.storage.local.set({ hardFilterEnabled: enabled });
-});
-
-chrome.storage.local.get('hardFilterEnabled', d => applyHardFilter(d.hardFilterEnabled !== false));
-
 // ── Open the web app (account / profile / billing) ─────────────────────────────
 
 document.querySelectorAll('.open-web').forEach(btn => {

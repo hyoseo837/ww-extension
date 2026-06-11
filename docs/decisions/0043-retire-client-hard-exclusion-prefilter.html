@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-06-10" />
+    <title>ADR 0043 — Retire the client hard-exclusion pre-filter (supersedes ADR 0018)</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>ADR 0043 — Retire the client hard-exclusion pre-filter (supersedes ADR 0018)</h1>
+
+    <h2>Context</h2>
+    <p>
+      ADR 0018 added a credit-free client-side pre-filter: before scanning, the
+      extension fetched the user's "never"-tier locations
+      (<code>match_criteria.preferred_locations.excluded</code>) and marked
+      matching rows <strong>Excluded</strong> without calling <code>/scan</code>.
+      ADR 0041 (v8.5) replaced the weighted/tiered criteria with facts +
+      free text — the v2 schema has no exclusion lists, and the accepted-lossy
+      v1→v2 conversion drops them. Since the v8.5.7 launch the pre-filter's
+      input key never exists, so the code path is unreachable: it silently
+      no-ops on every scan, and its options-page toggle and getting-started FAQ
+      claim ("skipped without spending a credit") describe behaviour that no
+      longer happens.
+    </p>
+
+    <h2>Decision</h2>
+    <p>
+      Remove the dead path rather than re-key it. Deleted: the pre-filter fetch
+      and gate in <code>content.js</code> (plus the City-column extraction that
+      only fed it), the <code>hardFilterEnabled</code> toggle in
+      <code>options.html</code>/<code>options.js</code>, and the FAQ claim
+      (already dropped in v8.6.1). Exclusion still works — server-side: the
+      scoring prompt's <strong>Excluded</strong> gate fires on work-authorization
+      conflicts and explicit "never / won't / not willing to" statements in the
+      user's own words, which covers ruled-out locations. The stale
+      <code>hardFilterEnabled</code> key in users' <code>chrome.storage.local</code>
+      is left behind harmlessly.
+    </p>
+
+    <h2>Consequences</h2>
+    <ul>
+      <li>Location exclusions now always cost a scan credit (the server scores
+        and returns Excluded) instead of being skipped free. Acceptable: the
+        v2 model has no structured exclusion list to match against, and the
+        free skip was conservative/rarely-firing by design.</li>
+      <li>If a credit-free pre-filter is ever wanted again, it needs a
+        machine-readable exclusion fact reintroduced into the v2 schema — a
+        new ADR, not a revert of this one.</li>
+      <li>ADR 0018 is superseded; its roadmap/architecture mentions stay as
+        history of the shipped v5 feature.</li>
+    </ul>
+  </body>
+</html>
