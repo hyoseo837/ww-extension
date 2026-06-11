@@ -148,7 +148,7 @@ export default function Landing() {
               Pay only for what you scan
             </h2>
             <p className="max-w-[600px] font-body-lg text-body-lg text-text-secondary">
-              Credits power AI scans — about 1 credit per scan, no subscription. Bigger packs include bonus credits.
+              Credits power AI scans — about 2 credits per scan, no subscription. Bigger packs include bonus credits.
             </p>
           </div>
           <div className="grid grid-cols-1 gap-lg md:grid-cols-3">

@@ -24,7 +24,7 @@ export default function Buy() {
       <header className="mt-lg flex flex-col items-center gap-sm text-center">
         <h1 className="font-display-lg text-display-lg text-on-surface">Top up your credits</h1>
         <p className="max-w-2xl font-body-lg text-body-lg text-text-secondary">
-          1 credit ≈ 1 scan.
+          1 scan ≈ 2 credits.
         </p>
       </header>
 

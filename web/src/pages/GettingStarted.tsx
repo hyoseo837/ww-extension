@@ -102,11 +102,11 @@ export default function GettingStarted() {
       <section className={CARD}>
         <h2 className="mb-sm font-headline-md text-headline-md text-on-surface">FAQ</h2>
         <Faq q="How much does it cost?">
-          New accounts get <strong>100 free credits</strong>. Each scan costs about 1 credit (1 credit = $0.01 CAD). Top
+          New accounts get <strong>100 free credits</strong>. Each scan costs about 2 credits (1 credit = $0.01 CAD). Top
           up any time from <Link to="/buy">Buy credits</Link>; bigger packs include bonus credits.
         </Faq>
         <Faq q="What counts as a scan?">
-          One posting scored is about 1 credit. Postings you've already scored aren't charged again.
+          One posting scored is about 2 credits. Postings you've already scored aren't charged again.
         </Faq>
         <Faq q="Do I need my own API key?">
           No. Scoring runs on our backend — there's nothing to set up beyond signing in.

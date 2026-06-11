@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-06-11" />
+    <title>ADR 0048 — A scan costs ~2 credits now: correct the copy, keep the pricing</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>ADR 0048 — A scan costs ~2 credits now: correct the copy, keep the pricing</h1>
+
+    <h2>Context</h2>
+    <p>
+      ADR 0034 (v7.4) set the per-token <code>MARGIN</code> so a typical scan
+      cost ~1 credit, and "1 credit ≈ 1 scan" became the message across the
+      Buy page, landing pricing, getting-started FAQ, and the extension's
+      scan-confirm estimate. Since then v8.5 rebuilt the match criteria and
+      research-hardened the scoring prompt — more input tokens per scan —
+      and the real charge drifted to roughly double. Owner measurement on
+      production, 2026-06-11: <strong>35 scans cost 67.9 credits
+      (~1.94/scan)</strong>. The claim and the charge no longer matched,
+      which is exactly the kind of gap that erodes trust in a paid product.
+    </p>
+
+    <h2>Decision</h2>
+    <p>
+      Keep the pricing as it is (margin, packs, and the
+      <code>1 credit = $0.01 CAD</code> base rate are unchanged) and correct
+      every surface to say <strong>a scan costs about 2 credits</strong>:
+      web copy (Buy, landing, getting-started FAQ, pack notes — "≈ 150
+      scans" for the 300 pack) and the extension's confirm dialog, whose
+      estimate and low-balance warning now use 2 credits/scan. Owner call,
+      2026-06-11.
+    </p>
+
+    <h2>Consequences</h2>
+    <ul>
+      <li>What users are told matches what the ledger charges; the
+        scan-confirm low-balance warning fires when the balance is actually
+        short instead of at half the real cost.</li>
+      <li>ADR 0034's "≈ 1 credit per scan" target is no longer operative
+        (its pack structure and re-margin mechanics stand). Re-margining
+        back down to ~1/scan was considered and rejected: it would halve
+        revenue per scan to preserve a slogan.</li>
+      <li>The ~2 figure is prompt-size-dependent. Any future phase that
+        meaningfully grows or shrinks the scoring prompt must re-measure
+        and update the same copy surfaces (grep for "2 credits").</li>
+    </ul>
+  </body>
+</html>
