@@ -5,7 +5,7 @@
     <meta name="project" content="ww-extension" />
     <meta name="type" content="spec" />
     <meta name="version" content="8.8.0" />
-    <meta name="status" content="planned" />
+    <meta name="status" content="done" />
     <meta name="last-updated" content="2026-06-11" />
     <title>v8.8 — Server tests + CI + version hygiene</title>
     <link rel="stylesheet" href="../style.css" />
@@ -90,6 +90,31 @@
       <li>The ledger tests deliberately encode today's behaviour,
         including the read-committed balance race (audit #3) — v8.9 then
         changes the behaviour and flips the test, proving the fix.</li>
+    </ul>
+
+    <h2>Close-out (<time datetime="2026-06-11">2026-06-11</time>)</h2>
+    <ul>
+      <li>Shipped as v8.8.1 (suite, 50 tests) / v8.8.2 (workflow) /
+        v8.8.3 (action-version bumps + this close-out). First Actions run
+        on <code>dev</code> green: ruff clean, 50 passed including the
+        DB-backed ledger tests against the Postgres service container.</li>
+      <li>The migrations <em>do</em> apply cleanly in order to a blank
+        Postgres — they only need a stub of Supabase's auth schema
+        (<code>auth.users</code> + <code>auth.uid()</code>), which
+        <code>tests/conftest.py</code> provides.</li>
+      <li>The audit-#3 overdraw race is confirmed real:
+        <code>test_concurrent_debits_can_overdraw</code> drives a
+        100-credit balance to −20 with two read-committed transactions.
+        v8.9 must flip that test.</li>
+      <li><code>tests/conftest.py</code> force-overrides all app env vars
+        with dummies before any <code>app.*</code> import — tests can
+        never read <code>server/.env</code> (production
+        <code>DATABASE_URL</code> lives there). DB tests use only
+        <code>TEST_DATABASE_URL</code>.</li>
+      <li>GitHub's runners deprecate Node 20 actions (forced to Node 24
+        from 2026-06-16): action majors bumped to
+        <code>checkout@v5</code> / <code>setup-node@v5</code> /
+        <code>setup-uv@v7</code> in v8.8.3.</li>
     </ul>
   </body>
 </html>
