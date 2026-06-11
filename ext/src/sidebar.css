@@ -578,7 +578,10 @@
 .ww-ext-card-reason.ww-ext-expanded { display: block; overflow: visible; }
 
 /* Per-aspect gain/loss breakdown (ADR 0016). Marker + colour both carry the
-   plus/minus signal so it reads without colour. */
+   plus/minus signal so it reads without colour. Lists of 3+ points get
+   .ww-ext-clamp: collapsed to ~2 items (like the reason's 3-line clamp) so
+   more cards fit on screen; click toggles the full list, with a fade-out
+   hinting there's more. */
 .ww-ext-card-breakdown {
   list-style: none;
   margin: 8px 0 0;
@@ -586,6 +589,18 @@
   display: flex;
   flex-direction: column;
   gap: 3px;
+}
+.ww-ext-card-breakdown.ww-ext-clamp {
+  cursor: pointer;
+  max-height: 40px;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, #000 24px, transparent);
+  mask-image: linear-gradient(to bottom, #000 24px, transparent);
+}
+.ww-ext-card-breakdown.ww-ext-clamp.ww-ext-expanded {
+  max-height: none;
+  -webkit-mask-image: none;
+  mask-image: none;
 }
 .ww-ext-card-breakdown li {
   font-size: 12px;

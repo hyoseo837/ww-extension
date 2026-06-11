@@ -676,12 +676,14 @@ async function submitFeedback(postingId, rating, comment = '') {
 
 // Compact gain/loss list under the reason. Each point is prefixed by a
 // signed marker so plus/minus reads without relying on colour alone.
+// 3+ points collapse to ~2 (ww-ext-clamp); click expands, like the reason.
 function renderBreakdown(breakdown) {
   if (!Array.isArray(breakdown) || !breakdown.length) return '';
   const items = breakdown.map(({ point, effect }) =>
     `<li class="ww-ext-bd-${effect === 'minus' ? 'minus' : 'plus'}">${esc(point)}</li>`
   ).join('');
-  return `<ul class="ww-ext-card-breakdown">${items}</ul>`;
+  const clamp = breakdown.length > 2 ? ' ww-ext-clamp' : '';
+  return `<ul class="ww-ext-card-breakdown${clamp}">${items}</ul>`;
 }
 
 // WW pagination puts `active` / `disabled` / aria-label on the inner
@@ -1029,6 +1031,8 @@ function injectSidebar() {
     if (e.target.closest('.ww-ext-fb-input')) return;
     const reason = e.target.closest('.ww-ext-card-reason');
     if (reason) reason.classList.toggle('ww-ext-expanded');
+    const breakdown = e.target.closest('.ww-ext-card-breakdown');
+    if (breakdown) breakdown.classList.toggle('ww-ext-expanded');
   });
 }
 
