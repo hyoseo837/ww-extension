@@ -831,6 +831,7 @@ function injectSidebar() {
     <div id="ww-ext-controls">
       <div class="ww-ext-section">
         <button id="ww-ext-scan">Scan All Jobs</button>
+        <div id="ww-ext-progress"></div>
       </div>
       <div class="ww-ext-section" id="ww-ext-save-section">
         <div class="ww-ext-section-label" id="ww-ext-save-toggle">
@@ -869,7 +870,6 @@ function injectSidebar() {
         </div>
         </div>
       </div>
-      <div id="ww-ext-progress"></div>
     </div>
     <ul id="ww-ext-results"></ul>
   `;

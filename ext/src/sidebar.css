@@ -218,14 +218,12 @@
 #ww-ext-scan:hover:not(:disabled) { background: var(--s-accent); }
 #ww-ext-scan:disabled { opacity: 0.4; cursor: not-allowed; }
 
-/* While a scan runs the same button becomes Stop (outline look). */
+/* While a scan runs the same button becomes a red Stop. */
 #ww-ext-scan.ww-ext-scanning {
-  background: var(--s-surface);
-  color: var(--s-primary);
-  border: 1px solid var(--s-border-hi);
-  box-shadow: none;
+  background: var(--s-error);
+  color: var(--s-on-primary);
 }
-#ww-ext-scan.ww-ext-scanning:hover:not(:disabled) { background: var(--s-hover); }
+#ww-ext-scan.ww-ext-scanning:hover:not(:disabled) { background: #a01616; }
 
 /* ── Confirmation overlay (scan + clear) ───────────────────────────────────── */
 .ww-ext-confirm-backdrop {
@@ -386,8 +384,8 @@
 }
 #ww-ext-clear:hover { color: var(--s-on-dim); }
 
+/* Status line lives right under the Scan/Stop button, inside its section. */
 #ww-ext-progress {
-  padding: 8px 20px;
   font: 12px 'WW Sans', system-ui, sans-serif;
   color: var(--s-on-dim);
 }
