@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="8.8.0" />
+    <meta name="status" content="planned" />
+    <meta name="last-updated" content="2026-06-11" />
+    <title>v8.8 — Server tests + CI + version hygiene</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>v8.8 — Server tests + CI + version hygiene</h1>
+
+    <h2>Goal</h2>
+    <p>
+      Give the server a test suite and the repo a CI gate before v8.9
+      touches the credit flow (ADR 0046, audit findings
+      <a href="../reference/audit-2026-06-11.html#f1">#1</a> and
+      <a href="../reference/audit-2026-06-11.html#f4">#4</a>). Scope is the
+      pure and near-pure server logic — pricing math, verdict bands, result
+      validation, criteria/profile serialization, ledger SQL — plus a
+      GitHub Actions workflow that runs ruff + pytest on
+      <code>server/</code> and typecheck + build on <code>web/</code> for
+      every push. Also catches <code>server/pyproject.toml</code> up from
+      its stale 6.11.0 so <code>/health</code> reports the truth again.
+      The extension is explicitly out of scope (no build step, ADR 0026;
+      manual verification stands per ADR 0046).
+    </p>
+
+    <h2>Files</h2>
+    <ul>
+      <li><code>server/pyproject.toml</code> — changed: bump
+        <code>version</code> to match the release commit; add a dev
+        dependency group (<code>pytest</code>, <code>pytest-asyncio</code>,
+        <code>ruff</code>); add <code>[tool.ruff]</code> and
+        <code>[tool.pytest.ini_options]</code> config.</li>
+      <li><code>server/tests/test_pricing.py</code> — added: token
+        estimation, scan/extract cost estimates, <code>actual_cost</code>
+        against known usage dicts, package table sanity
+        (<code>cad_cents ≤ credits</code> beyond entry tier).</li>
+      <li><code>server/tests/test_scoring_logic.py</code> — added:
+        <code>verdict_for</code> band edges (6/10/14/17, excluded
+        override), <code>_valid_result</code> accept/reject cases,
+        <code>_format_criteria</code> / <code>build_job_part</code> /
+        <code>build_profile_context</code> serialization (empty inputs emit
+        nothing; supplement marked self-reported; legacy
+        <code>cv_text</code> fallback).</li>
+      <li><code>server/tests/test_ledger.py</code> — added: DB-backed tests
+        for <code>insert_scan_pending</code> idempotency,
+        <code>balance_after_estimate</code>, <code>grant_purchase</code>
+        replay no-op, and the <code>get_history</code> debit+refund
+        collapse. Runs against a disposable Postgres (CI service
+        container); skipped locally when <code>TEST_DATABASE_URL</code> is
+        unset.</li>
+      <li><code>server/tests/conftest.py</code> — added: event-loop /
+        pool fixtures, schema setup from <code>server/migrations/</code>
+        applied in order to the test DB.</li>
+      <li><code>.github/workflows/ci.yml</code> — added: on push/PR —
+        job 1: ruff check + pytest (with Postgres service) in
+        <code>server/</code> via <code>uv</code>; job 2:
+        <code>npm ci &amp;&amp; tsc --noEmit &amp;&amp; vite build</code>
+        in <code>web/</code>.</li>
+      <li><code>ext/manifest.json</code> — changed: version bumps per
+        commit, as always.</li>
+    </ul>
+
+    <h2>Verify</h2>
+    <ul>
+      <li><code>uv run pytest</code> in <code>server/</code> passes locally
+        (ledger tests skip without <code>TEST_DATABASE_URL</code>, run with
+        it).</li>
+      <li><code>uv run ruff check .</code> in <code>server/</code> is
+        clean.</li>
+      <li>The GitHub Actions run on <code>dev</code> is green, including
+        the DB-backed ledger tests against the service container.</li>
+      <li><code>GET /health</code> on the next production deploy reports
+        the new version (deploy-skew check restored, ADR 0010).</li>
+      <li>No behaviour change anywhere: no production code is modified in
+        this phase except the version string.</li>
+    </ul>
+
+    <h2>Notes</h2>
+    <ul>
+      <li>Migrations double as the test schema — if applying
+        <code>server/migrations/*.sql</code> in order to a blank Postgres
+        fails, that's a real finding (the production DB was migrated by
+        hand), worth recording when discovered.</li>
+      <li>The ledger tests deliberately encode today's behaviour,
+        including the read-committed balance race (audit #3) — v8.9 then
+        changes the behaviour and flips the test, proving the fix.</li>
+    </ul>
+  </body>
+</html>

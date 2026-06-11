@@ -5,7 +5,7 @@
     <meta name="project" content="ww-extension" />
     <meta name="type" content="roadmap" />
     <meta name="active-major-version" content="v08" />
-    <meta name="last-updated" content="2026-06-10" />
+    <meta name="last-updated" content="2026-06-11" />
     <title>Roadmap — ww-extension</title>
     <link rel="stylesheet" href="style.css" />
   </head>
@@ -192,6 +192,40 @@
         2026-06-05 (<a href="decisions/0037-drop-typescript-migration.html">ADR
         0037</a>) — the number is reused here; the migration lives in "Further
         out" below.
+      </p>
+      <p>
+        <strong>Planned queue (added <time datetime="2026-06-11">2026-06-11</time>,
+        <a href="decisions/0046-september-hardening-initiative.html">ADR
+        0046</a>)</strong> — a full-repo audit
+        (<a href="reference/audit-2026-06-11.html">findings</a>) produced a
+        hardening batch, sequenced so tests exist before money code is
+        touched. Organic small fixes still interleave as
+        <code>v8.x</code> commits.
+      </p>
+      <ol>
+        <li data-status="planned"><strong>v8.8 — server tests + CI +
+          version hygiene</strong> (<a
+          href="specs/v8.8.0-tests-and-ci.html">spec</a>): pytest + ruff +
+          GitHub Actions; pyproject version catch-up.</li>
+        <li data-status="planned"><strong>v8.9 — credit-flow
+          hardening</strong>: refund scans stranded <code>pending</code> by
+          a restart; per-user lock on the debit so concurrent scans can't
+          overdraw; server-side input size caps.</li>
+        <li data-status="planned"><strong>v8.10 — server resilience</strong>:
+          rate limiting on free endpoints, one retry on transient Gemini
+          failures, DB check in <code>/health</code>, error monitoring
+          (tool choice decided at phase time).</li>
+        <li data-status="planned"><strong>v8.11 — extension polish</strong>:
+          split <code>content.js</code>, "retry failed" batch affordance,
+          server-side default model, dead-code removal.</li>
+      </ol>
+      <p>
+        A <strong>portfolio strand</strong> runs in parallel, owner-gated
+        and not version-bound: GitHub repo description/topics, GitHub Pages
+        for <code>docs/</code>, whiteboard cleanup, and the
+        reaffirm-or-scrub call on ADR 0045's key-in-history (the repo is
+        public). If time runs short before September, v8.8 + v8.9 are the
+        must-ships; v8.10/v8.11 degrade to later.
       </p>
     </section>
 

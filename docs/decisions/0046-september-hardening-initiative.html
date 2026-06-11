@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-06-11" />
+    <title>ADR 0046 — September-readiness hardening: adopt tests + CI, fix the credit-flow holes, plan v8.8–v8.11 as a queue</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>ADR 0046 — September-readiness hardening: adopt tests + CI, fix the credit-flow holes, plan v8.8–v8.11 as a queue</h1>
+
+    <h2>Context</h2>
+    <p>
+      A full repo audit on 2026-06-11
+      (<a href="../reference/audit-2026-06-11.html">findings</a>) confirmed
+      the shipped code is sound but found the project carries production
+      risk in what surrounds it: <strong>no tests, no CI</strong>, no
+      recovery path for a scan stranded <code>pending</code> by a server
+      restart (the user's debit is never refunded), a small race that lets
+      concurrent scans drive a balance negative, and no error monitoring.
+      Separately, the portfolio goal (ADR 0042) is underserved by
+      presentation gaps: empty repo description, and an ADR/spec corpus
+      that GitHub renders as raw HTML source.
+    </p>
+    <p>
+      v8 was opened as a rolling maintenance major where items surface
+      organically (v8.0 open spec). The audit produced a coherent batch
+      that benefits from explicit ordering: the credit-flow fixes touch
+      money, and changing money code without tests is how regressions
+      ship. The September wave is the deadline that makes this worth doing
+      now — marketing brings users, and users hit exactly the failure
+      modes the audit found.
+    </p>
+
+    <h2>Decision</h2>
+    <ul>
+      <li><strong>Adopt a server test suite and CI.</strong> pytest + ruff
+        for <code>server/</code>, a GitHub Actions workflow running server
+        lint/tests and the web app's typecheck + build on every push. This
+        amends the project's implicit no-test posture: from v8.8 on,
+        server changes are expected to keep CI green, and credit-ledger
+        logic changes are expected to come with tests. The extension stays
+        manually verified (no build step, ADR 0026 — unchanged).</li>
+      <li><strong>Order the work as a planned queue inside rolling v8</strong>,
+        sequenced so tests exist before money code is touched:
+        <ol>
+          <li><strong>v8.8 — tests + CI + version hygiene</strong>
+            (audit #1, #4): pytest suite over pricing/verdict/validation/
+            ledger, ruff, GitHub Actions, pyproject version catch-up.</li>
+          <li><strong>v8.9 — credit-flow hardening</strong> (#2, #3, #5):
+            pending-scan reconciliation (refund stranded debits), per-user
+            advisory lock on the debit transaction, server-side input caps.</li>
+          <li><strong>v8.10 — server resilience</strong> (#6, #7, #8, #9):
+            rate limiting on free endpoints, one-retry-with-backoff on
+            transient Gemini failures, DB check in <code>/health</code>,
+            and error monitoring (tool choice is its own decision at phase
+            time — new external service).</li>
+          <li><strong>v8.11 — extension polish</strong> (#11–#14): split
+            <code>content.js</code> into modules, "retry failed" batch
+            affordance, server-side default model, dead-code removal.</li>
+        </ol>
+        Each phase still gets its spec at phase start; this ADR fixes the
+        ordering and the rationale, not the per-phase details.</li>
+      <li><strong>Run the portfolio items as a parallel strand</strong>
+        (#15–#17), not version-gated: repo description/topics, GitHub Pages
+        for <code>docs/</code>, whiteboard cleanup, and the
+        reaffirm-or-scrub call on ADR 0045's key-in-history. All are
+        outward-facing or owner-only and proceed on explicit owner
+        approval, independent of the v8.x queue.</li>
+      <li><strong>Explicitly deferred:</strong> materialized credit balance
+        (#10) — revisit only if <code>db_pre_ms</code> in scan logs grows;
+        web-app unit tests — the typecheck + build CI gate is the v8 level
+        of investment.</li>
+    </ul>
+
+    <h2>Consequences</h2>
+    <ul>
+      <li>Server development gains a test-and-CI floor: slightly slower to
+        ship a one-line fix, much safer to touch
+        <code>billing/</code> — which v8.9 then does immediately.</li>
+      <li>v8's "items surface organically" posture now coexists with a
+        planned four-phase queue; organic small fixes can still interleave
+        as <code>v8.x</code> commits between phases.</li>
+      <li>The pending-scan reconciliation (v8.9) retires the only known
+        path where a user pays for nothing; until it ships, a stranded
+        <code>pending</code> scan must be refunded by hand via the admin
+        surface.</li>
+      <li>CI runs on GitHub's free tier; error monitoring (v8.10) is the
+        only item that may add an external account.</li>
+      <li>The queue is sized for one developer before September; if time
+        runs short, v8.8 and v8.9 are the must-ships (they protect money),
+        v8.10/v8.11 degrade gracefully to "later".</li>
+    </ul>
+
+    <h2>Alternatives considered</h2>
+    <ul>
+      <li><strong>Fix the credit-flow bugs first, tests later</strong> —
+        rejected: the bugs live in the hardest-to-re-verify code; tests
+        first means v8.9's changes land with a safety net instead of
+        adding risk to the riskiest module.</li>
+      <li><strong>Keep everything organic (no planned queue)</strong> —
+        rejected: the audit items are interdependent (tests gate money
+        fixes) and deadline-driven (September); leaving them to surface
+        organically guarantees the ordering is lost.</li>
+      <li><strong>Full TypeScript/test rig for the extension too</strong> —
+        rejected: re-opens ADR 0037's dropped migration; manual
+        verification has been adequate for the extension's failure modes,
+        and the no-build posture (ADR 0026) stands.</li>
+    </ul>
+  </body>
+</html>

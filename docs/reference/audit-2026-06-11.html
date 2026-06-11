@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="audit" />
+    <meta name="date" content="2026-06-11" />
+    <meta name="scope" content="full repo: ext/, server/, web/, packaging, repo presentation" />
+    <title>Code &amp; infrastructure audit — 2026-06-11</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>Code &amp; infrastructure audit — 2026-06-11</h1>
+
+    <p>
+      Full read-through of the repo at <code>v8.7.4</code>, looking for
+      weak points and upgrade candidates ahead of the September 2026
+      recruiting wave (ADR 0042's marketing window). Overall assessment:
+      the credit flow is carefully idempotent, auth is verified via JWKS,
+      prompts live server-side with injection guards — the weaknesses are
+      mostly in what's <em>around</em> the code (tests, CI, failure
+      recovery, observability), not in the code itself.
+    </p>
+    <p>
+      Each finding names its planned fix phase. The phase plan is decided
+      in <a href="../decisions/0046-september-hardening-initiative.html">ADR
+      0046</a>; per-phase scope is locked in each phase's spec when the
+      phase opens. File references are as of commit <code>e2ef15c</code>.
+    </p>
+
+    <section id="high">
+      <h2>High value</h2>
+      <ol>
+        <li id="f1">
+          <strong>Zero tests and zero CI, anywhere.</strong> No pytest
+          suite, no ruff/mypy config, no <code>.github/workflows</code>.
+          The code that most deserves tests handles money: the
+          estimate→debit→call→refund flow
+          (<code>server/app/scoring/routes.py</code>), idempotent replay
+          (<code>_replay</code>), ledger math
+          (<code>server/app/billing/db.py</code>), the Stripe grant, and
+          the pure logic in <code>pricing.py</code> /
+          <code>gemini.verdict_for</code> / <code>gemini._valid_result</code>.
+          All of it is hand-verified today; every future v8.x fix re-risks
+          it. <em>Phase: v8.8.</em>
+        </li>
+        <li id="f2">
+          <strong>A crash mid-scan permanently eats the user's credits.</strong>
+          If the server dies between transaction 1 (debit) and settlement —
+          realistically, a DO deploy restart during the 1–10s Gemini call —
+          the scan row stays <code>pending</code> forever, the debit is never
+          refunded, and a retry on the same <code>scan_id</code> gets 409
+          forever (<code>_replay</code>,
+          <code>server/app/scoring/routes.py:388</code>). There is no
+          reconciliation path. <em>Phase: v8.9.</em>
+        </li>
+        <li id="f3">
+          <strong>The balance check can be raced past.</strong>
+          <code>balance_after_estimate</code> computes
+          <code>sum(delta) − estimate</code> at read-committed isolation,
+          and the extension runs <code>SCAN_CONCURRENCY = 5</code> workers —
+          several requests can pass the check before any debit commits,
+          driving a balance negative by up to ~5 estimates. Self-inflicted
+          only and bounded, but the "balance never goes negative" invariant
+          is not actually enforced. A per-user
+          <code>pg_advisory_xact_lock</code> in transaction 1 closes it.
+          <em>Phase: v8.9.</em>
+        </li>
+        <li id="f4">
+          <strong><code>server/pyproject.toml</code> is stuck at 6.11.0.</strong>
+          The server changed since (v8.6.6 shipped the feedback backend), so
+          <code>/health</code> reports a wrong version — defeating the
+          deploy-skew check that endpoint exists for (ADR 0010 discipline).
+          <em>Phase: v8.8 (catch-up bump + CI guard).</em>
+        </li>
+      </ol>
+    </section>
+
+    <section id="server">
+      <h2>Server hardening</h2>
+      <ol start="5">
+        <li id="f5">
+          <strong>Request bodies are unbounded before validation.</strong>
+          <code>/profile/extract</code> checks the 5&nbsp;MB PDF cap only
+          after FastAPI parses the full JSON body; <code>/scan</code>'s
+          <code>description_text</code> has no server-side
+          <code>max_length</code> (the 6000-char cap lives only in the
+          extension). An authenticated user can post a 100&nbsp;MB body and
+          make the server parse it. Add <code>Field(max_length=…)</code>
+          on inputs and confirm DO App Platform's body-size limit.
+          <em>Phase: v8.9.</em>
+        </li>
+        <li id="f6">
+          <strong>No rate limiting.</strong> <code>/scan</code> is
+          credit-bounded, but <code>/credits/checkout</code> (Stripe session
+          creation), <code>/account/export</code> (heavy multi-table query),
+          and <code>/scan/feedback</code> are free to hammer.
+          <em>Phase: v8.10.</em>
+        </li>
+        <li id="f7">
+          <strong>No retry on transient Gemini failures.</strong> One
+          429/503/network blip = one user-visible failed scan in the batch
+          (refunded, but reported as a failure in the summary). A single
+          retry with short backoff in <code>gemini.score()</code> would cut
+          failure noise on 200-job batches. <em>Phase: v8.10.</em>
+        </li>
+        <li id="f8">
+          <strong><code>/health</code> doesn't touch the DB.</strong> A dead
+          connection pool still reports <code>ok</code>, so platform health
+          checks won't catch the most likely real outage. A
+          <code>select 1</code> makes it honest. <em>Phase: v8.10.</em>
+        </li>
+        <li id="f9">
+          <strong>No error monitoring.</strong> Failures exist only in DO's
+          log stream; web-app errors vanish entirely. A free-tier error
+          tracker (server + web) means hearing about breakage before users
+          email. New external service — needs an owner decision at phase
+          time. <em>Phase: v8.10 (decision gated).</em>
+        </li>
+        <li id="f10">
+          <strong>Balance is a full-ledger sum on every call.</strong>
+          <code>get_balance</code> is O(ledger size); fine at current scale,
+          degrades as ledgers grow. A running-total or cached balance is the
+          eventual upgrade. <em>Not scheduled — revisit if scan latency
+          logging shows db_pre_ms growth.</em>
+        </li>
+      </ol>
+    </section>
+
+    <section id="extension">
+      <h2>Extension</h2>
+      <ol start="11">
+        <li id="f11">
+          <strong><code>ext/src/content.js</code> is a 1037-line
+          monolith</strong> mixing the scan engine, sidebar rendering,
+          pagination navigation, and feedback UI.
+          <code>manifest.json</code> can list multiple content-script files
+          without a build step. <em>Phase: v8.11.</em>
+        </li>
+        <li id="f12">
+          <strong>No per-job retry.</strong> Failed scans in a batch are
+          reported only as an aggregate count; recovering means re-running
+          (and re-confirming) the whole batch. A "retry N failed"
+          affordance would help on flaky networks. <em>Phase: v8.11.</em>
+        </li>
+        <li id="f13">
+          <strong>The model id <code>gemini-2.5-flash</code> is hardcoded
+          client-side</strong> (<code>ext/src/content.js:449</code>). When
+          Google retires it, the fix needs a Web Store release with review
+          lag. Letting the server choose the default when <code>model</code>
+          is omitted moves the risk server-side where a same-day deploy
+          fixes it. <em>Phase: v8.11.</em>
+        </li>
+        <li id="f14">
+          <strong>Dead code:</strong> <code>VERDICT_ORDER</code> in
+          <code>ext/src/page-bridge.js:3</code> is the obsolete 3-tier
+          ladder, unused; <code>_require_pool()</code> in
+          <code>server/app/billing/db.py</code> is also unused.
+          <em>Phase: v8.11 (ride-along).</em>
+        </li>
+      </ol>
+    </section>
+
+    <section id="portfolio">
+      <h2>Portfolio presentation (serves the ADR 0042 goal directly)</h2>
+      <ol start="15">
+        <li id="f15">
+          <strong>The repo is public but has no GitHub description or
+          topics</strong> — the first thing a visitor sees above the
+          (already strong) README. One-minute fix. <em>Strand: portfolio,
+          any time.</em>
+        </li>
+        <li id="f16">
+          <strong>The docs don't render on GitHub.</strong> The ADR/spec
+          system — the most impressive artifact for a recruiter — is HTML,
+          shown as raw source on github.com. Serving <code>docs/</code> via
+          GitHub Pages (already styled, zero build) and linking it from the
+          README turns 45+ ADRs from invisible into a showcase.
+          <em>Strand: portfolio (decision gated — outward-facing).</em>
+        </li>
+        <li id="f17">
+          <strong>Housekeeping:</strong> the whiteboard still lists the
+          feedback loop and Direct board as future features (both shipped;
+          editing needs explicit owner permission). And now that the repo is
+          public, the captured WW Maps key in git history (ADR 0045) is
+          publicly reachable — still a non-secret third-party key, but the
+          "leave it" call predates knowing the repo was public; reaffirm or
+          scrub. <em>Strand: portfolio (owner decisions).</em>
+        </li>
+      </ol>
+    </section>
+  </body>
+</html>
