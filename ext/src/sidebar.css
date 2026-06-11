@@ -293,10 +293,12 @@
 #ww-ext-save-toggle { cursor: pointer; user-select: none; }
 #ww-ext-save-chevron {
   margin-left: auto;
-  font-size: 10px;
-  color: var(--s-on-mute);
-  transition: transform 0.15s;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--s-on-dim);
+  transition: transform 0.15s, color 0.15s;
 }
+#ww-ext-save-toggle:hover #ww-ext-save-chevron { color: var(--s-primary); }
 #ww-ext-save-section.ww-ext-collapsed #ww-ext-save-chevron { transform: rotate(-90deg); }
 
 #ww-ext-save-body { display: flex; flex-direction: column; gap: 10px; }
