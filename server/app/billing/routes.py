@@ -1,10 +1,9 @@
 import logging
 from decimal import Decimal
-from typing import Any, Literal
+from typing import Any
 
 import stripe
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
 from app.auth.dependency import CurrentUser
@@ -50,9 +49,6 @@ async def history(user: CurrentUser, limit: int = 50, offset: int = 0) -> dict[s
 
 class CheckoutRequest(BaseModel):
     package_id: str
-    # Selects the post-checkout return (v6.2): "web" returns to the web app,
-    # "extension" (default) uses the chrome-extension result shim.
-    client: Literal["web", "extension"] = "extension"
 
 
 @router.post("/credits/checkout")
@@ -62,7 +58,7 @@ async def checkout(req: CheckoutRequest, user: CurrentUser) -> dict[str, str]:
     ratelimit.check("checkout", user["sub"], limit=5)
     if req.package_id not in payments.CREDIT_PACKAGES:
         raise HTTPException(status_code=400, detail=f"unknown package: {req.package_id}")
-    url = await payments.create_checkout_session(user["sub"], req.package_id, req.client)
+    url = await payments.create_checkout_session(user["sub"], req.package_id)
     return {"url": url}
 
 
@@ -94,17 +90,3 @@ async def stripe_webhook(request: Request) -> dict[str, bool]:
     # 200 for handled and ignored events so Stripe stops retrying. A raised
     # DB error becomes a 500, which Stripe will retry — the grant is idempotent.
     return {"received": True}
-
-
-@router.get("/credits/checkout/result", response_class=HTMLResponse)
-async def checkout_result(status: str = "success") -> str:
-    if status == "cancel":
-        msg = "Checkout cancelled. You can close this tab and return to the extension."
-    else:
-        msg = ("Payment received. You can close this tab and return to the extension — "
-               "your credit balance updates within a few seconds.")
-    return (
-        "<!doctype html><html lang=\"en\"><head><meta charset=\"UTF-8\">"
-        "<title>WW Extension — Checkout</title></head>"
-        f"<body><p>{msg}</p></body></html>"
-    )

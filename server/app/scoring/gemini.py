@@ -265,7 +265,6 @@ async def score(
     model: str,
     cv_text: str,
     job_part: str,
-    cache_name: str | None = None,
     max_output_tokens: int = DEFAULT_MAX_OUTPUT_TOKENS,
 ) -> tuple[dict, dict]:
     """Score one job. Returns (parsed_result, usage_metadata).
@@ -276,31 +275,22 @@ async def score(
     """
     url = f"{_GEMINI_BASE}/models/{model}:generateContent"
 
-    generation_config = {
-        "temperature": _SCORE_TEMPERATURE,
-        "maxOutputTokens": max_output_tokens,
-        "thinkingConfig": {"thinkingBudget": 0},
-        "responseMimeType": "application/json",
-        "responseSchema": RESPONSE_SCHEMA,
+    body = {
+        "systemInstruction": {"parts": [{"text": SYSTEM_TEXT}]},
+        "contents": [
+            {
+                "role": "user",
+                "parts": [{"text": f"<candidate_profile>\n{cv_text}\n</candidate_profile>\n\n{job_part}"}],
+            }
+        ],
+        "generationConfig": {
+            "temperature": _SCORE_TEMPERATURE,
+            "maxOutputTokens": max_output_tokens,
+            "thinkingConfig": {"thinkingBudget": 0},
+            "responseMimeType": "application/json",
+            "responseSchema": RESPONSE_SCHEMA,
+        },
     }
-
-    if cache_name:
-        body = {
-            "cachedContent": cache_name,
-            "contents": [{"role": "user", "parts": [{"text": job_part}]}],
-            "generationConfig": generation_config,
-        }
-    else:
-        body = {
-            "systemInstruction": {"parts": [{"text": SYSTEM_TEXT}]},
-            "contents": [
-                {
-                    "role": "user",
-                    "parts": [{"text": f"<candidate_profile>\n{cv_text}\n</candidate_profile>\n\n{job_part}"}],
-                }
-            ],
-            "generationConfig": generation_config,
-        }
 
     res = await _post_gemini(url, body)
 

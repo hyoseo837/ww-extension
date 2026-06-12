@@ -24,27 +24,21 @@ CREDIT_PACKAGES: dict[str, dict[str, int]] = {
 }
 
 
-async def create_checkout_session(
-    user_id: str, package_id: str, client: str = "extension"
-) -> str:
+async def create_checkout_session(user_id: str, package_id: str) -> str:
     """Create a hosted Checkout session for one credit package and return
     its URL. Raises KeyError on an unknown package_id (caller maps to 400).
     The credit amount is taken from CREDIT_PACKAGES, never from the client.
 
-    `client` selects the post-checkout return (v6.2): "web" returns to the
-    web app; "extension" (default) uses the chrome-extension result shim.
+    Checkout returns to the web app — the only buying surface since v6.4
+    (the extension's buy UI shipped in no published version; its result
+    shim was removed in v8.13).
     """
     pkg = CREDIT_PACKAGES[package_id]
     credits = pkg["credits"]
 
-    if client == "web":
-        base = settings.web_app_url.rstrip("/")
-        success_url = f"{base}/billing?checkout=success"
-        cancel_url = f"{base}/buy?checkout=cancel"
-    else:
-        base = settings.public_base_url.rstrip("/")
-        success_url = f"{base}/credits/checkout/result?status=success"
-        cancel_url = f"{base}/credits/checkout/result?status=cancel"
+    base = settings.web_app_url.rstrip("/")
+    success_url = f"{base}/billing?checkout=success"
+    cancel_url = f"{base}/buy?checkout=cancel"
 
     # The stripe SDK is synchronous and this makes a blocking HTTP call —
     # run it off the event loop.

@@ -970,7 +970,7 @@ wheels = [
 
 [[package]]
 name = "ww-extension-backend"
-version = "8.12.1"
+version = "8.13.2"
 source = { editable = "." }
 dependencies = [
     { name = "asyncpg" },

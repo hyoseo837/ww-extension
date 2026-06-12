@@ -21,14 +21,12 @@ TEST_DB_URL = os.environ.get("TEST_DATABASE_URL")
 
 _DUMMY_ENV = {
     "SUPABASE_URL": "https://test.invalid",
-    "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_test",
     "SUPABASE_SECRET_KEY": "sb_secret_test",
     "SUPABASE_JWKS_URL": "https://test.invalid/jwks",
     "DATABASE_URL": "postgresql://invalid.test/never-used",
     "GEMINI_API_KEY": "test-key",
     "STRIPE_SECRET_KEY": "sk_test_dummy",
     "STRIPE_WEBHOOK_SECRET": "whsec_dummy",
-    "PUBLIC_BASE_URL": "https://test.invalid",
 }
 os.environ.update(_DUMMY_ENV)
 

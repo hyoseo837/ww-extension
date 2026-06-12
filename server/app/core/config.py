@@ -10,14 +10,12 @@ class Settings(BaseSettings):
     )
 
     supabase_url: HttpUrl
-    supabase_publishable_key: str
     supabase_secret_key: str
     supabase_jwks_url: HttpUrl
     database_url: str
     gemini_api_key: str
     stripe_secret_key: str
     stripe_webhook_secret: str
-    public_base_url: str
     # Comma-separated browser origins allowed by CORS (web app, v6.1).
     cors_origins: str = "http://localhost:5173,https://ww-extension.hyoseo.dev"
     # Web app base URL — Stripe success/cancel return for web checkout (v6.2).

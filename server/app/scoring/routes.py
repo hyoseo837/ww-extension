@@ -276,7 +276,6 @@ class ExtractRequest(BaseModel):
 
 class ExtractResponse(BaseModel):
     profile: dict  # structured profile (v5.1.0)
-    text: str      # readable serialization of `profile`, for display/back-compat
     cost: float
     balance: float
 
@@ -388,8 +387,6 @@ async def extract(req: ExtractRequest, user: CurrentUser):
             )
         new_balance = await billing_db.get_balance(user_id)
 
-    # Readable serialization of the structured profile, for display/back-compat.
-    text = gemini.build_profile_context(profile_json, [], "")
     total_ms = int((time.perf_counter() - started) * 1000)
     log.info(
         "extract_ok scan_id=%s model=%s total_ms=%d fields=%d cost=%s",
@@ -397,7 +394,7 @@ async def extract(req: ExtractRequest, user: CurrentUser):
     )
 
     return ExtractResponse(
-        profile=profile_json, text=text, cost=float(actual), balance=float(new_balance)
+        profile=profile_json, cost=float(actual), balance=float(new_balance)
     )
 
 
@@ -431,10 +428,8 @@ async def _replay_extract(existing: dict, user_id: str) -> ExtractResponse:
     # The profile isn't stored on the scan row (would bloat it); read it from
     # user_profile, which the original extract upserted into profile_json.
     profile = await profile_db.get_profile(user_id)
-    profile_json = profile["profile_json"]
     return ExtractResponse(
-        profile=profile_json,
-        text=gemini.build_profile_context(profile_json, [], ""),
+        profile=profile["profile_json"],
         cost=float(existing["actual_cost"]),
         balance=float(await billing_db.get_balance(user_id)),
     )
