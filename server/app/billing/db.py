@@ -323,7 +323,7 @@ async def referral_eligible(user_id: str, email: str) -> bool:
                 "   and not exists (select 1 from scan where user_id = $1::uuid) "
                 "   and not exists (select 1 from signup_bonus_block where email_hash = $2)",
                 user_id,
-                _sha256_hex(email),
+                email_hash(email),
             )
         )
 
@@ -334,13 +334,15 @@ async def is_blocked(email: str) -> bool:
         return bool(
             await conn.fetchval(
                 "select exists (select 1 from signup_bonus_block where email_hash = $1)",
-                _sha256_hex(email),
+                email_hash(email),
             )
         )
 
 
-def _sha256_hex(email: str) -> str:
-    """Must match the trigger's encode(digest(lower(email),'sha256'),'hex')."""
+def email_hash(email: str) -> str:
+    """One-way hash of the lowercased email — the signup_bonus_block key
+    (ADR 0029, shared by ADR 0050). Must match the trigger's
+    encode(digest(lower(email),'sha256'),'hex'). Also used by account.db."""
     return hashlib.sha256(email.lower().encode("utf-8")).hexdigest()
 
 

@@ -130,30 +130,8 @@ async def scan(req: ScanRequest, user: CurrentUser):
             if existing is not None:
                 return await _replay(existing, user_id)
 
-            # Serialize concurrent debits per user so the balance check
-            # can't be raced past (v8.9); released at commit.
-            await billing_db.lock_user_for_debit(conn, user_id)
-            remaining = await billing_db.balance_after_estimate(conn, user_id, estimate)
-            if remaining < 0:
-                await billing_db.update_scan_failed(
-                    conn, scan_id=req.scan_id, error="insufficient_credits"
-                )
-                current_balance = remaining + estimate
-                raise HTTPException(
-                    status_code=status.HTTP_402_PAYMENT_REQUIRED,
-                    detail={
-                        "error": "insufficient_credits",
-                        "balance": float(current_balance),
-                        "required": float(estimate),
-                    },
-                )
-
-            await billing_db.insert_ledger_entry(
-                conn,
-                user_id=user_id,
-                delta=-estimate,
-                kind="scan_debit",
-                ref=str(req.scan_id),
+            await _reserve_credits(
+                conn, scan_id=req.scan_id, user_id=user_id, estimate=estimate
             )
     db_pre_ms = int((time.perf_counter() - pre_started) * 1000)
 
@@ -324,28 +302,8 @@ async def extract(req: ExtractRequest, user: CurrentUser):
             if existing is not None:
                 return await _replay_extract(existing, user_id)
 
-            await billing_db.lock_user_for_debit(conn, user_id)
-            remaining = await billing_db.balance_after_estimate(conn, user_id, estimate)
-            if remaining < 0:
-                await billing_db.update_scan_failed(
-                    conn, scan_id=req.scan_id, error="insufficient_credits"
-                )
-                current_balance = remaining + estimate
-                raise HTTPException(
-                    status_code=status.HTTP_402_PAYMENT_REQUIRED,
-                    detail={
-                        "error": "insufficient_credits",
-                        "balance": float(current_balance),
-                        "required": float(estimate),
-                    },
-                )
-
-            await billing_db.insert_ledger_entry(
-                conn,
-                user_id=user_id,
-                delta=-estimate,
-                kind="scan_debit",
-                ref=str(req.scan_id),
+            await _reserve_credits(
+                conn, scan_id=req.scan_id, user_id=user_id, estimate=estimate
             )
 
     # --- Gemini multimodal call. ---
@@ -399,6 +357,37 @@ async def extract(req: ExtractRequest, user: CurrentUser):
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
+
+
+async def _reserve_credits(
+    conn, *, scan_id: UUID, user_id: str, estimate: Decimal
+) -> None:
+    """Transaction-1 debit, shared by /scan and /profile/extract: serialize
+    concurrent debits per user so the balance check can't be raced past
+    (v8.9; the lock releases at commit), then check the balance and insert
+    the scan_debit. On insufficient credits, marks the scan failed and
+    raises 402."""
+    await billing_db.lock_user_for_debit(conn, user_id)
+    remaining = await billing_db.balance_after_estimate(conn, user_id, estimate)
+    if remaining < 0:
+        await billing_db.update_scan_failed(
+            conn, scan_id=scan_id, error="insufficient_credits"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail={
+                "error": "insufficient_credits",
+                "balance": float(remaining + estimate),
+                "required": float(estimate),
+            },
+        )
+    await billing_db.insert_ledger_entry(
+        conn,
+        user_id=user_id,
+        delta=-estimate,
+        kind="scan_debit",
+        ref=str(scan_id),
+    )
 
 
 async def _replay(existing: dict, user_id: str) -> ScanResponse:
