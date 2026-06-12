@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v8.11.0" />
+    <meta name="status" content="in-progress" />
+    <meta name="last-updated" content="2026-06-11" />
+    <title>v8.11 — Extension polish</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>v8.11 — Extension polish</h1>
+
+    <h2>Goal</h2>
+    <p>
+      Close the four extension findings from the 2026-06-11 audit
+      (<a href="../reference/audit-2026-06-11.html">findings</a> #11–#14;
+      ordering per <a href="../decisions/0046-september-hardening-initiative.html">ADR
+      0046</a>): <code>content.js</code> is a 1050-line monolith, a failed
+      scan in a batch can only be recovered by re-running the whole batch,
+      the Gemini model id is pinned client-side where a fix needs a Web
+      Store review cycle, and two dead symbols linger.
+    </p>
+    <ol>
+      <li id="split">
+        <strong>Split <code>content.js</code> into modules</strong> — MV3
+        <code>content_scripts.js</code> accepts multiple files sharing one
+        isolated-world scope, so the split needs no build step (ADR 0026
+        posture unchanged). <code>ext/src/content.js</code> becomes
+        <code>ext/src/content/</code>, five classic scripts in manifest
+        load order:
+        <ol>
+          <li><code>core.js</code> — constants, shared mutable state
+            (<code>scores</code>, <code>allPostingIds</code>,
+            <code>aborted</code>, <code>detectedPageSize</code>), small
+            utils (<code>esc</code>, <code>verdictSlug</code>, SVGs,
+            <code>BOARD</code>), the page bridge
+            (<code>injectBridge</code>/<code>sendBridge</code>), and
+            persistence (<code>loadScores</code>/<code>saveScores</code>/
+            <code>scheduleFlush</code>/<code>clearScores</code>/
+            <code>removeScore</code>).</li>
+          <li><code>table.js</code> — job-table integration: badge
+            injection, table observer, pagination navigation,
+            <code>scrollToRow</code>.</li>
+          <li><code>scan.js</code> — the scan engine: progress line,
+            confirm dialogs, batch loop, <code>fetchPostingText</code>.</li>
+          <li><code>sidebar.js</code> — sidebar shell + results list +
+            feedback UI.</li>
+          <li><code>main.js</code> — injection guard, init sequence,
+            <code>storage.onChanged</code> listener.</li>
+        </ol>
+        Pure reorganization: no behavior change, no renames beyond file
+        placement. Top-level declarations in classic scripts share the
+        realm's global lexical scope, so cross-file references work
+        as before; only <em>top-level execution order</em> matters, and
+        only <code>main.js</code> executes at top level.
+      </li>
+      <li id="retry">
+        <strong>"Retry failed" affordance</strong> — the batch loop records
+        the posting ids of non-halt failures
+        (fetch errors, Gemini failures; refunded server-side). When a run
+        ends with failures, the progress area gains a
+        <em>Retry N failed</em> button that re-runs only those ids through
+        the same loop — same cost confirmation (it spends new credits, the
+        failed scans were refunded), same Stop button, fresh
+        <code>batch_id</code>. Halt codes (<code>NO_CREDITS</code>,
+        <code>NOT_SIGNED_IN</code>, <code>PROFILE_NOT_SET</code>) keep
+        their action prompts and do not populate the retry list — the jobs
+        a halt skipped are not failures, and "Scan All Jobs" already picks
+        up anything unscored. Mechanically: the worker loop is extracted
+        from <code>scanAllJobs()</code> into <code>runScan(ids)</code>,
+        and "Scan All Jobs" becomes selectAll → filter unscored → confirm
+        → <code>runScan</code>.
+      </li>
+      <li id="model">
+        <strong>Server-side default model</strong> — <code>ScanRequest.model</code>
+        gains the default <code>pricing.DEFAULT_MODEL</code>
+        (<code>/profile/extract</code> already has it), and the extension
+        stops sending <code>model</code> entirely (drop the literal in the
+        scan loop and the fallback in <code>background.js</code>). When
+        Google retires <code>gemini-2.5-flash</code>, the fix becomes a
+        one-line server deploy instead of a Web Store review cycle.
+        Validation is unchanged: an explicitly sent unsupported model still
+        gets 400.
+      </li>
+      <li id="dead-code">
+        <strong>Dead-code removal</strong> — <code>VERDICT_ORDER</code> in
+        <code>page-bridge.js</code> (the obsolete 3-tier ladder, unused)
+        and <code>_require_pool()</code> in
+        <code>server/app/billing/db.py</code> (unused).
+      </li>
+    </ol>
+
+    <h2>Files</h2>
+    <ul>
+      <li><code>server/app/scoring/routes.py</code> — <code>model</code>
+        default on <code>ScanRequest</code>.</li>
+      <li><code>server/app/billing/db.py</code> — <code>_require_pool()</code>
+        removed.</li>
+      <li><code>server/tests/test_scoring_logic.py</code> — request-shape
+        test: omitted <code>model</code> resolves to
+        <code>DEFAULT_MODEL</code>.</li>
+      <li><code>server/pyproject.toml</code> — version bump (ADR 0010).</li>
+      <li><code>docs/reference/api.html</code> — <code>/scan</code> contract:
+        <code>model</code> now optional, server default documented.</li>
+      <li><code>ext/src/content.js</code> — removed (becomes
+        <code>ext/src/content/core.js</code>, <code>table.js</code>,
+        <code>scan.js</code>, <code>sidebar.js</code>, <code>main.js</code>).</li>
+      <li><code>ext/manifest.json</code> — <code>content_scripts.js</code>
+        lists the five files in load order; version bumps.</li>
+      <li><code>ext/src/page-bridge.js</code> — dead
+        <code>VERDICT_ORDER</code> removed.</li>
+      <li><code>ext/src/background.js</code> — <code>scoreJob</code> omits
+        <code>model</code> from the <code>/scan</code> body.</li>
+      <li><code>ext/src/sidebar.css</code> — style for the retry button
+        (reuses the inline-link affordance).</li>
+    </ul>
+
+    <h2>Commits</h2>
+    <ol>
+      <li><code>v8.11.0</code> — this spec.</li>
+      <li><code>v8.11.1</code> — server slice: optional <code>model</code>,
+        dead <code>_require_pool</code>, test, <code>api.html</code>.</li>
+      <li><code>v8.11.2</code> — extension split (pure reorganization) +
+        <code>page-bridge.js</code> dead code.</li>
+      <li><code>v8.11.3</code> — retry-failed + extension stops sending
+        <code>model</code>; close-out (roadmap status, spec status).</li>
+    </ol>
+
+    <h2>Verify</h2>
+    <ul>
+      <li>pytest green, including the new default-model shape test; CI
+        green on push.</li>
+      <li><code>node --check</code> passes on every file under
+        <code>ext/src/</code> (syntax floor — there is no build step to
+        catch typos).</li>
+      <li><code>grep -r "gemini-2.5-flash" ext/</code> returns nothing —
+        the model id lives only server-side.</li>
+      <li><strong>Owner manual pass (live WW):</strong> load
+        <code>ext/</code> unpacked; on the full board confirm cached badges
+        and sidebar list render, scan a small batch, Stop works, and — with
+        the network briefly cut mid-batch — the <em>Retry N failed</em>
+        button appears, re-confirms cost, and rescues the failures. Spot
+        check the Direct board, save-to-folder, and 👍/👎 feedback (each
+        exercises a different module seam).</li>
+    </ul>
+
+    <h2>Notes</h2>
+    <ul>
+      <li>The five-file split is deliberately coarse — the audit's concern
+        is the monolith, not maximal modularity; minimal-code rule applies.
+        ES modules in content scripts would need
+        <code>import</code>-capable injection or a bundler; multiple
+        classic scripts get the same outcome with zero toolchain.</li>
+      <li>Retry intentionally re-runs the cost confirmation: failed scans
+        are refunded, so a retry spends <em>new</em> credits, and v6.13's
+        "confirm before spending" rule applies to every spend path.</li>
+      <li>Once v8.11 ships, the client is model-agnostic; choosing a new
+        default (or per-user models someday) is purely a server decision.
+        The Web Store zip is unaffected structurally —
+        <code>package.sh</code> zips all of <code>ext/</code>.</li>
+    </ul>
+  </body>
+</html>
