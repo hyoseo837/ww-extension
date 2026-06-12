@@ -71,7 +71,6 @@ el('signIn').addEventListener('click', async () => {
     }
     const accessToken = params.get('access_token');
     const refreshToken = params.get('refresh_token');
-    const expiresIn = parseInt(params.get('expires_in') || '3600', 10);
     if (!accessToken) {
       setAuthStatus('Sign-in failed: no access token returned.', 'err');
       return;
@@ -80,7 +79,6 @@ el('signIn').addEventListener('click', async () => {
     const auth = {
       access_token: accessToken,
       refresh_token: refreshToken,
-      expires_at: Date.now() + expiresIn * 1000,
       email: claims.email,
       user_id: claims.sub,
     };
@@ -95,10 +93,9 @@ el('signIn').addEventListener('click', async () => {
 });
 
 el('signOut').addEventListener('click', async () => {
-  // Clear the session and any locally cached profile/balance.
-  await chrome.storage.local.remove([
-    'auth', 'creditBalance', 'cvText', 'profileJson', 'profileSupplement', 'preferences', 'matchCriteria',
-  ]);
+  // Clear the session and the cached balance (profile data lives
+  // server-side since v6.4 — nothing else is stored locally).
+  await chrome.storage.local.remove(['auth', 'creditBalance']);
   renderBalance(undefined);
   setAuthStatus('Signed out.', 'ok');
 });

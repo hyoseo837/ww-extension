@@ -16,10 +16,8 @@ if (!window.__wwExtensionInjected) {
 
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== 'local') return;
-  if (changes.auth || changes.cvText) {
-    chrome.storage.local.get(['auth', 'cvText'], data => {
-      updateGuideSteps(!!data.auth?.access_token, !!(data.cvText && data.cvText.trim()));
-    });
+  if (changes.auth) {
+    updateGuideSteps(!!changes.auth.newValue?.access_token);
   }
   if (changes.auth || changes.creditBalance) {
     chrome.storage.local.get(['auth', 'creditBalance'], data => {

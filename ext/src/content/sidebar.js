@@ -31,7 +31,7 @@ function renderSidebarList() {
           <span class="ww-ext-step-num">1</span>
           <div>Sign in with your UWaterloo account in <button class="ww-ext-inline-link" id="ww-ext-guide-signin">Settings</button></div>
         </div>
-        <div class="ww-ext-guide-step" id="ww-ext-step-cv">
+        <div class="ww-ext-guide-step">
           <span class="ww-ext-step-num">2</span>
           <div>Set up your <button class="ww-ext-inline-link" id="ww-ext-guide-profile">profile</button> on the web app</div>
         </div>
@@ -46,8 +46,8 @@ function renderSidebarList() {
     ul.querySelector('#ww-ext-guide-profile')?.addEventListener('click', () => {
       chrome.runtime.sendMessage({ type: 'openWebApp', path: '/profile' });
     });
-    chrome.storage.local.get(['auth', 'cvText'], data => {
-      updateGuideSteps(!!data.auth?.access_token, !!(data.cvText && data.cvText.trim()));
+    chrome.storage.local.get('auth', data => {
+      updateGuideSteps(!!data.auth?.access_token);
     });
     return;
   }
@@ -362,15 +362,12 @@ function injectSidebar() {
   });
 }
 
-function updateGuideSteps(hasAuth, hasCv) {
+// Guide ✓ exists only for the sign-in step — auth is the one state the
+// extension can see locally. The profile lives server-side (v6.4), so step 2
+// stays a plain numbered link rather than guessing at completion.
+function updateGuideSteps(hasAuth) {
   const authStep = document.getElementById('ww-ext-step-auth');
-  const cvStep   = document.getElementById('ww-ext-step-cv');
-  if (authStep) {
-    authStep.querySelector('.ww-ext-step-num').textContent = hasAuth ? '✓' : '1';
-    authStep.classList.toggle('ww-ext-step-done', hasAuth);
-  }
-  if (cvStep) {
-    cvStep.querySelector('.ww-ext-step-num').textContent = hasCv ? '✓' : '2';
-    cvStep.classList.toggle('ww-ext-step-done', hasCv);
-  }
+  if (!authStep) return;
+  authStep.querySelector('.ww-ext-step-num').textContent = hasAuth ? '✓' : '1';
+  authStep.classList.toggle('ww-ext-step-done', hasAuth);
 }

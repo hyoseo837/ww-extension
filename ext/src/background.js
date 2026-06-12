@@ -53,10 +53,6 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     refreshBalance().then(sendResponse);
     return true;
   }
-  if (msg.type === "createCheckout") {
-    createCheckout(msg.packageId).then(sendResponse);
-    return true;
-  }
 });
 
 // Auto-refresh balance on sign-in (auth set in storage) and clear it on
@@ -168,20 +164,6 @@ async function refreshBalance() {
   return res;
 }
 
-// Create a Stripe Checkout session for a credit package and hand the URL
-// back to the options page, which opens it in a new tab. Credits are
-// granted server-side by the Stripe webhook, not here.
-async function createCheckout(packageId) {
-  const res = await backendFetch("/credits/checkout", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ package_id: packageId }),
-  });
-  if (res.ok && res.data?.url) return { ok: true, url: res.data.url };
-  if (res.status === 0) return { ok: false, error: "Sign in to buy credits." };
-  return { ok: false, error: res.data?.detail || "Couldn't start checkout." };
-}
-
 async function backendFetch(path, init = {}) {
   let auth = await getAuth();
   if (!auth?.access_token) return { ok: false, status: 0, error: "NOT_SIGNED_IN" };
@@ -230,7 +212,6 @@ function refreshSession(refreshToken) {
       const auth = {
         access_token: data.access_token,
         refresh_token: data.refresh_token,
-        expires_at: Date.now() + (data.expires_in ?? 3600) * 1000,
         email: claims.email,
         user_id: claims.sub,
       };
@@ -253,6 +234,3 @@ function decodeJwtPayload(token) {
     return null;
   }
 }
-
-// One-time cleanup of storage keys left behind by pre-v4.4.2 versions.
-chrome.storage.local.remove(["apiKey", "tokenUsage"]);
