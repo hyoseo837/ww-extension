@@ -83,15 +83,15 @@ chrome.storage.local.get("auth", (data) => {
 // One scan = one POST /scan with a fresh scan_id (idempotency key on the
 // backend). The backend handles Gemini, ledger debit/refund, and returns
 // the new balance alongside the result so we can update creditBalance
-// without a follow-up /credits/balance fetch.
-async function scoreJob({ meta, descriptionText, model, postingId, batchId }) {
+// without a follow-up /credits/balance fetch. No model field is sent — the
+// server owns the default (v8.11), so a model retirement is a server deploy.
+async function scoreJob({ meta, descriptionText, postingId, batchId }) {
   const scan_id = crypto.randomUUID();
   const res = await backendFetch("/scan", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       scan_id,
-      model: model || "gemini-2.5-flash",
       meta,
       description_text: descriptionText,
       posting_id: postingId,

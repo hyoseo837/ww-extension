@@ -124,19 +124,31 @@ function confirmDialog({ title, msg, goLabel }) {
   });
 }
 
-async function scanAllJobs() {
-  // One button doubles as Stop while a scan runs (the click handler checks
-  // the ww-ext-scanning class).
+// Posting ids whose last run ended in a non-halt failure (fetch/Gemini
+// errors — refunded server-side). Feeds "Retry N failed"; reset by each run.
+let failedIds = [];
+
+// Scan/Stop button state shared by every run path. One button doubles as
+// Stop while a run is live (the click handler in sidebar.js checks the
+// ww-ext-scanning class).
+async function withScanButton(run) {
   const scanBtn = document.getElementById('ww-ext-scan');
   scanBtn.classList.add('ww-ext-scanning');
   scanBtn.textContent = 'Stop';
   aborted = false;
-
-  // One id for this whole Scan run, sent on every /scan so the web app's
-  // credit history can group the batch ("Scanned N jobs"). v6.2.
-  const batchId = crypto.randomUUID();
-
   try {
+    await run();
+  } catch (e) {
+    setProgress(`Error: ${e.message}`, true);
+  } finally {
+    scanBtn.classList.remove('ww-ext-scanning');
+    scanBtn.textContent = 'Scan All Jobs';
+    scanBtn.disabled = false;
+  }
+}
+
+function scanAllJobs() {
+  return withScanButton(async () => {
     const tokens = await sendBridge('extractTokens');
     if (!tokens.selectAll) {
       setProgress('Error: selectAll token not found.', true);
@@ -177,101 +189,143 @@ async function scanAllJobs() {
       return;
     }
 
-    const rowMeta = indexVisibleRows();
-    const total   = toScore.length;
-    let done = 0, failed = 0;
-    let lastError = '';
-    let halted = false;
-    let nextIdx = 0;
+    await runScan(toScore);
+  });
+}
 
-    async function scanOne(postingId) {
-      const rowInfo = rowMeta[postingId];
+// Re-run only the failures from the last run (audit #12). Same loop, same
+// cost confirmation — the failed scans were refunded, so a retry spends new
+// credits and v6.13's confirm-before-spending rule applies.
+function retryFailed() {
+  return withScanButton(async () => {
+    const ids = failedIds.filter(id => !scores.has(id));
+    if (!ids.length) {
+      setProgress('Nothing to retry.');
+      return;
+    }
+    const balance = await new Promise(res =>
+      chrome.storage.local.get('creditBalance', d => res(d.creditBalance))
+    );
+    if (!(await confirmScan(ids.length, balance))) {
+      setProgress('Retry cancelled.');
+      return;
+    }
+    await runScan(ids);
+  });
+}
 
-      let descriptionText = '';
-      let extractedTitle  = '';
-      try {
-        ({ descriptionText, extractedTitle } = await fetchPostingText(postingId));
-      } catch (e) {
-        return { ok: false, error: `fetch: ${e.message}` };
-      }
+// The batch loop: scores `toScore` with SCAN_CONCURRENCY workers. Shared by
+// Scan All Jobs and Retry. Records non-halt failures in failedIds and offers
+// the retry button when a completed run has any.
+async function runScan(toScore) {
+  // One id for this whole run, sent on every /scan so the web app's credit
+  // history can group the batch ("Scanned N jobs"). v6.2.
+  const batchId = crypto.randomUUID();
+  const failures = [];
 
-      const meta = {
-        title: rowInfo?.title || extractedTitle || `#${postingId}`,
-        org:   rowInfo?.org   || ''
-      };
+  const rowMeta = indexVisibleRows();
+  const total   = toScore.length;
+  let done = 0, failed = 0;
+  let lastError = '';
+  let halted = false;
+  let nextIdx = 0;
 
-      const reply = await chrome.runtime.sendMessage({
-        type: 'scoreJob',
-        meta,
-        descriptionText,
-        model:       'gemini-2.5-flash',
-        postingId,
-        batchId
-      });
+  async function scanOne(postingId) {
+    const rowInfo = rowMeta[postingId];
 
-      if (reply?.ok) {
-        scores.set(postingId, { ...reply.result, scanId: reply.scanId, board: BOARD, title: meta.title, org: meta.org });
-        injectRowScores();
-        scheduleFlush();
-        return { ok: true };
-      }
-      // NO_CREDITS / NOT_SIGNED_IN / PROFILE_NOT_SET stop the whole batch —
-      // no point burning wall time on calls we know will all fail the same way.
-      const halt = reply?.code === 'NO_CREDITS'
-        || reply?.code === 'NOT_SIGNED_IN'
-        || reply?.code === 'PROFILE_NOT_SET';
-      return { ok: false, error: reply?.error || 'unknown', halt, code: reply?.code };
+    let descriptionText = '';
+    let extractedTitle  = '';
+    try {
+      ({ descriptionText, extractedTitle } = await fetchPostingText(postingId));
+    } catch (e) {
+      return { ok: false, error: `fetch: ${e.message}` };
     }
 
-    async function worker() {
-      while (!aborted && !halted) {
-        const idx = nextIdx++;
-        if (idx >= toScore.length) return;
-        const postingId = toScore[idx];
-        const result = await scanOne(postingId);
-        if (result.ok) {
-          done++;
-        } else {
-          failed++;
-          lastError = result.error;
-          if (result.halt) {
-            halted = true;
-            if (result.code === 'NO_CREDITS') {
-              setActionPrompt("You're out of credits.", 'Buy credits', '/buy');
-            } else if (result.code === 'PROFILE_NOT_SET') {
-              setActionPrompt('Set up your profile to start scoring.', 'Set up profile', '/profile');
-            } else {
-              setProgress(result.error, true);
-            }
-            return;
-          }
-        }
-        if (!halted) setProgress(`Scored ${done + failed} of ${total}…`);
-      }
+    const meta = {
+      title: rowInfo?.title || extractedTitle || `#${postingId}`,
+      org:   rowInfo?.org   || ''
+    };
+
+    // No model field — the server picks the default (v8.11, audit #13).
+    const reply = await chrome.runtime.sendMessage({
+      type: 'scoreJob',
+      meta,
+      descriptionText,
+      postingId,
+      batchId
+    });
+
+    if (reply?.ok) {
+      scores.set(postingId, { ...reply.result, scanId: reply.scanId, board: BOARD, title: meta.title, org: meta.org });
+      injectRowScores();
+      scheduleFlush();
+      return { ok: true };
     }
-
-    const workerCount = Math.min(SCAN_CONCURRENCY, toScore.length);
-    await Promise.all(Array.from({ length: workerCount }, () => worker()));
-
-    // Final flush — overrides the pending debounced one.
-    saveScores();
-    renderSidebarList();
-
-    if (!halted) {
-      const skipped = failed ? ` (${failed} failed: ${lastError})` : '';
-      const summary = aborted
-        ? `Stopped at ${done} of ${total}.${skipped}`
-        : `${done} of ${total} scored.${skipped}`;
-      setProgress(summary, failed > 0);
-    }
-
-  } catch (e) {
-    setProgress(`Error: ${e.message}`, true);
-  } finally {
-    scanBtn.classList.remove('ww-ext-scanning');
-    scanBtn.textContent = 'Scan All Jobs';
-    scanBtn.disabled = false;
+    // NO_CREDITS / NOT_SIGNED_IN / PROFILE_NOT_SET stop the whole batch —
+    // no point burning wall time on calls we know will all fail the same way.
+    const halt = reply?.code === 'NO_CREDITS'
+      || reply?.code === 'NOT_SIGNED_IN'
+      || reply?.code === 'PROFILE_NOT_SET';
+    return { ok: false, error: reply?.error || 'unknown', halt, code: reply?.code };
   }
+
+  async function worker() {
+    while (!aborted && !halted) {
+      const idx = nextIdx++;
+      if (idx >= toScore.length) return;
+      const postingId = toScore[idx];
+      const result = await scanOne(postingId);
+      if (result.ok) {
+        done++;
+      } else {
+        failed++;
+        lastError = result.error;
+        if (!result.halt) failures.push(postingId);
+        if (result.halt) {
+          halted = true;
+          if (result.code === 'NO_CREDITS') {
+            setActionPrompt("You're out of credits.", 'Buy credits', '/buy');
+          } else if (result.code === 'PROFILE_NOT_SET') {
+            setActionPrompt('Set up your profile to start scoring.', 'Set up profile', '/profile');
+          } else {
+            setProgress(result.error, true);
+          }
+          return;
+        }
+      }
+      if (!halted) setProgress(`Scored ${done + failed} of ${total}…`);
+    }
+  }
+
+  const workerCount = Math.min(SCAN_CONCURRENCY, toScore.length);
+  await Promise.all(Array.from({ length: workerCount }, () => worker()));
+
+  // Final flush — overrides the pending debounced one.
+  saveScores();
+  renderSidebarList();
+
+  failedIds = failures;
+  if (!halted) {
+    const skipped = failed ? ` (${failed} failed: ${lastError})` : '';
+    const summary = aborted
+      ? `Stopped at ${done} of ${total}.${skipped}`
+      : `${done} of ${total} scored.${skipped}`;
+    setProgress(summary, failed > 0);
+    if (failures.length) offerRetry(failures.length);
+  }
+}
+
+// Appends "Retry N failed" to the progress line after a run with failures.
+// setProgress on the next run clears it (textContent wipes child nodes).
+function offerRetry(n) {
+  const el = document.getElementById('ww-ext-progress');
+  if (!el) return;
+  el.append(' ');
+  const btn = document.createElement('button');
+  btn.className = 'ww-ext-inline-link';
+  btn.textContent = `Retry ${n} failed`;
+  btn.addEventListener('click', retryFailed);
+  el.appendChild(btn);
 }
 
 // Fetch + trim a posting's overview text. Used by the scan loop and by 👎

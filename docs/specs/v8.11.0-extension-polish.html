@@ -5,7 +5,7 @@
     <meta name="project" content="ww-extension" />
     <meta name="type" content="spec" />
     <meta name="version" content="v8.11.0" />
-    <meta name="status" content="in-progress" />
+    <meta name="status" content="done" />
     <meta name="last-updated" content="2026-06-11" />
     <title>v8.11 — Extension polish</title>
     <link rel="stylesheet" href="../style.css" />
@@ -132,12 +132,15 @@
     <h2>Verify</h2>
     <ul>
       <li>pytest green, including the new default-model shape test; CI
-        green on push.</li>
+        green on push. <em>Local run 2026-06-11: 70 passed.</em></li>
       <li><code>node --check</code> passes on every file under
         <code>ext/src/</code> (syntax floor — there is no build step to
-        catch typos).</li>
+        catch typos). <em>Pass 2026-06-11. The split was additionally
+        verified line-identical: the five files' non-blank lines diff
+        empty against the original <code>content.js</code>.</em></li>
       <li><code>grep -r "gemini-2.5-flash" ext/</code> returns nothing —
-        the model id lives only server-side.</li>
+        the model id lives only server-side. <em>Pass 2026-06-11 (no
+        <code>gemini</code> match at all).</em></li>
       <li><strong>Owner manual pass (live WW):</strong> load
         <code>ext/</code> unpacked; on the full board confirm cached badges
         and sidebar list render, scan a small batch, Stop works, and — with
@@ -161,6 +164,12 @@
         default (or per-user models someday) is purely a server decision.
         The Web Store zip is unaffected structurally —
         <code>package.sh</code> zips all of <code>ext/</code>.</li>
+      <li><strong>Deploy order:</strong> the production server (master)
+        still requires <code>model</code> until the next release — a
+        v8.11.3+ extension scanning against prod gets 422 until
+        <code>dev</code> is merged into <code>master</code>. Release the
+        server before loading this extension build against prod (the Web
+        Store version naturally trails the server deploy anyway).</li>
     </ul>
   </body>
 </html>
