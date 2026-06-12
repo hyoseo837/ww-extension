@@ -152,6 +152,11 @@ export default function PreferencesSetup() {
           setSaving(false);
           return;
         }
+        if (String(e).includes("400")) {
+          setReferralError("That's your own email — enter the friend who invited you, or leave it blank.");
+          setSaving(false);
+          return;
+        }
         // Anything else (already set, not eligible, transient) never blocks
         // finishing the wizard.
       }
