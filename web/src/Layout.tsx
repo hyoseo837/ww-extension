@@ -1,12 +1,22 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, NavLink, Outlet, useOutletContext } from "react-router-dom";
+import { Link, Navigate, NavLink, Outlet, useOutletContext } from "react-router-dom";
 import { apiGet } from "./api";
 import { signOut } from "./supabase";
 import { SUPPORT_EMAIL } from "./support";
 import { CHROME_STORE_URL } from "./links";
+import { coerceCriteria, setupDone } from "./types";
+import type { Profile } from "./types";
 import Icon from "./Icon";
 
-type DashboardContext = { balance: number | null; refetchBalance: () => void; email: string };
+type DashboardContext = {
+  balance: number | null;
+  refetchBalance: () => void;
+  // One shared /profile fetch (v8.13): serves the setup gate below and the
+  // dashboard snapshot. null = fetch failed (pages treat it as "unknown").
+  profile: Profile | null;
+  refetchProfile: () => void;
+  email: string;
+};
 
 export function useDashboard() {
   return useOutletContext<DashboardContext>();
@@ -41,6 +51,12 @@ const topLink = ({ isActive }: { isActive: boolean }) =>
 
 export default function Layout({ email }: { email: string }) {
   const [balance, setBalance] = useState<number | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  // Setup gate (ADR 0040): "loading" blocks the shell until the first
+  // profile fetch resolves; "redirect" sends new users to the wizard. Fails
+  // open on API errors — the gate funnels new users, it must never lock the
+  // app.
+  const [gate, setGate] = useState<"loading" | "redirect" | "open">("loading");
 
   const refetchBalance = useCallback(() => {
     apiGet<{ balance: number }>("/credits/balance")
@@ -48,11 +64,31 @@ export default function Layout({ email }: { email: string }) {
       .catch(() => setBalance(null));
   }, []);
 
+  const refetchProfile = useCallback(() => {
+    apiGet<Profile>("/profile")
+      .then((p) => {
+        const coerced = { ...p, match_criteria: coerceCriteria(p.match_criteria) };
+        setProfile(coerced);
+        setGate(setupDone(coerced.match_criteria) ? "open" : "redirect");
+      })
+      .catch(() => setGate("open"));
+  }, []);
+
   useEffect(() => {
     refetchBalance();
-  }, [refetchBalance]);
+    refetchProfile();
+  }, [refetchBalance, refetchProfile]);
 
   const initial = (email.trim()[0] || "?").toUpperCase();
+
+  if (gate === "loading") {
+    return (
+      <div className="center">
+        <p className="muted">Loading…</p>
+      </div>
+    );
+  }
+  if (gate === "redirect") return <Navigate to="/preferences/setup" replace />;
 
   return (
     <div className="min-h-screen bg-page-bg">
@@ -133,7 +169,7 @@ export default function Layout({ email }: { email: string }) {
       </aside>
 
       <main className="pb-xxl md:ml-64">
-        <Outlet context={{ balance, refetchBalance, email } satisfies DashboardContext} />
+        <Outlet context={{ balance, refetchBalance, profile, refetchProfile, email } satisfies DashboardContext} />
         <footer className="mx-auto flex max-w-max-width flex-col items-center gap-xs px-gutter pb-lg font-label-sm text-label-sm text-text-muted">
           <div className="flex justify-center gap-md">
             <Link to="/terms" className="transition-colors hover:text-text-secondary hover:underline">Terms</Link>

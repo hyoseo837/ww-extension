@@ -3,6 +3,7 @@ import { signInWithMicrosoft } from "../supabase";
 import { SUPPORT_EMAIL } from "../support";
 import { CHROME_STORE_URL } from "../links";
 import { PACKAGES } from "../packages";
+import PackageCard from "../PackageCard";
 import Icon from "../Icon";
 
 const FEATURES = [
@@ -173,48 +174,9 @@ export default function Landing() {
             </p>
           </div>
           <div className="grid grid-cols-1 gap-lg md:grid-cols-3">
-            {PACKAGES.map((p) => {
-              const highlighted = !!p.popular;
-              return (
-                <article
-                  key={p.id}
-                  className={[
-                    "relative flex flex-col gap-lg rounded-xl bg-surface p-lg",
-                    highlighted
-                      ? "border border-primary shadow-[0_8px_24px_rgba(143,72,48,0.08)] md:scale-105"
-                      : "border border-border shadow-[0_2px_8px_rgba(0,0,0,0.02)]",
-                  ].join(" ")}
-                >
-                  {highlighted && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-accent-soft px-md py-base font-label-sm text-label-sm text-primary">
-                      Most popular
-                    </div>
-                  )}
-                  <div className="flex flex-col gap-xs pt-sm">
-                    <h3 className={`font-headline-lg text-headline-lg ${highlighted ? "text-primary" : "text-on-surface"}`}>
-                      {p.credits.toLocaleString()}
-                      <span className="ml-xs font-body-md text-body-md text-text-muted">credits</span>
-                    </h3>
-                    <span className="font-label-sm text-label-sm text-text-muted">{p.note}</span>
-                  </div>
-                  <div className="flex items-baseline gap-xs">
-                    <span className="font-headline-md text-headline-md text-on-surface">{p.price}</span>
-                    <span className="font-body-md text-body-md text-text-secondary">CAD</span>
-                  </div>
-                  <button
-                    onClick={() => signInWithMicrosoft()}
-                    className={[
-                      "mt-auto w-full rounded-lg px-lg py-sm font-label-md text-label-md transition-colors",
-                      highlighted
-                        ? "bg-primary text-on-primary hover:bg-accent-hover shadow-[0_2px_8px_rgba(143,72,48,0.2)]"
-                        : "border border-border bg-surface text-primary hover:bg-surface-alt",
-                    ].join(" ")}
-                  >
-                    Sign in to buy
-                  </button>
-                </article>
-              );
-            })}
+            {PACKAGES.map((p) => (
+              <PackageCard key={p.id} pkg={p} ctaLabel="Sign in to buy" onCta={() => signInWithMicrosoft()} />
+            ))}
           </div>
           <div className="mt-lg flex items-center justify-center gap-xs text-text-muted">
             <Icon name="lock" className="text-[18px]" />

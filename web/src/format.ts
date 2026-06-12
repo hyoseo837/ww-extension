@@ -26,3 +26,6 @@ export function fmtBalance(n: number): string {
 export function creditUnit(n: number): string {
   return Math.abs(n) === 1 ? "credit" : "credits";
 }
+
+// An ISO timestamp as a locale date, e.g. "6/12/2026".
+export const fmtDate = (iso: string) => new Date(iso).toLocaleDateString();

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { fmtCredits, kindLabel } from "./format";
+import { fmtCredits, fmtDate, kindLabel } from "./format";
 import Icon from "./Icon";
 
 export type Entry = {
@@ -34,8 +34,6 @@ function iconFor(kind: string): string {
     default:               return "receipt_long";
   }
 }
-
-const fmtDate = (iso: string) => new Date(iso).toLocaleDateString();
 
 // Collapse consecutive scans sharing a batch_id (entries are time-ordered, so a
 // batch's scans are contiguous). Everything else, and any lone scan, is single.

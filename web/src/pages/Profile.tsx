@@ -3,6 +3,7 @@ import { apiGet, apiPost, apiPut } from "../api";
 import { useDashboard } from "../Layout";
 import { creditUnit, fmtBalance } from "../format";
 import Icon from "../Icon";
+import { emptyStructuredProfile } from "../types";
 import type { Profile as ProfileT, StructuredProfile, SupplementEntry } from "../types";
 
 const CARD = "rounded-xl border border-border bg-surface p-lg shadow-[0_2px_8px_rgba(41,38,31,0.04)]";
@@ -163,7 +164,7 @@ function ConfirmExtract({
 }
 
 export default function Profile() {
-  const { refetchBalance, balance } = useDashboard();
+  const { refetchBalance, refetchProfile, balance } = useDashboard();
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [profile, setProfile] = useState<ProfileT | null>(null);
@@ -200,14 +201,17 @@ export default function Profile() {
     setStatus(null);
     try {
       const pdf_b64 = await fileToBase64(file);
-      const res = await apiPost<{ cost: number }>("/profile/extract", {
-        scan_id: crypto.randomUUID(),
-        pdf_b64,
-      });
-      const fresh = await apiGet<ProfileT>("/profile");
-      setProfile(fresh);
-      setSupplement(fresh.profile_supplement);
+      // The response carries the freshly extracted profile_json — no
+      // follow-up GET /profile needed (v8.13). Supplement is untouched by
+      // extraction (ADR 0015), so the rest of the page state stands.
+      const res = await apiPost<{ profile: Partial<StructuredProfile>; cost: number }>(
+        "/profile/extract",
+        { scan_id: crypto.randomUUID(), pdf_b64 },
+      );
+      const profile_json = { ...emptyStructuredProfile(), ...res.profile };
+      setProfile((prev) => (prev ? { ...prev, profile_json } : prev));
       refetchBalance();
+      refetchProfile(); // dashboard CV-status reads the shared fetch
       setStaged(null);
       setStatus(`Profile extracted (cost ${res.cost.toFixed(2)} credits).`);
     } catch (e) {

@@ -4,7 +4,7 @@ import { apiGet, apiPost } from "../api";
 import { signOut } from "../supabase";
 import Icon from "../Icon";
 import HistoryList, { type Entry } from "../HistoryList";
-import { fmtBalance } from "../format";
+import { fmtBalance, fmtDate } from "../format";
 
 type Stats = { total_users: number; total_credits_issued: number; credits_used_24h: number };
 type AdminUser = { user_id: string; email: string | null; created_at: string; balance: number };
@@ -21,7 +21,6 @@ type Feedback = {
 };
 
 const CARD = "rounded-xl border border-border bg-surface p-lg shadow-[0_2px_8px_rgba(41,38,31,0.04)]";
-const fmtDate = (iso: string) => new Date(iso).toLocaleDateString();
 const isForbidden = (e: unknown) => e instanceof Error && e.message.startsWith("403");
 
 // Compact for the big stat numbers (128500 → "128.5k").

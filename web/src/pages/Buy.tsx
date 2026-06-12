@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { apiPost } from "../api";
 import { PACKAGES } from "../packages";
+import PackageCard from "../PackageCard";
 import Icon from "../Icon";
 
 export default function Buy() {
@@ -11,7 +12,7 @@ export default function Buy() {
     setBusy(id);
     setError(null);
     try {
-      const { url } = await apiPost<{ url: string }>("/credits/checkout", { package_id: id, client: "web" });
+      const { url } = await apiPost<{ url: string }>("/credits/checkout", { package_id: id });
       window.location.href = url;
     } catch (e) {
       setError(String(e));
@@ -31,49 +32,16 @@ export default function Buy() {
       {error && <p className="text-center font-body-md text-body-md text-negative">Could not start checkout: {error}</p>}
 
       <section className="grid grid-cols-1 gap-lg md:grid-cols-3">
-        {PACKAGES.map((p) => {
-          const highlighted = !!p.popular;
-          return (
-            <article
-              key={p.id}
-              className={[
-                "relative flex flex-col gap-lg rounded-xl bg-surface p-lg transition-transform duration-300 hover:-translate-y-1",
-                highlighted
-                  ? "border border-primary shadow-[0_8px_24px_rgba(143,72,48,0.08)] md:scale-105"
-                  : "border border-border shadow-[0_2px_8px_rgba(0,0,0,0.02)]",
-              ].join(" ")}
-            >
-              {highlighted && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-accent-soft px-md py-base font-label-sm text-label-sm text-primary">
-                  Most popular
-                </div>
-              )}
-              <div className="flex flex-col gap-xs pt-sm">
-                <h2 className={`font-headline-lg text-headline-lg ${highlighted ? "text-primary" : "text-on-surface"}`}>
-                  {p.credits.toLocaleString()}
-                  <span className="ml-xs font-body-md text-body-md text-text-muted">credits</span>
-                </h2>
-                <span className="font-label-sm text-label-sm text-text-muted">{p.note}</span>
-              </div>
-              <div className="flex items-baseline gap-xs">
-                <span className="font-headline-md text-headline-md text-on-surface">{p.price}</span>
-                <span className="font-body-md text-body-md text-text-secondary">CAD</span>
-              </div>
-              <button
-                onClick={() => buy(p.id)}
-                disabled={busy !== null}
-                className={[
-                  "mt-auto w-full rounded-lg px-lg py-sm font-label-md text-label-md transition-colors disabled:opacity-60",
-                  highlighted
-                    ? "bg-primary text-on-primary hover:bg-accent-hover shadow-[0_2px_8px_rgba(143,72,48,0.2)]"
-                    : "border border-border bg-surface text-primary hover:bg-surface-alt",
-                ].join(" ")}
-              >
-                {busy === p.id ? "Redirecting…" : "Buy"}
-              </button>
-            </article>
-          );
-        })}
+        {PACKAGES.map((p) => (
+          <PackageCard
+            key={p.id}
+            pkg={p}
+            hover
+            ctaLabel={busy === p.id ? "Redirecting…" : "Buy"}
+            ctaDisabled={busy !== null}
+            onCta={() => buy(p.id)}
+          />
+        ))}
       </section>
 
       <div className="mt-lg flex items-center justify-center gap-xs text-text-muted">

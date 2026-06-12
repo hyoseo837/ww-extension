@@ -98,6 +98,22 @@ export const upcomingTerms = (count = 4): string[] => {
   return out;
 };
 
+// Default-filled profile shape. POST /profile/extract returns the raw
+// extracted dict (fields the PDF lacked may be absent) — spread it over this
+// so consumers can index arrays without checks, matching what GET /profile's
+// server-side model would return.
+export const emptyStructuredProfile = (): StructuredProfile => ({
+  summary: "",
+  education: [],
+  experience: [],
+  skills: [],
+  projects: [],
+  languages: [],
+  grade_report: "",
+  coop_history: "",
+  cover_letter: "",
+});
+
 export const emptyMatchCriteria = (): MatchCriteria => ({
   work_authorization: null,
   wizard_completed_at: null,
