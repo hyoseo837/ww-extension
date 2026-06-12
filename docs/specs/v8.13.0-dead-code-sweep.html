@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v8.13.0" />
+    <meta name="status" content="in-progress" />
+    <meta name="last-updated" content="2026-06-12" />
+    <title>v8.13.0 — Dead-code sweep &amp; consolidation</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>v8.13.0 — Dead-code sweep &amp; consolidation</h1>
+
+    <h2>Goal</h2>
+    <p>
+      Remove verified-dead code and consolidate verbatim duplication found by
+      a full-repo quality review (<time datetime="2026-06-12">2026-06-12</time>,
+      all of <code>ext/src</code>, <code>server/app</code>,
+      <code>web/src</code> read end-to-end, every suspect symbol traced
+      through git history). No feature changes; behavior is preserved except
+      where the "behavior" was already broken (the sidebar guide's step-2
+      checkmark, which keyed off a storage key nothing writes). Serves the
+      v8 maintenance charter and ADR 0003 (minimal code).
+    </p>
+
+    <h2>Findings being fixed</h2>
+    <ol>
+      <li id="dead-ext-checkout"><strong>Extension checkout path, dead since
+        v6.4.1.</strong> <code>background.js</code> still carries the
+        <code>createCheckout</code> message handler + function, but the only
+        sender was the options page's buy UI, removed in v6.4.1 — before the
+        first Web Store publication (7.1.1), so no installed extension has
+        ever called it. This also strands the server's
+        <code>client == "extension"</code> checkout branch, the
+        <code>GET /credits/checkout/result</code> HTML shim it returned to,
+        and the <code>client</code> request field (the web app always sends
+        <code>"web"</code>; with the extension branch gone the field selects
+        nothing). <code>PUBLIC_BASE_URL</code> existed only to build the shim
+        URL and goes with it.</li>
+      <li id="dead-cvtext"><strong>Sidebar guide step 2 keys off
+        <code>cvText</code>, which nothing writes</strong> (profile moved
+        server-side at v6.4). The ✓ for "Set up your profile" can never
+        light up; the <code>changes.cvText</code> storage listener never
+        fires. Decision: drop the step-2 checkmark derivation rather than
+        invent a backend round-trip for a cosmetic ✓ — the step stays a
+        numbered link (ADR 0003).</li>
+      <li id="dead-legacy-storage"><strong>Legacy storage cleanups for keys
+        no published user ever had.</strong> The every-SW-start
+        <code>remove(["apiKey", "tokenUsage"])</code> (pre-v4.4.2 keys) and
+        the sign-out removal of <code>cvText / profileJson /
+        profileSupplement / preferences / matchCriteria</code> (pre-v6.4
+        keys). Also <code>expires_at</code>, computed and stored on the auth
+        object in two places but never read (refresh is 401-reactive).</li>
+      <li id="dead-server"><strong>Server scaffolding with no caller.</strong>
+        <code>gemini.score()</code>'s <code>cache_name</code> /
+        <code>cachedContent</code> branch (explicit context caching, never
+        wired up); the required-but-unread
+        <code>SUPABASE_PUBLISHABLE_KEY</code> setting;
+        <code>ExtractResponse.text</code> (back-compat for the pre-v6.4
+        options page — the web app, the only extract client, reads only
+        <code>cost</code>).</li>
+      <li id="dup-web"><strong>Web duplication.</strong>
+        <code>ChipToggle</code> / <code>TagInput</code> /
+        <code>ChipSelect</code> + chip classes duplicated verbatim between
+        <code>Preferences.tsx</code> and <code>PreferencesSetup.tsx</code>
+        (~120 lines); the pricing-card markup duplicated between
+        <code>Landing.tsx</code> and <code>Buy.tsx</code> (~40 lines each);
+        <code>fmtDate</code> defined twice. Plus two redundant API calls:
+        landing on <code>/account</code> fetches <code>GET /profile</code>
+        twice (SetupGate, then Account), and the extract flow refetches
+        <code>GET /profile</code> when the POST response already carries the
+        fresh <code>profile_json</code>.</li>
+      <li id="dup-ext"><strong>Extension duplication.</strong>
+        <code>confirmScan</code> and <code>confirmDialog</code> duplicate the
+        overlay scaffolding (backdrop / card / Esc / settle, ~35 lines
+        each).</li>
+      <li id="dup-server"><strong>Server duplication.</strong> The
+        insufficient-credits reserve block (lock → balance check → 402 →
+        debit) is copy-pasted between <code>/scan</code> and
+        <code>/profile/extract</code>; the must-match-the-trigger email hash
+        is implemented in both <code>billing/db.py</code> and
+        <code>account/db.py</code>.</li>
+    </ol>
+
+    <h2>Files</h2>
+    <ul>
+      <li><code>ext/src/background.js</code> — drop createCheckout handler +
+        function, the legacy key sweep, <code>expires_at</code>.</li>
+      <li><code>ext/src/options.js</code> — trim sign-out key list to
+        <code>auth</code> + <code>creditBalance</code>; drop
+        <code>expires_at</code>.</li>
+      <li><code>ext/src/content/main.js</code>,
+        <code>ext/src/content/sidebar.js</code> — remove cvText wiring;
+        guide ✓ applies to the sign-in step only.</li>
+      <li><code>ext/src/content/scan.js</code> — <code>confirmScan</code>
+        re-expressed on a generalized <code>confirmDialog</code>.</li>
+      <li><code>server/app/billing/routes.py</code> /
+        <code>payments.py</code> — drop <code>client</code> field, extension
+        return-URL branch, <code>/credits/checkout/result</code>.</li>
+      <li><code>server/app/core/config.py</code> — drop
+        <code>supabase_publishable_key</code>, <code>public_base_url</code>
+        (verify no other reader first).</li>
+      <li><code>server/app/scoring/gemini.py</code> — drop
+        <code>cache_name</code> branch.</li>
+      <li><code>server/app/scoring/routes.py</code> — drop
+        <code>ExtractResponse.text</code>; shared
+        <code>_reserve_credits</code> helper (settle paths stay separate —
+        they differ for real: profile upsert, referral grant on scan
+        settlement only).</li>
+      <li><code>server/app/account/db.py</code> /
+        <code>billing/db.py</code> — one shared <code>email_hash</code>.</li>
+      <li><code>server/tests/conftest.py</code> — drop dummies for removed
+        env vars.</li>
+      <li><code>web/src/criteria-inputs.tsx</code> (new) — shared
+        ChipToggle / TagInput / ChipSelect + chip classes.</li>
+      <li><code>web/src/PackageCard.tsx</code> (new) — shared pricing card;
+        CTA injected by the page.</li>
+      <li><code>web/src/App.tsx</code> / <code>Layout.tsx</code> — SetupGate
+        merged into Layout: one <code>/profile</code> fetch serves both the
+        wizard gate and the dashboard; outlet context gains
+        <code>profile</code> + <code>refetchProfile</code>.</li>
+      <li><code>web/src/pages/Account.tsx</code> — consume context profile
+        (drops its own fetch).</li>
+      <li><code>web/src/pages/Profile.tsx</code> /
+        <code>Preferences.tsx</code> — keep their own editor fetches; call
+        <code>refetchProfile()</code> after successful mutations; extract
+        flow uses the POST response instead of refetching.</li>
+      <li><code>web/src/format.ts</code> — <code>fmtDate</code> moves here.</li>
+      <li><code>server/pyproject.toml</code> — bump on each server-touching
+        slice (ADR 0010).</li>
+      <li><code>docs/reference/api.html</code>,
+        <code>docs/architecture.html</code>, <code>CLAUDE.md</code> — close-out:
+        contract updates (checkout request shape, removed endpoint, extract
+        response), env-var list, stale <code>ext/screenshots/</code>
+        mention.</li>
+    </ul>
+
+    <h2>Slices</h2>
+    <ul>
+      <li><code>v8.13.0</code> — docs: this spec + roadmap entry.</li>
+      <li><code>v8.13.1</code> — ext: dead-code removal (checkout, cvText
+        guide wiring, legacy storage sweeps, expires_at).</li>
+      <li><code>v8.13.2</code> — server: dead-code removal (extension
+        checkout path + result shim + client field, unused settings,
+        cache_name branch, ExtractResponse.text).</li>
+      <li><code>v8.13.3</code> — web: consolidation (criteria inputs,
+        package card, gate merge + profile context, extract-response reuse,
+        fmtDate).</li>
+      <li><code>v8.13.4</code> — server: consolidation (_reserve_credits,
+        shared email hash).</li>
+      <li><code>v8.13.5</code> — ext: confirm-dialog consolidation.</li>
+      <li><code>v8.13.6</code> — docs: close-out (api.html, architecture,
+        CLAUDE.md staleness), spec → done.</li>
+    </ul>
+
+    <h2>Verify</h2>
+    <ul>
+      <li>Ext: load unpacked from <code>ext/</code>; sign in/out via options;
+        scan a board page — confirm dialog, badges, sidebar list, save to
+        folder, clear-all confirm, 👍/👎 all behave as before; guide shows ✓
+        on step 1 after sign-in and plain numbers otherwise;
+        <code>grep -rn "createCheckout\|cvText\|expires_at" ext/src/</code>
+        is empty.</li>
+      <li>Server: <code>pytest</code> green (DB-backed suite against a
+        throwaway Postgres) and <code>ruff check</code> clean; a checkout
+        from <code>/buy</code> still round-trips to
+        <code>/billing?checkout=success</code>; webhook grant unaffected;
+        <code>grep -rn "cache_name\|publishable\|public_base_url"
+        server/app/</code> is empty.</li>
+      <li>Web: <code>npm run build</code> (tsc) clean; logged-in
+        <code>/account</code> issues exactly one <code>GET /profile</code>;
+        wizard gate still redirects a fresh account to
+        <code>/preferences/setup</code> and never locks the app on API error
+        (fails open); extraction updates the on-page profile without a
+        follow-up <code>GET /profile</code>; Landing and <code>/buy</code>
+        pricing cards render identically to before.</li>
+      <li>Scan settlement still grants the referral bonus; profile-extract
+        settlement still does not (ADR 0050 — first <em>scan</em>).</li>
+    </ul>
+
+    <h2>Notes — deliberate non-removals</h2>
+    <ul>
+      <li><code>cv_text</code> legacy fallback stays (ADR 0015 — kept until
+        re-extraction).</li>
+      <li>The v1→v2 criteria converters stay in <em>both</em> server and web
+        (deploy-skew shim, ADR 0041). The durable fix is a one-time SQL
+        migration rewriting remaining v1 rows, then deleting both
+        converters — deferred to its own phase since it's a production data
+        change.</li>
+      <li><code>gemini-2.5-pro</code> pricing rates stay: inert data, rides
+        along whenever <code>pricing.py</code> is next touched
+        (ADR 0031 context).</li>
+      <li><code>ext/design/</code> and <code>web/design/</code> mockups stay
+        in place — unreferenced by any build (package.sh is an allowlist)
+        and documented repo furniture; archiving is an owner call.</li>
+      <li><code>ratelimit._windows</code> unbounded growth noted but not
+        fixed here — behavior addition, not dead code; harmless at current
+        scale with deploy restarts.</li>
+    </ul>
+  </body>
+</html>

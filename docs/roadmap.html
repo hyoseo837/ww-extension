@@ -235,6 +235,15 @@
           email attribution in the setup wizard, suppression shared with
           ADR 0029; share marketing on landing, dashboard, and /buy.
           Serves the September word-of-mouth channel (ADR 0042).</li>
+        <li data-status="in-progress"><strong>v8.13 — dead-code sweep &amp;
+          consolidation</strong> (<a
+          href="specs/v8.13.0-dead-code-sweep.html">spec</a>; from a
+          full-repo quality review, 2026-06-12): remove the
+          dead-since-v6.4.1 extension checkout path (client + server shim),
+          the never-written <code>cvText</code> guide wiring, unused
+          settings and Gemini cache scaffolding; consolidate the duplicated
+          criteria inputs / pricing cards / confirm dialogs / credit-reserve
+          block; cut redundant <code>GET /profile</code> calls.</li>
       </ol>
       <p>
         A <strong>portfolio strand</strong> runs in parallel, owner-gated
