@@ -19,76 +19,56 @@
 
     <h2>Client — <code>chrome.storage.local</code></h2>
 
+    <p>
+      Trimmed to the live key set at v8.13 (dead-code sweep). The
+      profile/settings cache keys of v3–v5 (<code>apiKey</code>,
+      <code>model</code>, <code>theme</code>, <code>tokenUsage</code>,
+      <code>cvText</code>, <code>profileJson</code>,
+      <code>profileSupplement</code>, <code>preferences</code>,
+      <code>matchCriteria</code>, <code>hardFilterEnabled</code>,
+      <code>droppedFile</code>) are gone — profile data is
+      server-authoritative and edited on the web app since v6.4, scoring is
+      server-side since v4.4, and the pre-filter was retired by ADR 0043.
+    </p>
+
     <dl>
-      <dt><code>apiKey</code></dt>
-      <dd><strong>Type:</strong> <code>string</code>. Gemini API key.
-        Read only by the background service worker; never enters the
-        content-script context. In v4 this becomes optional / removed
-        once server-side scoring lands.</dd>
+      <dt><code>auth</code> (v4.2.1)</dt>
+      <dd><strong>Type:</strong>
+        <code>{ access_token: string, refresh_token: string,
+        email: string, user_id: string }</code>.
+        Supabase session captured by
+        <code>chrome.identity.launchWebAuthFlow</code>;
+        <code>email</code> and <code>user_id</code> are extracted
+        from the decoded JWT for display. Absent when signed out;
+        cleared by the Sign out button. The background worker refreshes
+        the session reactively on a backend 401 (one shared in-flight
+        refresh; Supabase rotates the refresh token per use).</dd>
 
-      <dt><code>model</code></dt>
-      <dd><strong>Type:</strong> <code>string</code>
-        (<code>'gemini-2.5-flash'</code> | <code>'gemini-2.5-pro'</code>
-        — verify against current options page).</dd>
-
-      <dt><code>cvText</code></dt>
-      <dd><strong>Type:</strong> <code>string</code>. Legacy raw extracted
-        profile text, cached from the server. As of v5.1.0 it's a fallback
-        only — the structured <code>profileJson</code> below supersedes it once
-        the user re-extracts (ADR 0015). User-facing name: "application
-        package."</dd>
-
-      <dt><code>profileJson</code> (v5.1.0)</dt>
-      <dd><strong>Type:</strong> structured profile object cached from
-        <code>GET /profile</code> (summary / education / experience / skills /
-        projects / languages, plus raw grade_report / coop_history /
-        cover_letter). Rendered read-only by section on the options page.
-        Mirrors the server <code>user_profile.profile_json</code> column
-        below.</dd>
-
-      <dt><code>profileSupplement</code> (v5.1.0)</dt>
-      <dd><strong>Type:</strong> array of
-        <code>{ kind, title, description }</code> user-authored entries, cached
-        from <code>GET /profile</code>. Mirrors the server
-        <code>user_profile.profile_supplement</code> column below.</dd>
-
-      <dt><code>preferences</code></dt>
-      <dd><strong>Type:</strong> <code>string</code>. As of v5.0.0 this is the
-        "Additional Notes" field — free-form prose the scorer weighs alongside
-        the structured criteria below. Column/key name unchanged so old prose
-        carries over (ADR 0013); only the label and prompt framing narrowed.</dd>
-
-      <dt><code>matchCriteria</code> (v5.0.4)</dt>
-      <dd><strong>Type:</strong> structured match-criteria object, cached from
-        <code>GET /profile</code> (server is authoritative). Shape mirrors the
-        server <code>user_profile.match_criteria</code> column documented
-        below.</dd>
-
-      <dt><code>theme</code></dt>
-      <dd><strong>Type:</strong> <code>'dark' | 'light'</code>. Default
-        <code>'dark'</code>. Live-synced via
-        <code>chrome.storage.onChanged</code> across all extension
-        contexts.</dd>
-
-      <dt><code>tokenUsage</code></dt>
-      <dd><strong>Type:</strong> <code>{ input: number, cached: number,
-        output: number }</code>. Cumulative token counters across all
-        scans. Writes are serialized through
-        <code>tokenWriteChain</code> in the background service worker
-        to prevent lost-update races.</dd>
+      <dt><code>creditBalance</code> (v4.3.1)</dt>
+      <dd><strong>Type:</strong> <code>number | undefined</code>.
+        Last-known credit balance, updated by the background worker from
+        <code>GET /credits/balance</code> and from each
+        <code>POST /scan</code> response. Unit:
+        <code>1 credit = $0.01 CAD</code>; may be fractional. Cleared on
+        sign-out. Live-synced to the sidebar credits chip and the options
+        page via <code>chrome.storage.onChanged</code>.</dd>
 
       <dt><code>ww_scores</code></dt>
       <dd><strong>Type:</strong> <code>Record&lt;postingId, { score:
         number | null, verdict: string, reason: string,
         breakdown: { point: string, effect: "plus" | "minus" }[],
-        title: string, org: string }&gt;</code>. Score map keyed by WW
-        posting ID. <code>score</code> is <code>1–20</code> and
-        <code>verdict</code> is one of <em>Strong Apply · Apply · Consider ·
-        Unlikely · Skip · Excluded</em> (ADR 0017); <code>breakdown</code> is
-        the gain/loss points rendered in the sidebar card. <code>score</code>
-        is <code>null</code> for a client hard-filtered <em>Excluded</em> entry
-        (ADR 0018) — no fit score was computed; the badge shows the verdict
-        alone. Drives badge rendering and sidebar list.</dd>
+        title: string, org: string, scanId?: string,
+        board?: "full" | "direct", feedback?: "up" | "down" }&gt;</code>.
+        Score map keyed by WW posting ID. <code>score</code> is
+        <code>1–20</code> and <code>verdict</code> is one of <em>Strong
+        Apply · Apply · Consider · Unlikely · Skip · Excluded</em>
+        (ADR 0017); <code>breakdown</code> is the gain/loss points rendered
+        in the sidebar card. <code>scanId</code> (v8.6.6) keys 👍/👎
+        feedback to the server scan row (ADR 0044); <code>feedback</code>
+        records a sent vote (hides the buttons). <code>board</code>
+        (v8.7.1) tags which WW board the entry was scanned on — absent
+        means pre-v8.7, treated as <code>"full"</code>. Drives badge
+        rendering and the per-board sidebar list.</dd>
 
       <dt><code>ww_posting_ids</code></dt>
       <dd><strong>Type:</strong> <code>string[]</code>. Ordered array
@@ -103,44 +83,16 @@
         clears <code>ww_scores</code> / <code>ww_posting_ids</code> wholesale
         so badges never mix scales (e.g. old 1–10 with new 1–20).</dd>
 
-      <dt><code>hardFilterEnabled</code></dt>
-      <dd><strong>Type:</strong> <code>boolean</code> (default <code>true</code>
-        when unset). Settings-tab toggle for the client hard-exclusion
-        pre-filter (ADR 0018). When on, a scan skips postings whose results-table
-        City matches a <code>excluded</code>-tier location — marking them
-        Excluded without calling <code>/scan</code> (no credit). When off, every
-        posting scans normally.</dd>
+      <dt><code>ww_save_collapsed</code> (v8.6.10)</dt>
+      <dd><strong>Type:</strong> <code>boolean</code>. Whether the sidebar's
+        Save-to-Folder section is collapsed. Absent = collapsed (the
+        default, so the results list gets the room).</dd>
 
       <dt><code>welcomeShown</code></dt>
       <dd><strong>Type:</strong> <code>boolean</code>. Set after the
         first-install welcome tab opens. Prevents re-opening on dev
         reloads (which fire <code>onInstalled</code> with reason
         <code>'update'</code>).</dd>
-
-      <dt><code>droppedFile</code></dt>
-      <dd><strong>Type:</strong> options-page transient state for the
-        last-dropped PDF (filename + base64). Cleared by the "Clear
-        application package" button.</dd>
-
-      <dt><code>auth</code> (v4.2.1)</dt>
-      <dd><strong>Type:</strong>
-        <code>{ access_token: string, refresh_token: string,
-        expires_at: number, email: string, user_id: string }</code>.
-        Supabase session captured by
-        <code>chrome.identity.launchWebAuthFlow</code>.
-        <code>expires_at</code> is a millisecond timestamp;
-        <code>email</code> and <code>user_id</code> are extracted
-        from the decoded JWT for display. Absent when signed out;
-        cleared by the Sign out button. Refresh logic lands at v4.2.2.</dd>
-
-      <dt><code>creditBalance</code> (v4.3.1)</dt>
-      <dd><strong>Type:</strong> <code>number | undefined</code>.
-        Last-known credit balance fetched from
-        <code>GET /credits/balance</code> by the background service
-        worker. Unit: <code>1 credit = $0.01 CAD</code>. May be
-        fractional once debit/refund land (v4.4+). Cleared on sign-out.
-        Live-synced to UI via
-        <code>chrome.storage.onChanged</code>.</dd>
     </dl>
 
     <h2>Server — Supabase Postgres</h2>

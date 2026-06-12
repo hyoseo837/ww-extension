@@ -56,8 +56,8 @@ This order is load-bearing — follow it for every phase, not just when asked:
   authoritative backend API contract)
 - `docs/archive/` — frozen old major versions (v01, v02, v03 used the
   older plan/impl/history shape)
-- `ext/` — the Chrome extension source (manifest, src/, icons/,
-  options.html, welcome.html, design/, screenshots/); ADR 0026
+- `ext/` — the Chrome extension source (manifest, src/, icons/, fonts/,
+  options.html, welcome.html, design/); ADR 0026
 - `web/` — Vite+React web app (account/profile/payments + admin)
 - `server/` — FastAPI backend (created at v4.1 bootstrap; excluded
   from Web Store zip by `package.sh`)

@@ -6,7 +6,7 @@
     <meta name="type" content="reference" />
     <meta name="subject" content="backend-api-contract" />
     <meta name="status" content="live" />
-    <meta name="last-updated" content="2026-06-11" />
+    <meta name="last-updated" content="2026-06-12" />
     <meta name="version-pin" content="server v6.6" />
     <title>Backend API Contract — ww-extension</title>
     <link rel="stylesheet" href="../style.css" />
@@ -441,10 +441,13 @@
         <p><strong>Response:</strong> <code>200 OK</code></p>
         <pre><code>{
   "profile": { ...structured profile, see GET /profile... },
-  "text": "...readable serialization of `profile`, for display...",
   "cost": 1.85,
   "balance": 98.15
 }</code></pre>
+        <p>The <code>profile</code> field is the raw extracted object —
+          fields the PDF lacked may be absent (the web client default-fills
+          them). A <code>text</code> serialization shipped here until v8.13;
+          removed with no remaining reader.</p>
         <p><strong>Errors:</strong> same set as <code>/scan</code>
           (400 unsupported model / invalid base64 / oversize / 401 /
           402 / 409 / 502).</p>
@@ -457,31 +460,32 @@
           No credit movement happens here — credits are granted later
           by the webhook. The granted amount is derived server-side
           from <code>package_id</code>; the client never sends a credit
-          or dollar amount. Packages are fixed 1:1 bundles
-          (<code>1 credit = $0.01 CAD</code>):
-          <code>credits_500</code> ($5),
-          <code>credits_1000</code> ($10),
-          <code>credits_2000</code> ($20).</p>
+          or dollar amount. Base rate <code>1 credit = $0.01 CAD</code>;
+          bigger packs include bonus credits (ADR 0034):
+          <code>credits_300</code> (300 / $3),
+          <code>credits_525</code> (525 / $5),
+          <code>credits_1100</code> (1,100 / $10).</p>
         <p><strong>Request:</strong></p>
         <pre><code>{
-  "package_id": "credits_500" | "credits_1000" | "credits_2000",
-  "client": "web" | "extension"   // optional, default "extension" (v6.2)
+  "package_id": "credits_300" | "credits_525" | "credits_1100"
 }</code></pre>
         <p><strong>Response:</strong> <code>200 OK</code></p>
         <pre><code>{
   "url": "https://checkout.stripe.com/c/pay/&lt;session&gt;"
 }</code></pre>
-        <p>The caller redirects/opens <code>url</code>. The optional
-          <code>client</code> field (v6.2) selects the post-checkout return:
-          <code>"web"</code> returns to the web app
-          (<code>{WEB_APP_URL}/billing?checkout=success</code> /
-          <code>/buy?checkout=cancel</code>); <code>"extension"</code> (the
-          default) uses the <code>/credits/checkout/result</code> shim. The
-          extension still sends no <code>client</code> and is unchanged.</p>
+        <p>The caller redirects/opens <code>url</code>. Checkout returns to
+          the web app (<code>{WEB_APP_URL}/billing?checkout=success</code> /
+          <code>/buy?checkout=cancel</code>) — the only buying surface since
+          v6.4. The <code>client</code> field and the
+          <code>/credits/checkout/result</code> extension shim (v6.2 era)
+          were removed at v8.13; an unknown <code>client</code> key in the
+          body is ignored.</p>
         <p><strong>Errors:</strong>
           <code>400</code> <code>{"detail": "unknown package: …"}</code>
           for an unrecognized <code>package_id</code>;
-          <code>401</code> on missing/invalid bearer token.</p>
+          <code>401</code> on missing/invalid bearer token;
+          <code>429</code> <code>{"detail": "rate_limited"}</code> past
+          5 calls/min (v8.10).</p>
       </dd>
 
       <dt id="post-webhooks-stripe"><code>POST /webhooks/stripe</code> (v4.5)</dt>
@@ -504,16 +508,6 @@
           <code>400</code> <code>{"detail": "invalid_signature"}</code>
           on a missing/invalid signature or malformed payload — no
           ledger row is written.</p>
-      </dd>
-
-      <dt id="get-checkout-result"><code>GET /credits/checkout/result</code> (v4.5)</dt>
-      <dd>
-        <p>No auth. Minimal HTML landing page Stripe redirects the
-          browser to after Checkout (<code>?status=success</code> or
-          <code>?status=cancel</code>). Exists because Stripe requires an
-          http(s) <code>success_url</code> and a
-          <code>chrome-extension://</code> URL is not allowed. Purely a
-          UX page — it does not grant credits (the webhook does).</p>
       </dd>
 
       <dt id="admin-authz"><code>/admin/*</code> — authZ (v6.6)</dt>

@@ -80,10 +80,14 @@
           from the scan-time verdict.</dd>
 
         <dt><code>src/background.js</code></dt>
-        <dd>Service worker. Gemini API client, token-usage counter, message
-          router. Handles <code>openWelcome</code>, <code>openOptions</code>,
-          <code>openWebApp {path}</code> (v6.4, deep-links to the web app),
-          scan requests from content script.</dd>
+        <dd>Service worker. Message router + authenticated backend client
+          (<code>backendFetch</code>: bearer token from storage, one shared
+          in-flight session refresh on 401). Handles <code>openWelcome</code>,
+          <code>openOptions</code>, <code>openWebApp {path}</code> (v6.4,
+          deep-links to the web app), <code>scoreJob</code>
+          (<code>POST /scan</code>), <code>sendFeedback</code> (ADR 0044),
+          and <code>refreshBalance</code>. No Gemini access — scoring is
+          server-side since v4.4.</dd>
 
         <dt><code>src/page-bridge.js</code></dt>
         <dd>Page-context bridge. Injected into the WW page (not isolated
@@ -98,24 +102,19 @@
 
       <h4>Storage</h4>
       <p>See <code>reference/data-model.html</code> for the full key list
-        with schemas. Summary: settings (apiKey, model, cvText fallback +
-        structured profileJson/profileSupplement, preferences/notes +
-        structured matchCriteria), theme, cumulative
-        token usage, score map per posting (with a scoring-schema version for
-        clear-on-upgrade), <code>hardFilterEnabled</code> (hard-exclusion
-        pre-filter toggle, v5.3),
-        ordered posting-id list for cross-page navigation,
-        <code>auth</code> (Supabase session, v4.2.1+) and
-        <code>creditBalance</code> (last-known balance from
-        <code>GET /credits/balance</code>, v4.3.1+). The credits chip
-        in the sidebar header and the Account section in options both
-        render <code>creditBalance</code> live via
-        <code>chrome.storage.onChanged</code>. The options Account
-        section also hosts the v4.5 Buy-credits buttons: a click routes
-        through the background <code>createCheckout</code> handler to
-        <code>POST /credits/checkout</code> and opens the returned
-        Stripe URL in a new tab; the options page re-fetches the balance
-        on <code>visibilitychange</code> when the user returns.</p>
+        with schemas. Summary (trimmed to the live set at v8.13):
+        <code>auth</code> (Supabase session, v4.2.1+),
+        <code>creditBalance</code> (last-known balance, v4.3.1+), the
+        score map per posting (with a scoring-schema version for
+        clear-on-upgrade), the ordered posting-id list for cross-page
+        navigation, the Save-to-Folder collapsed flag, and
+        <code>welcomeShown</code>. Profile data is server-authoritative
+        and edited on the web app (v6.4) — the extension caches none of
+        it. The credits chip in the sidebar header and the Account section
+        in options both render <code>creditBalance</code> live via
+        <code>chrome.storage.onChanged</code>; the options page re-fetches
+        the balance on <code>visibilitychange</code> when the user returns
+        from the web app (e.g. after buying credits there).</p>
 
       <h4>Key architectural decisions to preserve</h4>
       <ul>
@@ -294,10 +293,6 @@
           <code>kind='purchase'</code> credits on a paid
           <code>checkout.session.completed</code>, idempotent on the
           Stripe event id (ledger <code>ref</code>).</li>
-        <li><code>GET /credits/checkout/result</code> (v4.5) — no auth.
-          Minimal HTML landing page for Stripe's success/cancel
-          redirect (a <code>chrome-extension://</code> URL can't be a
-          Stripe <code>success_url</code>).</li>
         <li><code>/admin/*</code> (v6.6, <code>app.admin</code>) — operator-only
           (<code>GET /admin/stats</code>, <code>GET /admin/users</code>,
           <code>GET /admin/users/{id}</code>, <code>POST /admin/grant</code>,
@@ -379,24 +374,25 @@
       <h4>Configuration</h4>
       <p>
         Env vars (<code>SUPABASE_URL</code>,
-        <code>SUPABASE_PUBLISHABLE_KEY</code>,
         <code>SUPABASE_SECRET_KEY</code>,
         <code>SUPABASE_JWKS_URL</code>,
         <code>DATABASE_URL</code>,
         <code>GEMINI_API_KEY</code>,
         <code>STRIPE_SECRET_KEY</code>,
         <code>STRIPE_WEBHOOK_SECRET</code>,
-        <code>PUBLIC_BASE_URL</code>, <code>CORS_ORIGINS</code>,
+        <code>CORS_ORIGINS</code>,
         <code>WEB_APP_URL</code>) live in DO App Platform's env store. <code>SUPABASE_SECRET_KEY</code>,
         <code>DATABASE_URL</code>, <code>GEMINI_API_KEY</code>,
         <code>STRIPE_SECRET_KEY</code>, and
         <code>STRIPE_WEBHOOK_SECRET</code> are marked encrypted (they
-        embed secrets); the others (including
-        <code>PUBLIC_BASE_URL</code>) are public-by-design and stored
-        as plain (<code>CORS_ORIGINS</code>, the comma-separated browser
+        embed secrets); the others are public-by-design and stored as
+        plain (<code>CORS_ORIGINS</code>, the comma-separated browser
         origins allowed by CORS, and <code>WEB_APP_URL</code>, the web app's
-        base for Stripe return URLs, are also public and plain — v6.1/v6.2).
-        Local dev uses <code>server/.env</code> (gitignored);
+        base for Stripe return URLs — v6.1/v6.2).
+        <code>SUPABASE_PUBLISHABLE_KEY</code> and
+        <code>PUBLIC_BASE_URL</code> were retired at v8.13 (unread / only
+        fed the removed checkout shim) and can be deleted from the DO env
+        store. Local dev uses <code>server/.env</code> (gitignored);
         <code>server/.env.example</code> is the committed template.
         <code>server/app/core/config.py</code> reads them via
         pydantic-settings.
