@@ -4,7 +4,7 @@ import Icon from "./Icon";
 
 export type Entry = {
   id: string;
-  kind: string; // scan | profile_extract | purchase | signup_bonus | admin_grant
+  kind: string; // scan | profile_extract | purchase | signup_bonus | admin_grant | referral_bonus
   delta: number;
   created_at: string;
   org: string | null;
@@ -30,6 +30,7 @@ function iconFor(kind: string): string {
     case "purchase":       return "payments";
     case "signup_bonus":   return "redeem";
     case "admin_grant":    return "card_giftcard";
+    case "referral_bonus": return "group_add";
     default:               return "receipt_long";
   }
 }

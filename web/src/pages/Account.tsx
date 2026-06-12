@@ -108,6 +108,53 @@ function GettingStarted({
   );
 }
 
+// Invite-a-friend card (v8.12, ADR 0050): the user's email is the referral
+// "code", and the copy button puts a ready-to-paste pitch in the clipboard so
+// sharing is one click into any chat.
+function InviteCard({ email }: { email: string | null }) {
+  const [copied, setCopied] = useState(false);
+  const message =
+    "Try WW Scorer — AI scores every WaterlooWorks posting against your profile, so you only read the good ones. " +
+    "https://ww-extension.hyoseo.dev" +
+    (email ? ` — and put my email (${email}) in the "Who invited you?" step during setup!` : "");
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(message);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* clipboard denied — the message is shown below, copyable by hand */
+    }
+  }
+
+  return (
+    <section className={CARD}>
+      <div className="mb-xs flex items-center gap-xs">
+        <Icon name="group_add" className="text-[20px] text-primary" />
+        <h3 className="font-headline-md text-headline-md text-on-surface">Invite a friend, earn 20 credits</h3>
+      </div>
+      <p className="mb-md font-body-md text-body-md text-text-secondary">
+        When a friend runs their first scan, you get <strong>20 credits</strong> (≈ 10 free scans). No links or
+        codes — they just enter your email{email ? <> (<strong>{email}</strong>)</> : ""} at the "Who invited you?"
+        step during setup.
+      </p>
+      <div className="flex flex-wrap items-center gap-sm">
+        <button
+          onClick={copy}
+          className="inline-flex items-center gap-xs rounded-lg bg-primary px-md py-sm font-label-md text-label-md text-on-primary transition-colors hover:bg-accent-hover"
+        >
+          <Icon name={copied ? "check" : "content_copy"} className="text-[16px]" />
+          {copied ? "Copied — paste it anywhere" : "Copy invite message"}
+        </button>
+        <span className="min-w-0 flex-1 truncate font-label-sm text-label-sm text-text-muted" title={message}>
+          {message}
+        </span>
+      </div>
+    </section>
+  );
+}
+
 function SnapRow({ label, value, dot }: { label: string; value: string; dot?: "ok" | "muted" }) {
   return (
     <div className="border-b border-border py-base last:border-0">
@@ -339,6 +386,9 @@ export default function Account() {
           <GettingStarted extDone={extDone} cvReady={cvReady} prefsReady={prefsReady} onAckInstall={ackInstall} />
         )}
       </div>
+
+      {/* Invite a friend (v8.12, ADR 0050) */}
+      <InviteCard email={email} />
 
       {/* Your data — rarely-used data-rights actions, one quiet row (v8.4.5).
           Deletion safety lives in the type-DELETE dialog, not the button. */}

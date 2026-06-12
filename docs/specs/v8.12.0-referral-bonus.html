@@ -5,7 +5,7 @@
     <meta name="project" content="ww-extension" />
     <meta name="type" content="spec" />
     <meta name="version" content="v8.12.0" />
-    <meta name="status" content="planned" />
+    <meta name="status" content="done" />
     <meta name="last-updated" content="2026-06-11" />
     <title>v8.12 — Friend-invitation bonus</title>
     <link rel="stylesheet" href="../style.css" />
@@ -158,11 +158,12 @@
       <li>pytest green, covering: attribution rules (self / unknown /
         duplicate / already-scanned / suppression-blocked), grant fires
         once across two settlements, grant absent without attribution,
-        constraint accepts the new kind. CI green.</li>
+        constraint accepts the new kind. CI green. <em>Local run
+        2026-06-12: 80 passed (10 new); web tsc + vite build clean.</em></li>
       <li>Manual (local): fresh account → wizard shows the question →
         attribute a second account → first scan grants the inviter +20
         exactly once; <code>referral_eligible</code> flips false after
-        answering or scanning.</li>
+        answering or scanning. <em>Owner to run live after release.</em></li>
       <li><strong>Owner runbook (release):</strong> apply migration 0013
         to production Supabase before (or with) the release that ships
         the server code — the deploy order matters because the

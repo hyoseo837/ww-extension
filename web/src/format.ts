@@ -2,10 +2,11 @@
 // (with org), so only the ledger kinds need a label here.
 export function kindLabel(kind: string): string {
   switch (kind) {
-    case "purchase":     return "Purchase";
-    case "signup_bonus": return "Signup bonus";
-    case "admin_grant":  return "Gift credit";
-    default:             return kind;
+    case "purchase":       return "Purchase";
+    case "signup_bonus":   return "Signup bonus";
+    case "admin_grant":    return "Gift credit";
+    case "referral_bonus": return "Friend invite bonus";
+    default:               return kind;
   }
 }
 

@@ -140,6 +140,27 @@ export default function Landing() {
           </div>
         </section>
 
+        {/* Referral banner (v8.12, ADR 0050) — speaks to both audiences:
+            existing users learn the program exists; invited visitors learn
+            what the "Who invited you?" setup step is for. */}
+        <section className="mx-auto w-full max-w-max-width px-gutter pb-[120px]">
+          <div className="flex flex-col items-center gap-md rounded-[16px] border border-primary/30 bg-accent-soft p-xl text-center md:flex-row md:text-left">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-surface text-primary">
+              <Icon name="group_add" className="text-[28px]" />
+            </div>
+            <div className="flex-1">
+              <h2 className="mb-xs font-headline-md text-headline-md text-on-surface">
+                Better with friends — invite and earn free scans
+              </h2>
+              <p className="font-body-md text-body-md text-text-secondary">
+                Every friend who signs up and runs their first scan earns you <strong>20 credits</strong> — about 10
+                free scans. No links or codes: they just enter your email at the "Who invited you?" step during
+                setup. Invited by someone? Don't forget to enter their email.
+              </p>
+            </div>
+          </div>
+        </section>
+
         {/* Pricing — visible before sign-in. Display-only: buying needs an
             authenticated session, so the CTA is sign-in, not checkout. */}
         <section className="mx-auto w-full max-w-max-width px-gutter pb-[120px]">

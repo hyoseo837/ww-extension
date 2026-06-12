@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { apiGet, apiPut } from "../api";
+import { apiGet, apiPost, apiPut } from "../api";
 import Icon from "../Icon";
 import { coerceCriteria, emptyMatchCriteria, upcomingTerms } from "../types";
 import type { MatchCriteria, Profile, WorkAuth } from "../types";
@@ -105,6 +105,7 @@ function TagInput({ values, onChange, placeholder }: {
 }
 
 const STEPS = ["Eligibility", "Locations", "Work mode", "Timing", "In your own words"];
+const REFERRAL_STEP = "Who invited you?";
 
 export default function PreferencesSetup() {
   const navigate = useNavigate();
@@ -114,6 +115,11 @@ export default function PreferencesSetup() {
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Referral step (v8.12, ADR 0050) — shown only while the server says the
+  // question is still answerable (no attribution, no scans, not blocked).
+  const [referralEligible, setReferralEligible] = useState(false);
+  const [referralEmail, setReferralEmail] = useState("");
+  const [referralError, setReferralError] = useState<string | null>(null);
 
   // Prefill so re-running the wizard edits rather than clobbers.
   useEffect(() => {
@@ -124,11 +130,32 @@ export default function PreferencesSetup() {
       })
       .catch(() => {}) // empty defaults are a fine starting point
       .finally(() => setLoaded(true));
+    apiGet<{ referral_eligible: boolean }>("/me")
+      .then((m) => setReferralEligible(!!m.referral_eligible))
+      .catch(() => {}); // no referral step is a fine fallback
   }, []);
+
+  const steps = referralEligible ? [...STEPS, REFERRAL_STEP] : STEPS;
 
   async function finish() {
     setSaving(true);
     setError(null);
+    setReferralError(null);
+    // The referral answer is validated first so a typo'd email can be fixed
+    // before anything saves; preferences are unaffected by its outcome.
+    if (referralEligible && referralEmail.trim()) {
+      try {
+        await apiPost("/referral", { inviter_email: referralEmail.trim() });
+      } catch (e) {
+        if (String(e).includes("404")) {
+          setReferralError("No account with that email — fix it, or leave it blank to skip.");
+          setSaving(false);
+          return;
+        }
+        // Anything else (already set, not eligible, transient) never blocks
+        // finishing the wizard.
+      }
+    }
     try {
       await apiPut<Profile>("/profile", {
         match_criteria: { ...mc, wizard_completed_at: new Date().toISOString() },
@@ -149,7 +176,7 @@ export default function PreferencesSetup() {
     );
   }
 
-  const last = step === STEPS.length - 1;
+  const last = step === steps.length - 1;
   const canNext = step !== 0 || mc.work_authorization !== null;
   // Whether the current step has any input — flips the button label Skip/Next.
   const stepHasInput = [
@@ -158,6 +185,7 @@ export default function PreferencesSetup() {
     mc.work_modes.length > 0,
     mc.target_term.trim().length > 0 || mc.term_lengths.length > 0,
     notes.trim().length > 0,
+    referralEmail.trim().length > 0,
   ][step];
 
   return (
@@ -169,12 +197,12 @@ export default function PreferencesSetup() {
             <span className="font-label-md text-label-md text-text-secondary">Set up your match preferences</span>
           </div>
           <div className="flex items-center gap-xs">
-            {STEPS.map((s, i) => (
+            {steps.map((s, i) => (
               <span key={s} className={`h-1 flex-1 rounded-full ${i <= step ? "bg-primary" : "bg-surface-container"}`} />
             ))}
           </div>
           <span className="font-label-sm text-label-sm text-text-muted">
-            Step {step + 1} of {STEPS.length} — {STEPS[step]}
+            Step {step + 1} of {steps.length} — {steps[step]}
           </span>
         </header>
 
@@ -268,6 +296,27 @@ export default function PreferencesSetup() {
                 placeholder="e.g. Remote is non-negotiable. I'd love a startup but it's not a dealbreaker. Never pure QA."
                 className="rounded-lg border border-border bg-surface px-sm py-sm font-body-md text-body-md outline-none focus:border-primary"
               />
+            </>
+          )}
+
+          {steps[step] === REFERRAL_STEP && (
+            <>
+              <h1 className="font-headline-md text-headline-md text-on-surface">Did a friend invite you?</h1>
+              <p className="font-body-md text-body-md text-text-secondary">
+                Enter their UWaterloo email and they'll get 20 bonus credits when you run your first scan.
+                Totally optional — leave it blank if you found us yourself.
+              </p>
+              <input
+                type="email"
+                value={referralEmail}
+                onChange={(e) => {
+                  setReferralEmail(e.target.value);
+                  setReferralError(null);
+                }}
+                placeholder="friend@uwaterloo.ca"
+                className="rounded-lg border border-border bg-surface px-sm py-sm font-body-md text-body-md outline-none focus:border-primary"
+              />
+              {referralError && <p className="font-label-sm text-label-sm text-negative">{referralError}</p>}
             </>
           )}
 

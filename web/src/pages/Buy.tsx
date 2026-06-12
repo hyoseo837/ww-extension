@@ -80,6 +80,20 @@ export default function Buy() {
         <Icon name="lock" className="text-[18px]" />
         <span className="font-label-sm text-label-sm">Secure checkout via Stripe</span>
       </div>
+
+      {/* Referral blurb (v8.12, ADR 0050) — the free alternative to buying. */}
+      <section className="mx-auto flex w-full max-w-2xl items-start gap-md rounded-xl border border-border bg-surface p-lg shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent-soft text-primary">
+          <Icon name="group_add" />
+        </div>
+        <div>
+          <h2 className="mb-xs font-headline-md text-headline-md text-on-surface">Or earn credits free — invite a friend</h2>
+          <p className="font-body-md text-body-md text-text-secondary">
+            When a friend runs their first scan, you get <strong>20 credits</strong> (≈ 10 scans). No links or
+            codes — they just enter your email at the "Who invited you?" step during setup.
+          </p>
+        </div>
+      </section>
     </div>
   );
 }

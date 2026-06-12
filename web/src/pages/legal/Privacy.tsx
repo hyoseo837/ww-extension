@@ -21,6 +21,7 @@ export default function Privacy() {
         <li><strong>Usage records</strong> — the job postings you scan and their AI results, and your credit ledger (purchases, scan charges and refunds, grants).</li>
         <li><strong>Score feedback</strong> — if you rate a score 👍/👎, we store the rating, your optional note, and (on 👎 only) the posting text, to improve scoring quality.</li>
         <li><strong>Payment</strong> — handled by Stripe. We store ledger entries and a Stripe reference, not your card number.</li>
+        <li><strong>Referral attribution</strong> — if you name the friend who invited you during setup, we store that link (your account → theirs) solely to credit their invite bonus. It is deleted with either account.</li>
       </ul>
 
       <h2>2. What we don't collect</h2>
@@ -57,6 +58,7 @@ export default function Privacy() {
         <li><strong>DigitalOcean</strong> — backend hosting (Canada).</li>
         <li><strong>Vercel</strong> — web app hosting.</li>
         <li><strong>Cloudflare</strong> — DNS and support email routing.</li>
+        <li><strong>Sentry</strong> — error monitoring (technical failure reports only; configured not to include personal data, and never your profile or card details).</li>
       </ul>
 
       <h2>6. Data location</h2>
