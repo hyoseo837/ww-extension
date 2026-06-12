@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v8.12.0" />
+    <meta name="status" content="planned" />
+    <meta name="last-updated" content="2026-06-11" />
+    <title>v8.12 — Friend-invitation bonus</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>v8.12 — Friend-invitation bonus</h1>
+
+    <h2>Goal</h2>
+    <p>
+      Ship the referral channel decided in
+      <a href="../decisions/0050-referral-bonus.html">ADR 0050</a> before
+      the September wave: the inviter earns <strong>20 credits</strong>
+      when an invited friend's first scan settles. One-sided, attributed
+      by email at onboarding, suppression shared with
+      <a href="../decisions/0029-signup-bonus-suppression-on-deletion.html">ADR
+      0029</a>.
+    </p>
+
+    <h3>Server</h3>
+    <ol>
+      <li id="migration">
+        <strong>Migration <code>0013_referral.sql</code></strong>:
+        <ul>
+          <li><code>referral</code> table:
+            <code>invitee_user_id</code> (uuid, PK, references
+            <code>auth.users</code> on delete cascade),
+            <code>inviter_user_id</code> (uuid, not null, references
+            <code>auth.users</code> on delete cascade),
+            <code>created_at</code>. RLS enabled, no user policies
+            (backend service-role writes only, same posture as
+            migration 0011).</li>
+          <li>Extend the <code>credit_ledger_entry.kind</code> check
+            constraint with <code>referral_bonus</code>.</li>
+          <li>Partial unique index on <code>(ref)</code> where
+            <code>kind = 'referral_bonus'</code> — at most one bonus per
+            invitee, ever (the grant's idempotency key, like migration
+            0004's purchase index).</li>
+        </ul>
+      </li>
+      <li id="attribution">
+        <strong><code>POST /referral</code></strong> (authenticated)
+        — body <code>{"inviter_email": "..."}</code>, normalized
+        lower/trim. Creates the attribution row. Rejections:
+        <ul>
+          <li>400 — own email (no self-invites);</li>
+          <li>404 — no account with that email (honest error so a typo
+            is fixable; disclosure trade-off accepted in ADR 0050);</li>
+          <li>409 — attribution already exists, or the caller already
+            has a scan row (signup-time question only);</li>
+          <li>403 — caller's email hash is in
+            <code>signup_bonus_block</code> (re-registered identity,
+            ADR 0029 reuse — same SQL hash expression).</li>
+        </ul>
+      </li>
+      <li id="eligibility">
+        <strong><code>GET /me</code> gains
+        <code>referral_eligible: bool</code></strong> — true iff no
+        attribution row, no scans yet, and not suppression-blocked. The
+        wizard uses it to decide whether to show the question.</li>
+      <li id="grant">
+        <strong>Grant hook in scan settlement</strong>: when a scan
+        settles successfully and a <code>referral</code> row exists for
+        the scanning user, insert the inviter's ledger row
+        (<code>kind='referral_bonus'</code>, <code>delta=+20</code>,
+        <code>ref=&lt;invitee user_id&gt;</code>)
+        <code>on conflict do nothing</code>. The partial unique index
+        makes "first scan only" emergent — no first-scan detection
+        code.</li>
+      <li id="export">
+        <strong><code>/account/export</code></strong> includes the
+        user's referral attribution (both directions: who they named,
+        and that they were named, ids only).</li>
+    </ol>
+
+    <h3>Web</h3>
+    <ol>
+      <li id="wizard">
+        <strong>Wizard step — "Who invited you?"</strong> (optional,
+        skippable): appended to the preferences-setup wizard
+        (ADR 0040), shown only when <code>/me</code> reports
+        <code>referral_eligible</code>. One email input; submit calls
+        <code>POST /referral</code>; a 404 shows "No account with that
+        email" inline; Skip moves on. Failures never block the wizard.</li>
+      <li id="promo">
+        <strong>Invite blurb on <code>/buy</code></strong>: one quiet
+        card — "Invite a friend: when they run their first scan, you get
+        20 credits (≈ 10 scans). They just enter your email during
+        setup." No links, no codes, nothing to manage.</li>
+      <li id="history">
+        <strong>Credit history label</strong>: <code>kindLabel</code> /
+        <code>HistoryList</code> map <code>referral_bonus</code> →
+        "Friend invite bonus" with a fitting icon.</li>
+      <li id="privacy">
+        <strong>Privacy policy</strong>: one added line — attribution
+        (who invited whom) is stored for bonus crediting and deleted
+        with either account.</li>
+    </ol>
+
+    <h2>Files</h2>
+    <ul>
+      <li><code>server/migrations/0013_referral.sql</code> — added.</li>
+      <li><code>server/app/account/</code> or
+        <code>server/app/billing/</code> — referral routes + db helpers
+        (placement at implementation time; the grant constant
+        <code>REFERRAL_BONUS = 20</code> lives beside the pricing
+        constants).</li>
+      <li><code>server/app/scoring/routes.py</code> — grant hook in the
+        settlement transaction.</li>
+      <li><code>server/app/auth/routes.py</code> —
+        <code>referral_eligible</code> on <code>/me</code>.</li>
+      <li><code>server/tests/test_referral.py</code> — added.</li>
+      <li><code>server/pyproject.toml</code> — version bump (ADR 0010).</li>
+      <li><code>docs/reference/api.html</code> — <code>POST /referral</code>,
+        <code>/me</code> field, ledger kind.</li>
+      <li><code>web/src/pages/PreferencesSetup.tsx</code> — wizard step.</li>
+      <li><code>web/src/pages/Buy.tsx</code>, <code>web/src/format.ts</code>,
+        <code>web/src/HistoryList.tsx</code>, privacy legal page,
+        <code>web/src/api.ts</code> — blurb, label, policy line, client
+        call.</li>
+    </ul>
+
+    <h2>Commits</h2>
+    <ol>
+      <li><code>v8.12.0</code> — ADR 0050 + this spec.</li>
+      <li><code>v8.12.1</code> — server: migration, attribution endpoint,
+        eligibility flag, grant hook, tests, api.html.</li>
+      <li><code>v8.12.2</code> — web: wizard step, buy-page blurb,
+        history label, privacy line; close-out.</li>
+    </ol>
+
+    <h2>Verify</h2>
+    <ul>
+      <li>pytest green, covering: attribution rules (self / unknown /
+        duplicate / already-scanned / suppression-blocked), grant fires
+        once across two settlements, grant absent without attribution,
+        constraint accepts the new kind. CI green.</li>
+      <li>Manual (local): fresh account → wizard shows the question →
+        attribute a second account → first scan grants the inviter +20
+        exactly once; <code>referral_eligible</code> flips false after
+        answering or scanning.</li>
+      <li><strong>Owner runbook (release):</strong> apply migration 0013
+        to production Supabase before (or with) the release that ships
+        the server code — the deploy order matters because the
+        settlement hook queries the new table.</li>
+    </ul>
+
+    <h2>Notes</h2>
+    <ul>
+      <li>The grant rides inside the existing settlement transaction —
+        no new failure mode for the scan itself; if the bonus insert
+        conflicts (already granted), settlement proceeds untouched.</li>
+      <li>Admin surface gets referral grants for free: they are ordinary
+        ledger rows (kind <code>referral_bonus</code>) in the existing
+        history/audit views.</li>
+      <li>The whiteboard entry (Future features → friend invitation) is
+        promoted by this spec; striking it through there is the owner's
+        edit to make.</li>
+    </ul>
+  </body>
+</html>

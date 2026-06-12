@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-06-11" />
+    <title>ADR 0050 — Friend-invitation bonus: one-sided 20 credits on the invitee's first scan, email attribution, ADR 0029 suppression shared</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>ADR 0050 — Friend-invitation bonus: one-sided 20 credits on the
+      invitee's first scan, email attribution, ADR 0029 suppression shared</h1>
+
+    <h2>Context</h2>
+    <p>
+      The September wave (ADR 0042) needs word-of-mouth, and the product's
+      audience — co-op cohorts hitting the same WaterlooWorks deadlines in
+      the same weeks — is a dense referral network. A friend-invitation
+      bonus converts "this is neat" into "sign up with my email". The idea
+      matured on the whiteboard and the owner confirmed the product calls
+      on 2026-06-11.
+    </p>
+    <p>
+      Referral programs usually die by self-invite farming. Here the fraud
+      surface is unusually small: sign-in is UWaterloo Microsoft auth
+      (ADR 0036) — one identity per student — and ADR 0029 already retains
+      an email-hash suppression record across account deletion, so
+      delete-and-re-register cannot mint fresh referrable identities.
+    </p>
+
+    <h2>Decision</h2>
+    <ul>
+      <li><strong>One-sided: the inviter gets the bonus, the invitee gets
+        nothing extra.</strong> Owner's call — people who find the service
+        themselves are just as precious, and the invitee already receives
+        the signup bonus. One-sided also keeps the incentive aimed at the
+        person doing the inviting.</li>
+      <li><strong>20 credits per activated referral</strong> (≈ 10 scans at
+        the ~2 credits/scan rate, ADR 0048). New ledger kind
+        <code>referral_bonus</code>, granted to the <em>inviter</em> with
+        <code>ref</code> = the invitee's user id.</li>
+      <li><strong>Activation trigger, not signup trigger.</strong> The
+        bonus is granted when the invitee's first successful scan settles —
+        rewarding a real activated user, not an account row. Mechanically:
+        every successful scan settlement attempts an
+        insert-or-ignore of the bonus; a partial unique index
+        (<code>ref</code> where <code>kind='referral_bonus'</code>) makes
+        it at most once per invitee, so no "is this the first scan?"
+        bookkeeping exists at all.</li>
+      <li><strong>Attribution by email, asked once at onboarding — no
+        referral links or codes.</strong> The preferences-setup wizard
+        (ADR 0040) gains an optional "Who invited you?" step: the invitee
+        types the inviter's UWaterloo email. Free text beats link/code
+        infrastructure: nothing to generate, track, or leak. Attribution
+        is rejected when the email is the invitee's own, matches no
+        account, an attribution already exists, or the invitee has already
+        scanned (the question is a signup-time question; answering after
+        activating would make the grant retroactive).</li>
+      <li><strong>Suppression shares ADR 0029's mechanism.</strong> An
+        account whose email hash sits in <code>signup_bonus_block</code>
+        (i.e. a deleted-and-re-registered identity) is not referral-eligible:
+        it can neither be attributed nor re-earn anyone a bonus. This
+        closes the pair-farming loop (A invites B → B scans → B deletes →
+        B re-registers and attributes A again).</li>
+    </ul>
+
+    <h2>Consequences</h2>
+    <ul>
+      <li><strong>+</strong> A referral channel exists before the September
+        wave, at near-zero marginal cost (20 credits ≈ $0.20 nominal, far
+        less in actual Gemini spend).</li>
+      <li><strong>+</strong> Farming requires distinct UW identities and a
+        real scan per bonus — the strongest practical deterrent available
+        without building verification machinery.</li>
+      <li><strong>−</strong> Attribution stores a who-invited-whom link
+        (PII linkage). It is backend-only, cascades away on either
+        account's deletion, joins the account export, and gets a line in
+        the privacy policy.</li>
+      <li><strong>−</strong> The attribution endpoint confirms whether an
+        email has an account (a 404 on no match). Accepted: within a closed
+        UW cohort this is low-risk, and the honest error means a typo'd
+        email is fixable instead of silently costing the inviter the
+        bonus.</li>
+      <li>If the invitee deletes their account before their first scan,
+        the attribution cascades away and no bonus is ever granted —
+        correct by construction.</li>
+    </ul>
+
+    <h2>Alternatives considered</h2>
+    <ul>
+      <li><strong>Two-sided bonus</strong> ("you both get N") — slightly
+        more viral, but rejected by the owner: self-found users shouldn't
+        be worth less than invited ones, and one-sided is simpler.</li>
+      <li><strong>Referral links/codes</strong> — standard, but pure
+        infrastructure: generation, attribution windows, link leakage to
+        strangers. Email entry inside a UW-only cohort gets the same
+        attribution with one text field.</li>
+      <li><strong>Grant on signup instead of first scan</strong> —
+        rejected: pays for account rows, invites farming, and misaligns
+        the incentive (an inviter should want their friend to actually
+        try it).</li>
+    </ul>
+  </body>
+</html>
