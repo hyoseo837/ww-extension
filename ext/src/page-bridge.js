@@ -1,6 +1,6 @@
-// Runs in page context. Communicates with content.js via postMessage.
+// Runs in page context. Communicates with the content scripts (src/content/)
+// via postMessage.
 
-const VERDICT_ORDER = { Apply: 0, Consider: 1, Skip: 2 };
 let cachedTokens = null;
 
 window.addEventListener('message', e => {

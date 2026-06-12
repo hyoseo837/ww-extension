@@ -6,7 +6,7 @@
     <meta name="type" content="architecture" />
     <meta name="scope" content="current shipped system" />
     <meta name="baseline-version" content="v03.015" />
-    <meta name="last-updated" content="2026-05-31" />
+    <meta name="last-updated" content="2026-06-11" />
     <title>Architecture — ww-extension</title>
     <link rel="stylesheet" href="style.css" />
   </head>
@@ -37,7 +37,7 @@
         (<a href="decisions/0026-extension-in-ext-folder.html">ADR 0026</a>);
         Chrome loads <code>ext/</code> as the unpacked extension. The file
         paths below are relative to <code>ext/</code> (e.g.
-        <code>src/content.js</code> is <code>ext/src/content.js</code>).
+        <code>src/background.js</code> is <code>ext/src/background.js</code>).
       </p>
 
       <h4>Files</h4>
@@ -61,19 +61,23 @@
           <code>chrome.runtime.onInstalled</code>; <code>welcomeShown</code>
           storage flag prevents re-open on dev reloads.</dd>
 
-        <dt><code>src/content.js</code></dt>
-        <dd>Content script. Owns the sidebar UI, scan flow, badge injection
-          via MutationObserver, theme listener, empty-state guide, and the
-          out-of-credits "Buy credits" nudge (shown when a scan batch halts
-          on <code>NO_CREDITS</code>; opens the web app's <code>/buy</code> via
-          <code>openWebApp</code>, v6.4) — and a matching profile-not-set prompt
-          (<code>PROFILE_NOT_SET</code> → web <code>/profile</code>). Also runs
-          the client hard-exclusion
-          pre-filter (ADR 0018): before <code>/scan</code>, a posting whose
-          results-table City matches a <code>excluded</code>-tier location is
-          marked <em>Excluded</em> with no Gemini call and no credit — so
-          Excluded has two producers (this pre-filter and the scan-time
-          verdict). Gated by the <code>hardFilterEnabled</code> setting.</dd>
+        <dt><code>src/content/</code> (five classic scripts, one isolated world)</dt>
+        <dd>The content script, split from the former single
+          <code>src/content.js</code> at v8.11 (audit #11). The manifest
+          lists the files in load order; they share one isolated-world
+          scope, so the split needs no build step (ADR 0026 posture
+          unchanged): <code>core.js</code> (constants, shared state,
+          page-bridge messaging, score persistence), <code>table.js</code>
+          (badge injection via MutationObserver, pagination navigation,
+          scroll-to-row), <code>scan.js</code> (batch scan engine and
+          spend-confirmation dialogs — including the out-of-credits
+          "Buy credits" nudge and the profile-not-set prompt that deep-link
+          to the web app, v6.4), <code>sidebar.js</code> (panel shell,
+          results list, empty-state guide, 👍/👎 feedback, ADR 0044), and
+          <code>main.js</code> (injection guard + init, loads last). The
+          client hard-exclusion pre-filter formerly described here was
+          retired at v8.5 (ADR 0043) — <em>Excluded</em> now comes only
+          from the scan-time verdict.</dd>
 
         <dt><code>src/background.js</code></dt>
         <dd>Service worker. Gemini API client, token-usage counter, message
