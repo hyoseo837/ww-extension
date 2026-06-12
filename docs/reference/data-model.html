@@ -5,7 +5,7 @@
     <meta name="project" content="ww-extension" />
     <meta name="type" content="reference" />
     <meta name="subject" content="data-model" />
-    <meta name="last-updated" content="2026-05-30" />
+    <meta name="last-updated" content="2026-06-12" />
     <title>Data Model — ww-extension</title>
     <link rel="stylesheet" href="../style.css" />
   </head>
@@ -148,19 +148,29 @@
     <p>
       User records are managed by Supabase Auth (table
       <code>auth.users</code>) — populated automatically on first
-      Google sign-in. Application-owned tables (credit ledger, scan
-      history) land at v4.3+ and will be documented here as they ship.
+      Google sign-in. Application-owned tables live in
+      <code>public</code>; their migrations are the column-level source
+      of truth (<code>server/migrations/</code>, well-commented).
     </p>
 
     <p>
-      <strong>Live (v4.3.0):</strong>
+      <strong>Live tables:</strong>
     </p>
     <ul>
       <li><code>auth.users</code> (Supabase-managed) — identity records
         keyed by UUID. The extension receives this UUID as
         <code>sub</code> in the session JWT.</li>
-      <li><code>public.credit_ledger_entry</code> — append-only credit
-        ledger. See below.</li>
+      <li><code>public.credit_ledger_entry</code> (v4.3) — append-only
+        credit ledger. See below.</li>
+      <li><code>public.scan</code> (v4.4) — per-call metering record.</li>
+      <li><code>public.user_profile</code> (v4.4) — server-side
+        profile. See below.</li>
+      <li><code>public.signup_bonus_block</code> (v6.9) — deleted-account
+        email hashes, bonus suppression. See below.</li>
+      <li><code>public.scan_feedback</code> (v8.6.6) — 👍/👎 verdicts on
+        scored postings. See below.</li>
+      <li><code>public.referral</code> (v8.12) — friend-invitation
+        attribution. See below.</li>
     </ul>
 
     <h3 id="credit_ledger_entry"><code>public.credit_ledger_entry</code></h3>
@@ -178,9 +188,10 @@
 
       <dt><code>delta numeric(14, 6) not null</code></dt>
       <dd>Positive for credits added (signup_bonus, admin_grant,
-        purchase, scan_refund); negative for credits spent
-        (scan_debit). Fractional values are expected once token-priced
-        debits land at v4.4. NUMERIC keeps Postgres SUM exact.</dd>
+        purchase, scan_refund, referral_bonus); negative for credits
+        spent (scan_debit). Fractional values are expected once
+        token-priced debits land at v4.4. NUMERIC keeps Postgres SUM
+        exact.</dd>
 
       <dt><code>kind text not null check (kind in (…))</code></dt>
       <dd>One of
@@ -188,11 +199,20 @@
         <code>'admin_grant'</code>,
         <code>'purchase'</code>,
         <code>'scan_debit'</code>,
-        <code>'scan_refund'</code>.</dd>
+        <code>'scan_refund'</code>,
+        <code>'referral_bonus'</code> (v8.12, migration 0013).</dd>
 
       <dt><code>ref text null</code></dt>
       <dd>Free-form correlation (scan UUID for debit/refund pairs at
-        v4.4; Stripe event ID for purchases at v4.5).</dd>
+        v4.4; Stripe event ID for purchases at v4.5; invitee user id
+        for referral bonuses at v8.12).</dd>
+
+      <dt><code>created_by uuid null references auth.users(id)</code>,
+        <code>note text null</code> (v6.6, migration 0009)</dt>
+      <dd>Audit trail for admin gift grants (ADR 0025):
+        <code>created_by</code> is the granting admin,
+        <code>note</code> the free-text reason. NULL for system/self
+        rows and all pre-v6.6 rows.</dd>
 
       <dt><code>created_at timestamptz not null default now()</code></dt>
       <dd>Insertion time.</dd>
@@ -204,7 +224,12 @@
       'signup_bonus'</code> as defense-in-depth against double-grant;
       partial unique index on <code>(ref) where kind = 'purchase'</code>
       (migration 0004, v4.5) so a replayed Stripe webhook can't
-      double-grant — one purchase row per Stripe event id.
+      double-grant — one purchase row per Stripe event id;
+      partial unique index on <code>(ref) where kind =
+      'referral_bonus'</code> (migration 0013, v8.12) — at most one
+      referral bonus per invitee, ever. The settlement hook does a
+      plain insert-or-ignore on every successful scan, so "first scan
+      only" is emergent with no first-scan bookkeeping (ADR 0050).
     </p>
     <p>
       <strong>RLS:</strong> enabled. SELECT policy
@@ -237,6 +262,40 @@
       above. ADR 0012 chose this over a dedicated
       <code>stripe_event</code> table (minimal-code; add one later if
       full payment-funnel auditing is ever needed).
+    </p>
+    <p>
+      <strong><code>public.signup_bonus_block</code> (v6.9, migration
+      0010, ADR 0029).</strong> One-way SHA-256 hashes of lowercased
+      emails, written on account deletion so a delete + re-register
+      can't re-grab the signup bonus (the
+      <code>grant_signup_bonus</code> trigger skips on a matching hash).
+      Also consulted by the referral flow (v8.12, ADR 0050): a blocked
+      identity is never <code>referral_eligible</code>. No plaintext
+      email survives a deletion. RLS on with no policies —
+      backend-only.
+    </p>
+    <p>
+      <strong><code>public.scan_feedback</code> (v8.6.6, migration
+      0012, ADR 0044).</strong> User 👍/👎 verdicts on scored postings:
+      one row per scan (<code>scan_id</code> PK), re-submits upsert so
+      the latest verdict wins; <code>rating</code>, optional
+      <code>comment</code>, and <code>description_text</code> (stored
+      only on 👎, sent by the extension at feedback time). RLS on with
+      no policies — backend-only. Full column set in
+      <code>server/migrations/0012_scan_feedback.sql</code>.
+    </p>
+    <p>
+      <strong><code>public.referral</code> (v8.12, migration 0013, ADR
+      0050).</strong> Friend-invitation attribution: one row per
+      invitee (<code>invitee_user_id</code> PK,
+      <code>inviter_user_id</code>, both FK to
+      <code>auth.users</code> on delete cascade), written by
+      <code>POST /referral</code> when the invitee answers the optional
+      "Who invited you?" wizard step. The inviter's 20-credit
+      <code>referral_bonus</code> ledger row is granted at the
+      invitee's first successful scan settlement (idempotency via the
+      partial unique index above). RLS on with no policies —
+      backend-only.
     </p>
 
     <h3 id="user_profile"><code>public.user_profile</code></h3>
@@ -321,9 +380,10 @@
       <dd>Touched on every upsert.</dd>
     </dl>
     <p>
-      <strong>RLS:</strong> enabled with own-row select/modify policies; the
-      backend uses service-role credentials and bypasses RLS for its own
-      queries.
+      <strong>RLS:</strong> enabled. Own-row SELECT policy only; the modify
+      policy was dropped in migration 0011 (v8.3.2) so the backend —
+      service-role credentials, bypasses RLS — is the sole writer and
+      Pydantic validation can't be skipped via direct PostgREST writes.
     </p>
   </body>
 </html>

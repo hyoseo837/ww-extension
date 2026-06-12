@@ -6,7 +6,7 @@
     <meta name="type" content="spec" />
     <meta name="version" content="v8.12.0" />
     <meta name="status" content="done" />
-    <meta name="last-updated" content="2026-06-11" />
+    <meta name="last-updated" content="2026-06-12" />
     <title>v8.12 — Friend-invitation bonus</title>
     <link rel="stylesheet" href="../style.css" />
   </head>
@@ -87,8 +87,10 @@
         skippable): appended to the preferences-setup wizard
         (ADR 0040), shown only when <code>/me</code> reports
         <code>referral_eligible</code>. One email input; submit calls
-        <code>POST /referral</code>; a 404 shows "No account with that
-        email" inline; Skip moves on. Failures never block the wizard.</li>
+        <code>POST /referral</code>; a 404 ("No account with that
+        email") and the self-invite 400 (added v8.12.3) show inline so
+        the email can be fixed; Skip moves on. Failures never block the
+        wizard.</li>
       <li id="promo">
         <strong>Invite blurb on <code>/buy</code></strong>: one quiet
         card — "Invite a friend: when they run their first scan, you get
@@ -125,8 +127,8 @@
       <li><code>server/app/account/</code> or
         <code>server/app/billing/</code> — referral routes + db helpers
         (placement at implementation time; the grant constant
-        <code>REFERRAL_BONUS = 20</code> lives beside the pricing
-        constants).</li>
+        <code>REFERRAL_BONUS_CREDITS = 20</code> lives beside the
+        pricing constants).</li>
       <li><code>server/app/scoring/routes.py</code> — grant hook in the
         settlement transaction.</li>
       <li><code>server/app/auth/routes.py</code> —
@@ -151,6 +153,9 @@
         eligibility flag, grant hook, tests, api.html.</li>
       <li><code>v8.12.2</code> — web: wizard step, buy-page blurb,
         history label, privacy line; close-out.</li>
+      <li><code>v8.12.3</code> — web: wizard surfaces the self-invite
+        400 inline (was silently swallowed; the server already rejected
+        it).</li>
     </ol>
 
     <h2>Verify</h2>
