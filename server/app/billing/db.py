@@ -35,10 +35,6 @@ def pool() -> asyncpg.Pool:
     return _pool
 
 
-def _require_pool() -> asyncpg.Pool:
-    return pool()
-
-
 async def get_balance(user_id: str) -> Decimal:
     async with pool().acquire() as conn:
         row = await conn.fetchrow(

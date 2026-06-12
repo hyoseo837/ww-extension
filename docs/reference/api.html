@@ -6,7 +6,7 @@
     <meta name="type" content="reference" />
     <meta name="subject" content="backend-api-contract" />
     <meta name="status" content="live" />
-    <meta name="last-updated" content="2026-05-31" />
+    <meta name="last-updated" content="2026-06-11" />
     <meta name="version-pin" content="server v6.6" />
     <title>Backend API Contract — ww-extension</title>
     <link rel="stylesheet" href="../style.css" />
@@ -200,12 +200,19 @@
         <p><strong>Request:</strong></p>
         <pre><code>{
   "scan_id": "&lt;uuid v4 — client-generated, doubles as idempotency key&gt;",
-  "model": "gemini-2.5-flash" | "gemini-2.5-pro",
+  "model": "gemini-2.5-flash" | "gemini-2.5-pro",   // optional since v8.11
   "meta": { "title": "...", "org": "..." },
   "description_text": "...",
   "posting_id": "&lt;WW posting ID&gt;",
   "batch_id": "&lt;uuid&gt;"   // optional (v6.2): shared across one Scan run
 }</code></pre>
+        <p>
+          <code>model</code> (optional since v8.11): when omitted, the
+          server uses its default (<code>pricing.DEFAULT_MODEL</code>) —
+          the extension no longer pins a model id, so retiring a Gemini
+          model is a server deploy, not a Web Store release. An explicitly
+          sent unsupported value is still a 400.
+        </p>
         <p>
           <code>batch_id</code> (v6.2, optional) is one id the extension
           generates per Scan run and sends on every posting in that run; the
@@ -398,7 +405,7 @@
         <p><strong>Request:</strong></p>
         <pre><code>{
   "scan_id": "&lt;uuid v4&gt;",
-  "model": "gemini-2.5-flash" | "gemini-2.5-pro",
+  "model": "gemini-2.5-flash" | "gemini-2.5-pro",   // optional, server default
   "pdf_b64": "&lt;base64-encoded PDF, no data: prefix&gt;"
 }</code></pre>
         <p>5 MB cap on the decoded PDF.</p>

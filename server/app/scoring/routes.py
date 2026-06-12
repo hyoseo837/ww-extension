@@ -43,7 +43,9 @@ class ScanMeta(BaseModel):
 
 class ScanRequest(BaseModel):
     scan_id: UUID
-    model: str
+    # Optional since v8.11: the server owns the default so retiring a Gemini
+    # model is a deploy, not a Web Store review cycle.
+    model: str = pricing.DEFAULT_MODEL
     meta: ScanMeta
     description_text: str = Field(..., max_length=_MAX_DESC_CHARS)
     posting_id: str = Field(..., max_length=32)

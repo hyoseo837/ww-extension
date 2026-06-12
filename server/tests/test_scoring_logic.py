@@ -152,3 +152,22 @@ def test_profile_context_appends_supplement_as_self_reported():
 def test_profile_context_empty_everything_is_empty():
     assert gemini.build_profile_context(None, [], "") == ""
     assert gemini.build_profile_context({}, [], "   ") == ""
+
+
+# ── ScanRequest model default (v8.11) ────────────────────────────────────────
+
+
+def test_scan_request_defaults_model_server_side():
+    from uuid import uuid4
+
+    from app.billing import pricing
+    from app.scoring.routes import ScanRequest
+
+    req = ScanRequest(
+        scan_id=uuid4(),
+        meta={"title": "t", "org": "o"},
+        description_text="desc",
+        posting_id="123",
+    )
+    assert req.model == pricing.DEFAULT_MODEL
+    assert pricing.DEFAULT_MODEL in pricing.supported_models()
