@@ -26,71 +26,17 @@ function setActionPrompt(text, linkLabel, path) {
   el.appendChild(btn);
 }
 
-// Confirmation shown before a scan spends credits (v6.13). Rendered inside
-// #ww-ext-sidebar so it inherits the --s-* theme vars + light-theme override;
-// the sidebar uses transform, so a position:fixed child would be trapped in the
-// panel — the overlay is position:absolute within it. Resolves true on Scan,
-// false on Cancel / backdrop / Esc.
-function confirmScan(count, balance) {
+// Confirm overlay. Rendered inside #ww-ext-sidebar so it inherits the --s-*
+// theme vars + light-theme override; the sidebar uses transform, so a
+// position:fixed child would be trapped in the panel — the overlay is
+// position:absolute within it. Resolves true on the go button, false on
+// Cancel / backdrop / Esc. `warn` adds a warning line; `extra` adds a middle
+// button ({label, onClick}) whose action counts as a cancel (it navigates
+// away rather than confirming).
+function confirmDialog({ title, msg, goLabel, warn = '', extra = null }) {
   return new Promise(resolve => {
     const sidebar = document.getElementById('ww-ext-sidebar');
     if (!sidebar) { resolve(true); return; } // no UI to host the prompt
-
-    const bal = Number.isFinite(balance) ? parseFloat(balance.toFixed(2)) : null;
-    const jobWord = count === 1 ? 'job' : 'jobs';
-
-    // Estimated cost: ~2 credits/scan (measured live 2026-06-11, 35 scans →
-    // 67.9 credits; v8.5's richer prompt outgrew ADR 0034's ~1/scan). The real
-    // per-scan charge is token-variable, hence "~". Warn when the balance can't
-    // cover the whole batch (v7.5.1).
-    const estCost = count * 2;
-    const short = bal != null && bal < estCost;
-
-    const backdrop = document.createElement('div');
-    backdrop.className = 'ww-ext-confirm-backdrop';
-    backdrop.innerHTML = `
-      <div class="ww-ext-confirm-card" role="dialog" aria-modal="true">
-        <div class="ww-ext-confirm-title">Scan ${count} unscored ${jobWord}?</div>
-        <div class="ww-ext-confirm-msg">This costs ~${estCost} credits${bal != null ? ` — you have ${bal}` : ''}.</div>
-        ${short ? '<div class="ww-ext-confirm-warn">⚠ Not enough to scan them all.</div>' : ''}
-        <div class="ww-ext-confirm-actions">
-          <button class="ww-ext-confirm-cancel">Cancel</button>
-          ${short ? '<button class="ww-ext-confirm-buy">Buy credits</button>' : ''}
-          <button class="ww-ext-confirm-go">${short ? 'Scan anyway' : `Scan ${count}`}</button>
-        </div>
-      </div>`;
-
-    let settled = false;
-    const close = result => {
-      if (settled) return;
-      settled = true;
-      document.removeEventListener('keydown', onKey, true);
-      backdrop.remove();
-      resolve(result);
-    };
-    const onKey = e => { if (e.key === 'Escape') { e.preventDefault(); close(false); } };
-
-    backdrop.addEventListener('click', e => { if (e.target === backdrop) close(false); });
-    backdrop.querySelector('.ww-ext-confirm-cancel').addEventListener('click', () => close(false));
-    backdrop.querySelector('.ww-ext-confirm-go').addEventListener('click', () => close(true));
-    // Buy credits → web app /buy; treated as a cancel (navigating away, not scanning).
-    backdrop.querySelector('.ww-ext-confirm-buy')?.addEventListener('click', () => {
-      chrome.runtime.sendMessage({ type: 'openWebApp', path: '/buy' });
-      close(false);
-    });
-    document.addEventListener('keydown', onKey, true);
-
-    sidebar.appendChild(backdrop);
-    backdrop.querySelector('.ww-ext-confirm-go').focus();
-  });
-}
-
-// Generic confirm overlay (same chrome as confirmScan). Resolves true on
-// confirm, false on cancel / backdrop / Esc.
-function confirmDialog({ title, msg, goLabel }) {
-  return new Promise(resolve => {
-    const sidebar = document.getElementById('ww-ext-sidebar');
-    if (!sidebar) { resolve(true); return; }
 
     const backdrop = document.createElement('div');
     backdrop.className = 'ww-ext-confirm-backdrop';
@@ -98,8 +44,10 @@ function confirmDialog({ title, msg, goLabel }) {
       <div class="ww-ext-confirm-card" role="dialog" aria-modal="true">
         <div class="ww-ext-confirm-title">${esc(title)}</div>
         <div class="ww-ext-confirm-msg">${esc(msg)}</div>
+        ${warn ? `<div class="ww-ext-confirm-warn">${esc(warn)}</div>` : ''}
         <div class="ww-ext-confirm-actions">
           <button class="ww-ext-confirm-cancel">Cancel</button>
+          ${extra ? `<button class="ww-ext-confirm-buy">${esc(extra.label)}</button>` : ''}
           <button class="ww-ext-confirm-go">${esc(goLabel)}</button>
         </div>
       </div>`;
@@ -117,10 +65,35 @@ function confirmDialog({ title, msg, goLabel }) {
     backdrop.addEventListener('click', e => { if (e.target === backdrop) close(false); });
     backdrop.querySelector('.ww-ext-confirm-cancel').addEventListener('click', () => close(false));
     backdrop.querySelector('.ww-ext-confirm-go').addEventListener('click', () => close(true));
+    backdrop.querySelector('.ww-ext-confirm-buy')?.addEventListener('click', () => {
+      extra.onClick();
+      close(false);
+    });
     document.addEventListener('keydown', onKey, true);
 
     sidebar.appendChild(backdrop);
     backdrop.querySelector('.ww-ext-confirm-go').focus();
+  });
+}
+
+// Confirmation shown before a scan spends credits (v6.13). Estimated cost:
+// ~2 credits/scan (measured live 2026-06-11, 35 scans → 67.9 credits; v8.5's
+// richer prompt outgrew ADR 0034's ~1/scan). The real per-scan charge is
+// token-variable, hence "~". When the balance can't cover the whole batch,
+// warn and offer Buy credits → web app /buy (v7.5.1).
+function confirmScan(count, balance) {
+  const bal = Number.isFinite(balance) ? parseFloat(balance.toFixed(2)) : null;
+  const estCost = count * 2;
+  const short = bal != null && bal < estCost;
+  return confirmDialog({
+    title: `Scan ${count} unscored ${count === 1 ? 'job' : 'jobs'}?`,
+    msg: `This costs ~${estCost} credits${bal != null ? ` — you have ${bal}` : ''}.`,
+    warn: short ? '⚠ Not enough to scan them all.' : '',
+    extra: short ? {
+      label: 'Buy credits',
+      onClick: () => chrome.runtime.sendMessage({ type: 'openWebApp', path: '/buy' })
+    } : null,
+    goLabel: short ? 'Scan anyway' : `Scan ${count}`
   });
 }
 
