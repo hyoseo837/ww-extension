@@ -5,7 +5,7 @@
     <meta name="project" content="ww-extension" />
     <meta name="type" content="reference" />
     <meta name="status" content="current" />
-    <meta name="last-updated" content="2026-06-05" />
+    <meta name="last-updated" content="2026-06-12" />
     <title>Chrome Web Store listing — single source of truth</title>
     <link rel="stylesheet" href="../style.css" />
   </head>
@@ -25,77 +25,107 @@
         <a href="https://chromewebstore.google.com/detail/ww-extension/bichfckekdcnmkenflpmmehegggcfgdd">chromewebstore.google.com/&hellip;/bichfckekdcnmkenflpmmehegggcfgdd</a></li>
       <li><strong>Extension ID:</strong> <code>bichfckekdcnmkenflpmmehegggcfgdd</code></li>
       <li><strong>Publisher:</strong> hyoseo.dev · <strong>Support:</strong> support@hyoseo.dev</li>
-      <li><strong>Approved &amp; published:</strong> 2026-06-04 (build 7.1.1)</li>
+      <li><strong>First approved &amp; published:</strong> 2026-06-04 (build 7.1.1)</li>
+      <li><strong>Current upload:</strong> 8.13.7 (2026-06-12) — listing copy
+        below rewritten with it: Google→UWaterloo sign-in (v7.5, ADR 0036),
+        hard-filters bullet retired (ADR 0043), v8 features added.</li>
     </ul>
 
     <h2>Description (current)</h2>
     <p>
-      Updated 2026-06-05 for the v7 redesign + credit system. Plain text — the
-      store field is not HTML.
+      Rewritten 2026-06-12 for the 8.13.7 upload. Plain text — the store field
+      is not HTML.
     </p>
-    <pre>WW Extension saves you hours of reading job descriptions by using AI to score WaterlooWorks co-op postings directly against your resume. WaterlooWorks dumps hundreds of postings on you each cycle, but this extension reads each posting, compares it against your candidate profile and preferences using AI, and gives you a clear 1-20 score and verdict so you know exactly which jobs are worth applying to - without opening 200 individual tabs.
+    <pre>WW Extension saves you hours of reading job descriptions by using AI to score WaterlooWorks co-op postings directly against your profile. WaterlooWorks dumps hundreds of postings on you each cycle; this extension reads each one, compares it with your resume and preferences using AI, and gives you a clear 1-20 score and verdict so you know exactly which jobs deserve your application - without opening 200 individual tabs.
 
-Sign in with your Google account to get started. New accounts include free credits to try it out, and you can top up anytime - scoring runs on our backend, so there's no API key to manage.
+Built for University of Waterloo co-op students: sign in with your UWaterloo (Microsoft) account to get started. New accounts include free credits to try it out, and you can top up anytime - scoring runs on our backend, so there's no API key to manage, and a confirmation always shows the estimated cost before a scan spends credits.
 
 Features:
-* Bulk scan: One click scans every posting in your current search and injects 1-20 scores directly into the job table.
-* Ranked sidebar: All your scored jobs, sorted best-first. Click any entry to jump straight to its row, or remove scores you don't need.
-* Smart extraction: Upload your CV PDF to the web dashboard and the system extracts your relevant profile text, so you can add custom match criteria.
-* Hard filters: Automatically skip postings that violate your strict exclusions (like location or citizenship) to save time and credits.
-* Bulk save: Filter by score threshold and verdict, then push matching jobs into a WaterlooWorks folder in one shot.
+* Bulk scan: one click scores every posting in your current search - on both the Full-Cycle and Employer-Student Direct boards - and injects 1-20 scores directly into the job table.
+* Ranked sidebar: all your scored jobs sorted best-first, each with the AI's reasoning and a point-by-point breakdown of what raised or lowered the score. Click any entry to jump straight to its row.
+* Eligibility gates: postings that rule you out - a citizenship or work-authorization requirement you don't meet, or anything you declared off-limits - are marked Excluded so you don't waste time or credits on them.
+* Your profile, your criteria: upload your application package once on the web dashboard, answer a short preferences wizard, and tell the scorer what matters most in your own words ("remote is non-negotiable", "never pure QA").
+* Bulk save: filter by score threshold and verdict, then push the matching jobs into a WaterlooWorks folder in one shot.
+* Feedback loop: rate any score with a thumbs up or down to help improve scoring quality.
 
 Note: This extension is not affiliated with, endorsed by, or connected to the University of Waterloo or WaterlooWorks.</pre>
 
     <h2>Per-permission justifications</h2>
     <p>One line each for the dashboard's "why do you need this?" form. The
       manifest stays narrow (no <code>&lt;all_urls&gt;</code>) on purpose — it is
-      the easiest review path.</p>
+      the easiest review path. <code>permissions</code> and
+      <code>host_permissions</code> are byte-identical to the approved 7.1.1
+      build (verified against commit <code>20c487d</code>); only the
+      content-script <code>matches</code> list gained the Employer-Student
+      Direct page (v8.7), which sits inside the already-granted WW host
+      permission — no new warnings.</p>
     <dl>
       <dt><code>storage</code></dt>
-      <dd>Persist user settings, the last-known credit balance, per-posting
-        scores, and the signed-in session locally.</dd>
+      <dd>Persist the signed-in session, the last-known credit balance, and
+        per-posting scores locally.</dd>
       <dt><code>identity</code></dt>
-      <dd>Google sign-in via <code>launchWebAuthFlow</code> (Supabase OAuth) so
-        scores and credits attach to the user's account.</dd>
+      <dd>UWaterloo (Microsoft Entra) sign-in via
+        <code>launchWebAuthFlow</code> (Supabase OAuth) so scores and credits
+        attach to the user's account.</dd>
       <dt>host — <code>https://waterlooworks.uwaterloo.ca/*</code></dt>
-      <dd>The content script runs only on the co-op jobs page to read postings
-        and inject scores — this is the product.</dd>
+      <dd>The content script runs only on the co-op job-board pages
+        (Full-Cycle and Employer-Student Direct) to read postings and inject
+        scores — this is the product.</dd>
       <dt>host — <code>https://bumrzedwwfhbxlttwboh.supabase.co/*</code></dt>
-      <dd>Authentication (session / JWT).</dd>
+      <dd>Authentication (session / JWT refresh).</dd>
       <dt>host — <code>https://ww-extension-backend-x5h6h.ondigitalocean.app/*</code></dt>
-      <dd>The backend that scores postings and holds the credit ledger.</dd>
+      <dd>The backend that scores postings, records optional score feedback,
+        and holds the credit ledger.</dd>
     </dl>
 
     <h2>Privacy practices form</h2>
     <ul>
       <li><strong>Single purpose:</strong> Score WaterlooWorks co-op postings
         for the signed-in user against their profile.</li>
-      <li><strong>Data collected / used:</strong> account email (auth); the
-        uploaded CV / extracted profile and match criteria; posting text — all
-        sent to the backend only to produce a score.</li>
+      <li><strong>Data the extension collects / transmits:</strong> account
+        email + session tokens (authentication); job-posting text, titles, and
+        employer names, sent to the backend only to produce a score; optional
+        👍/👎 score feedback with an optional comment (plus the posting text on
+        a 👎), sent to improve scoring quality. The CV / application-package
+        upload and match preferences are handled on the companion web app
+        (ww-extension.hyoseo.dev), not by the extension; payments are Stripe
+        Checkout on the web app — the extension never touches payment data.</li>
+      <li><strong>Dashboard data-type checkboxes:</strong> tick
+        <em>Personally identifiable information</em> (email),
+        <em>Authentication information</em> (session tokens), and
+        <em>Website content</em> (job-posting text from
+        waterlooworks.uwaterloo.ca). Everything else — health, financial and
+        payment, personal communications, location, web history, user
+        activity — is <strong>not</strong> collected by the extension.</li>
       <li><strong>Privacy policy URL:</strong>
         <a href="https://ww-extension.hyoseo.dev/privacy">https://ww-extension.hyoseo.dev/privacy</a>
-        (in-app, v6.12; the old <code>hyoseo.dev/privacy-policy/&hellip;</code> was
-        removed in v6.10 — don't point at it).</li>
+        (in-app page; covers Microsoft sign-in, scan records, score feedback,
+        Gemini processing, Stripe, Sentry, and the referral program as of
+        v8.12.2 — verified in sync 2026-06-12).</li>
       <li><strong>Attestations:</strong> data is <em>not</em> sold; not used or
         transferred for purposes unrelated to the single purpose; not used for
-        creditworthiness / lending. (Confirm these match the live policy.)</li>
+        creditworthiness / lending. (Matches the live policy.)</li>
     </ul>
 
     <h2>Screenshots</h2>
     <p>
-      <strong>Stale:</strong> current store screenshots show the pre-v7.3
-      dark/purple UI. Refresh to the warm redesign before/with the next update —
-      capture from <code>ext/design/sidebar-preview.html</code> or a live jobs
-      page at cycle 2. Store sizes: 1280×800 or 640×400.
+      <strong>Refresh with this upload:</strong> the store screenshots still
+      show the pre-v7.3 dark/purple UI, and 8.13.7 is the first store build
+      carrying the warm redesign. Capture from
+      <code>ext/design/sidebar-preview.html</code> or a live jobs page (a
+      scored list with breakdowns + the feedback row makes the best shot).
+      Store sizes: 1280×800 or 640×400.
     </p>
 
     <h2>Notes</h2>
     <ul>
-      <li>Permissions are unchanged from the approved build, so an update upload
-        reuses these justifications.</li>
+      <li>Permissions are unchanged from the approved build, so an update
+        upload reuses these justifications.</li>
       <li>Keep the "not affiliated" disclaimer — it also lives in the README,
         the extension UI, and the web footer.</li>
+      <li>Naming: the store item is "WW Extension" while the web app brands
+        itself "WW Scorer". Renaming the listing is allowed at any update but
+        is a deliberate-branding decision — not changed here.</li>
     </ul>
   </body>
 </html>
