@@ -482,4 +482,7 @@ async def _settle_success(
                 response=result,
                 usage=usage,
             )
+            # Friend-invitation bonus (v8.12, ADR 0050): no-op without an
+            # attribution row; at most once per invitee via partial index.
+            await billing_db.grant_referral_bonus(conn, user_id)
         return await billing_db.get_balance(user_id)

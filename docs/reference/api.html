@@ -68,11 +68,16 @@
       <dt id="get-me"><code>GET /me</code></dt>
       <dd>
         <p>Authenticated. Returns the signed-in user's identity
-          extracted from the verified Supabase JWT.</p>
+          extracted from the verified Supabase JWT, plus
+          <code>referral_eligible</code> (v8.12, ADR 0050): whether the
+          web app should show the "Who invited you?" wizard step — true
+          iff the caller has no referral attribution, no scans yet, and
+          is not a re-registered identity (ADR 0029 suppression).</p>
         <p><strong>Response:</strong> <code>200 OK</code></p>
         <pre><code>{
   "user_id": "&lt;supabase-user-uuid&gt;",
-  "email": "user@example.com"
+  "email": "user@example.com",
+  "referral_eligible": true
 }</code></pre>
         <p><strong>Errors:</strong>
           <code>401</code> if the Authorization header is missing or
@@ -102,10 +107,34 @@
   "profile": { ...same shape as GET /profile... },
   "credit_history": [ { "id","kind","delta","created_at",
                         "org","title","posting_id","batch_id" }, ... ],
-  "scans": [ { "id","kind","status","org","title","cost","created_at" }, ... ]
+  "scans": [ { "id","kind","status","org","title","cost","created_at" }, ... ],
+  "referral": { "invited_by_user_id": "&lt;uuid&gt;|null",
+                "invited_user_ids": [ "&lt;uuid&gt;", ... ] }   // v8.12
 }</code></pre>
         <p><strong>Errors:</strong> <code>401</code> (missing/invalid token);
           <code>404</code> if the auth user no longer exists.</p>
+      </dd>
+
+      <dt id="post-referral"><code>POST /referral</code> (v8.12, ADR 0050)</dt>
+      <dd>
+        <p>Authenticated. Records who invited the caller — the optional
+          "Who invited you?" wizard step. At most one attribution per
+          account, only before the caller's first scan, never for a
+          re-registered identity (ADR 0029 suppression shared). The
+          20-credit <code>referral_bonus</code> ledger entry is granted to
+          the <em>inviter</em> later, when the caller's first successful
+          scan settles (insert-or-ignore against a partial unique index on
+          <code>ref</code> — at most once per invitee).</p>
+        <p><strong>Request:</strong></p>
+        <pre><code>{ "inviter_email": "friend@uwaterloo.ca" }</code></pre>
+        <p><strong>Response:</strong> <code>200 OK</code> —
+          <code>{ "ok": true }</code></p>
+        <p><strong>Errors:</strong> <code>400</code> (empty / own email);
+          <code>403</code> (suppression-blocked identity);
+          <code>404</code> (no account with that email — honest so a typo
+          is fixable; disclosure trade-off accepted in ADR 0050);
+          <code>409</code> (attribution already set, or caller already
+          scanned); <code>401</code>.</p>
       </dd>
 
       <dt id="delete-account"><code>DELETE /account</code></dt>

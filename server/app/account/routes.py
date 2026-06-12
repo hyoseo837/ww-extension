@@ -15,6 +15,7 @@ from datetime import datetime, timezone
 
 import httpx
 from fastapi import APIRouter, HTTPException, Response
+from pydantic import BaseModel, Field
 
 from app.account import db as account_db
 from app.auth.dependency import CurrentUser
@@ -25,6 +26,44 @@ from app.profile import db as profile_db
 
 router = APIRouter()
 log = logging.getLogger("ww.account")
+
+
+# ── Referral attribution (v8.12, ADR 0050) ───────────────────────────────────
+
+
+class ReferralRequest(BaseModel):
+    inviter_email: str = Field(..., max_length=320)
+
+
+@router.post("/referral")
+async def set_referral(req: ReferralRequest, user: CurrentUser) -> dict:
+    """Record who invited the caller — the optional 'Who invited you?' wizard
+    step. At most one answer per account, only before the first scan, and
+    never for a re-registered identity (ADR 0029 suppression, per ADR 0050).
+    The bonus itself is granted later, when the caller's first scan settles."""
+    user_id = user["sub"]
+    email = (user.get("email") or "").strip().lower()
+    inviter_email = req.inviter_email.strip().lower()
+
+    if not inviter_email:
+        raise HTTPException(status_code=400, detail="inviter_email is empty")
+    if inviter_email == email:
+        raise HTTPException(status_code=400, detail="you can't name yourself")
+    if email and await billing_db.is_blocked(email):
+        raise HTTPException(status_code=403, detail="not eligible for referral")
+    if await billing_db.has_scans(user_id):
+        raise HTTPException(
+            status_code=409, detail="referral can only be set before your first scan"
+        )
+
+    inviter_id = await billing_db.find_user_id_by_email(inviter_email)
+    if inviter_id is None:
+        raise HTTPException(status_code=404, detail="no account with that email")
+
+    if not await billing_db.insert_referral(user_id, inviter_id):
+        raise HTTPException(status_code=409, detail="referral already set")
+    log.info("referral_set invitee=%s inviter=%s", user_id, inviter_id)
+    return {"ok": True}
 
 
 @router.get("/account/export")
@@ -44,6 +83,7 @@ async def export_account(user: CurrentUser) -> dict:
         "profile": profile,
         "credit_history": data["credit_history"],
         "scans": data["scans"],
+        "referral": data["referral"],
     }
 
 

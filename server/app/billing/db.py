@@ -1,3 +1,4 @@
+import hashlib
 import logging
 from decimal import Decimal
 from typing import Any
@@ -5,6 +6,7 @@ from uuid import UUID
 
 import asyncpg
 
+from app.billing import pricing
 from app.core.config import settings
 
 _pool: asyncpg.Pool | None = None
@@ -129,6 +131,15 @@ async def export_user(user_id: str) -> dict | None:
             "order by created_at desc",
             user_id,
         )
+        # Referral attribution, both directions (v8.12, ADR 0050) — ids only.
+        invited_by = await conn.fetchval(
+            "select inviter_user_id::text from referral where invitee_user_id = $1::uuid",
+            user_id,
+        )
+        invited = await conn.fetch(
+            "select invitee_user_id::text as id from referral where inviter_user_id = $1::uuid",
+            user_id,
+        )
     balance = await get_balance(user_id)
     history = await get_history(user_id, _EXPORT_MAX_ROWS, 0)
     return {
@@ -163,6 +174,10 @@ async def export_user(user_id: str) -> dict | None:
             }
             for s in scans
         ],
+        "referral": {
+            "invited_by_user_id": invited_by,
+            "invited_user_ids": [r["id"] for r in invited],
+        },
     }
 
 
@@ -258,6 +273,91 @@ async def grant_purchase(user_id: str, credits: Decimal, event_id: str) -> None:
             credits,
             event_id,
         )
+
+
+# ── Referral (v8.12, ADR 0050) ───────────────────────────────────────────────
+
+
+async def find_user_id_by_email(email: str) -> str | None:
+    """Inviter lookup for referral attribution. Email is matched lowercased."""
+    async with pool().acquire() as conn:
+        row = await conn.fetchrow(
+            "select id::text as id from auth.users where lower(email) = $1",
+            email,
+        )
+    return row["id"] if row else None
+
+
+async def has_scans(user_id: str) -> bool:
+    async with pool().acquire() as conn:
+        return bool(
+            await conn.fetchval(
+                "select exists (select 1 from scan where user_id = $1::uuid)",
+                user_id,
+            )
+        )
+
+
+async def insert_referral(invitee_user_id: str, inviter_user_id: str) -> bool:
+    """Record who invited this user. Returns False when an attribution
+    already exists (the question is answered at most once)."""
+    async with pool().acquire() as conn:
+        result = await conn.execute(
+            "insert into referral (invitee_user_id, inviter_user_id) "
+            "values ($1::uuid, $2::uuid) "
+            "on conflict (invitee_user_id) do nothing",
+            invitee_user_id,
+            inviter_user_id,
+        )
+    return result == "INSERT 0 1"
+
+
+async def referral_eligible(user_id: str, email: str) -> bool:
+    """Whether to show the 'Who invited you?' question: no attribution yet,
+    no scans yet (it's a signup-time question), and not a re-registered
+    identity (ADR 0029's suppression record, shared per ADR 0050)."""
+    async with pool().acquire() as conn:
+        return bool(
+            await conn.fetchval(
+                "select not exists (select 1 from referral where invitee_user_id = $1::uuid) "
+                "   and not exists (select 1 from scan where user_id = $1::uuid) "
+                "   and not exists (select 1 from signup_bonus_block where email_hash = $2)",
+                user_id,
+                _sha256_hex(email),
+            )
+        )
+
+
+async def is_blocked(email: str) -> bool:
+    """ADR 0029 suppression check — a deleted-and-re-registered identity."""
+    async with pool().acquire() as conn:
+        return bool(
+            await conn.fetchval(
+                "select exists (select 1 from signup_bonus_block where email_hash = $1)",
+                _sha256_hex(email),
+            )
+        )
+
+
+def _sha256_hex(email: str) -> str:
+    """Must match the trigger's encode(digest(lower(email),'sha256'),'hex')."""
+    return hashlib.sha256(email.lower().encode("utf-8")).hexdigest()
+
+
+async def grant_referral_bonus(conn: asyncpg.Connection, invitee_user_id: str) -> None:
+    """Inviter's bonus, attempted on every successful scan settlement.
+    The insert-select is a no-op without an attribution row, and the partial
+    unique index on (ref) where kind='referral_bonus' (migration 0013) makes
+    it at most once per invitee — 'first scan only' is emergent, with no
+    first-scan bookkeeping (ADR 0050)."""
+    await conn.execute(
+        "insert into credit_ledger_entry (user_id, delta, kind, ref) "
+        "select inviter_user_id, $2, 'referral_bonus', $1::uuid::text "
+        "from referral where invitee_user_id = $1::uuid "
+        "on conflict do nothing",
+        invitee_user_id,
+        Decimal(pricing.REFERRAL_BONUS_CREDITS),
+    )
 
 
 async def insert_ledger_entry(

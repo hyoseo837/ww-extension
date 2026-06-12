@@ -94,6 +94,21 @@
         card — "Invite a friend: when they run their first scan, you get
         20 credits (≈ 10 scans). They just enter your email during
         setup." No links, no codes, nothing to manage.</li>
+      <li id="marketing">
+        <strong>Share marketing on the landing page and dashboard</strong>
+        (owner-requested scope addition, 2026-06-12):
+        <ul>
+          <li><em>Landing</em> — a referral banner between How-it-works
+            and Pricing: invite friends, earn 20 credits per friend who
+            scans. Speaks to both audiences: existing users learn the
+            program exists; invited visitors learn what the "Who invited
+            you?" step is for.</li>
+          <li><em>Dashboard (<code>/account</code>)</em> — an "Invite a
+            friend" card showing the user's own email (the thing the
+            friend must type) and a copy-to-clipboard share message
+            (app pitch + URL + "put my email in setup") so sharing is
+            one click into any chat.</li>
+        </ul></li>
       <li id="history">
         <strong>Credit history label</strong>: <code>kindLabel</code> /
         <code>HistoryList</code> map <code>referral_bonus</code> →
@@ -121,10 +136,12 @@
       <li><code>docs/reference/api.html</code> — <code>POST /referral</code>,
         <code>/me</code> field, ledger kind.</li>
       <li><code>web/src/pages/PreferencesSetup.tsx</code> — wizard step.</li>
-      <li><code>web/src/pages/Buy.tsx</code>, <code>web/src/format.ts</code>,
-        <code>web/src/HistoryList.tsx</code>, privacy legal page,
-        <code>web/src/api.ts</code> — blurb, label, policy line, client
-        call.</li>
+      <li><code>web/src/pages/Buy.tsx</code>,
+        <code>web/src/pages/Landing.tsx</code>,
+        <code>web/src/pages/Account.tsx</code>,
+        <code>web/src/format.ts</code>, <code>web/src/HistoryList.tsx</code>,
+        privacy legal page — blurb, landing banner, dashboard invite card,
+        history label, policy line.</li>
     </ul>
 
     <h2>Commits</h2>

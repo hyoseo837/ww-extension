@@ -76,6 +76,11 @@ DEFAULT_MAX_OUTPUT_TOKENS = 1024
 DEFAULT_MODEL = "gemini-2.5-flash"
 
 
+# Friend-invitation bonus, granted to the inviter when the invitee's first
+# scan settles (v8.12, ADR 0050) — ≈ 10 scans at the ~2 credits/scan rate.
+REFERRAL_BONUS_CREDITS = 20
+
+
 def supported_models() -> list[str]:
     return list(_RATES)
 
