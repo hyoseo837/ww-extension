@@ -6,7 +6,7 @@
     <meta name="type" content="reference" />
     <meta name="subject" content="backend-api-contract" />
     <meta name="status" content="live" />
-    <meta name="last-updated" content="2026-06-12" />
+    <meta name="last-updated" content="2026-06-14" />
     <meta name="version-pin" content="server v6.6" />
     <title>Backend API Contract — ww-extension</title>
     <link rel="stylesheet" href="../style.css" />
@@ -247,6 +247,15 @@
           generates per Scan run and sends on every posting in that run; the
           backend stores it (with <code>meta.title</code>/<code>meta.org</code>)
           on the <code>scan</code> row so the credit history can group the batch.
+        </p>
+        <p>
+          <strong>Input caps (v8.9, audit #5):</strong>
+          <code>description_text</code> ≤ 6000 chars,
+          <code>meta.title</code>/<code>meta.org</code> ≤ 400 each (raised
+          from 300 in v8.14 as a backstop; the extension truncates both to
+          200 client-side), <code>posting_id</code> ≤ 32. Over-cap fields are
+          rejected with <code>422</code> (Pydantic
+          <code>string_too_long</code>).
         </p>
         <p>
           <strong>Breaking change in v4.4.2:</strong>

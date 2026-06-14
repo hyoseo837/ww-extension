@@ -12,6 +12,7 @@ from pydantic import ValidationError
 from app.main import _MAX_BODY_BYTES, body_too_large
 from app.scoring.routes import (
     _MAX_DESC_CHARS,
+    _MAX_META_CHARS,
     _MAX_PDF_B64_CHARS,
     ExtractRequest,
     FeedbackRequest,
@@ -41,9 +42,14 @@ def test_scan_rejects_oversized_description():
         ScanRequest(**_scan_kwargs(description_text="x" * (_MAX_DESC_CHARS + 1)))
 
 
+def test_scan_accepts_max_meta():
+    req = ScanRequest(**_scan_kwargs(meta={"title": "x" * _MAX_META_CHARS, "org": ""}))
+    assert len(req.meta.title) == _MAX_META_CHARS
+
+
 def test_scan_rejects_oversized_meta_and_posting_id():
     with pytest.raises(ValidationError):
-        ScanRequest(**_scan_kwargs(meta={"title": "x" * 301, "org": ""}))
+        ScanRequest(**_scan_kwargs(meta={"title": "x" * (_MAX_META_CHARS + 1), "org": ""}))
     with pytest.raises(ValidationError):
         ScanRequest(**_scan_kwargs(posting_id="1" * 33))
 

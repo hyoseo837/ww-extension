@@ -29,7 +29,10 @@ _MAX_PDF_BYTES = 5 * 1024 * 1024
 # bound before. 6000 mirrors the extension's DESC_CHAR_CAP; pdf_b64 is the
 # 5 MB PDF cap in base64 (4/3×) with slack.
 _MAX_DESC_CHARS = 6000
-_MAX_META_CHARS = 300
+# 400 is the backstop, comfortably above the client's 200-char truncation
+# (v8.14) — the client guarantees title/org fit, this just refuses anything
+# that didn't (raised from 300, which a description-prose title overran).
+_MAX_META_CHARS = 400
 _MAX_PDF_B64_CHARS = 7_000_000
 
 
