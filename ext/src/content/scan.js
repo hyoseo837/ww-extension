@@ -214,9 +214,10 @@ async function runScan(toScore) {
       return { ok: false, error: `fetch: ${e.message}` };
     }
 
+    // Truncate to META_CHAR_CAP so no source can exceed the server cap (v8.14).
     const meta = {
-      title: rowInfo?.title || extractedTitle || `#${postingId}`,
-      org:   rowInfo?.org   || ''
+      title: (rowInfo?.title || extractedTitle || `#${postingId}`).slice(0, META_CHAR_CAP),
+      org:   (rowInfo?.org   || '').slice(0, META_CHAR_CAP)
     };
 
     // No model field — the server picks the default (v8.11, audit #13).
@@ -242,36 +243,51 @@ async function runScan(toScore) {
     return { ok: false, error: reply?.error || 'unknown', halt, code: reply?.code };
   }
 
+  // Score one id and fold the result into the shared run state. Used by both
+  // the warm-up scan and the worker pool.
+  async function processOne(postingId) {
+    const result = await scanOne(postingId);
+    if (result.ok) {
+      done++;
+    } else {
+      failed++;
+      lastError = result.error;
+      if (!result.halt) failures.push(postingId);
+      if (result.halt) {
+        halted = true;
+        if (result.code === 'NO_CREDITS') {
+          setActionPrompt("You're out of credits.", 'Buy credits', '/buy');
+        } else if (result.code === 'PROFILE_NOT_SET') {
+          setActionPrompt('Set up your profile to start scoring.', 'Set up profile', '/profile');
+        } else {
+          setProgress(result.error, true);
+        }
+        return;
+      }
+    }
+    if (!halted) setProgress(`Scored ${done + failed} of ${total}…`);
+  }
+
   async function worker() {
     while (!aborted && !halted) {
       const idx = nextIdx++;
       if (idx >= toScore.length) return;
-      const postingId = toScore[idx];
-      const result = await scanOne(postingId);
-      if (result.ok) {
-        done++;
-      } else {
-        failed++;
-        lastError = result.error;
-        if (!result.halt) failures.push(postingId);
-        if (result.halt) {
-          halted = true;
-          if (result.code === 'NO_CREDITS') {
-            setActionPrompt("You're out of credits.", 'Buy credits', '/buy');
-          } else if (result.code === 'PROFILE_NOT_SET') {
-            setActionPrompt('Set up your profile to start scoring.', 'Set up profile', '/profile');
-          } else {
-            setProgress(result.error, true);
-          }
-          return;
-        }
-      }
-      if (!halted) setProgress(`Scored ${done + failed} of ${total}…`);
+      await processOne(toScore[idx]);
     }
   }
 
-  const workerCount = Math.min(SCAN_CONCURRENCY, toScore.length);
-  await Promise.all(Array.from({ length: workerCount }, () => worker()));
+  // Warm-up (ADR 0051): run the first scan alone so Gemini's implicit prefix
+  // cache (system + CV) is populated before the rest fan out — otherwise the
+  // whole opening wave of SCAN_CONCURRENCY scans races as cache misses. A halt
+  // here (no credits / not signed in / profile unset) short-circuits the run.
+  if (!aborted && toScore.length) {
+    nextIdx = 1;
+    await processOne(toScore[0]);
+  }
+  if (!aborted && !halted && nextIdx < toScore.length) {
+    const workerCount = Math.min(SCAN_CONCURRENCY, toScore.length - nextIdx);
+    await Promise.all(Array.from({ length: workerCount }, () => worker()));
+  }
 
   // Final flush — overrides the pending debounced one.
   saveScores();
@@ -311,9 +327,15 @@ async function fetchPostingText(postingId) {
   if (summaryIdx > 0) rawText = rawText.slice(summaryIdx);
   const appInfoIdx = rawText.indexOf('Application Information');
   if (appInfoIdx > 0) rawText = rawText.slice(0, appInfoIdx).trim();
+  // Off-page postings have no table row, so the title falls back to the
+  // overview's first heading. That selector sometimes grabs description prose
+  // (the live 422, v8.14): collapse whitespace and reject anything too long to
+  // be a title, so the caller falls through to `#id` instead of sending prose.
+  const heading = (doc.querySelector('h1, h2, h3')?.textContent ?? '')
+    .replace(/\s+/g, ' ').trim();
   return {
     descriptionText: rawText.slice(0, DESC_CHAR_CAP),
-    extractedTitle:  doc.querySelector('h1, h2, h3')?.textContent.trim() ?? ''
+    extractedTitle:  heading.length <= META_CHAR_CAP ? heading : ''
   };
 }
 

@@ -5,8 +5,15 @@
 const TABLE_SEL      = '#dataViewerPlaceholder table.data-viewer-table';
 const ROW_SEL        = `${TABLE_SEL} tbody tr.table__row--body`;
 const DESC_CHAR_CAP   = 6000;
+// Hard cap on title/org sent as scan meta. A real job title is short; this
+// guarantees no source (off-page heading, future change) overruns the
+// server's 400-char cap and 422s the scan (v8.14).
+const META_CHAR_CAP   = 200;
 const FETCH_TIMEOUT   = 15000;
-const SCAN_CONCURRENCY = 5;
+// 10 workers (v8.14). runScan warms Gemini's implicit prefix cache with one
+// scan before fanning out, so only that first scan is a cache miss per batch
+// (ADR 0051) — not the whole opening wave.
+const SCAN_CONCURRENCY = 10;
 // Verdict ladder (ADR 0017), best → worst; index drives sort order. Excluded
 // (a hard-criteria gate) sorts last, below Skip.
 const VERDICT_ORDER  = { 'Strong Apply': 0, Apply: 1, Consider: 2, Unlikely: 3, Skip: 4, Excluded: 5 };
