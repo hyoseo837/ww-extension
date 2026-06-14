@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-06-14" />
+    <title>ADR 0051 — Scan loop warms the cache before fanning out</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>ADR 0051 — Scan loop warms the cache before fanning out</h1>
+
+    <h2>Context</h2>
+    <p>
+      Scoring relies on Gemini's <em>implicit</em> context caching: every
+      <code>/scan</code> sends an identical prefix —
+      <code>systemInstruction</code> (<code>SYSTEM_TEXT</code>) plus
+      <code>&lt;candidate_profile&gt;{cv_text}&lt;/candidate_profile&gt;</code>
+      — and only the job text varies (<code>scoring/gemini.py</code>). The
+      backend bills the cheap cached rate on
+      <code>cachedContentTokenCount</code> (<code>billing/pricing.py</code>);
+      flash cached input is <code>$0.075</code> vs <code>$0.30</code>/1M.
+      Implicit caching is populated by the <em>first</em> request carrying a
+      given prefix; later requests with the same prefix hit it.
+    </p>
+    <p>
+      The extension scans with a worker pool of <code>SCAN_CONCURRENCY</code>
+      (v8.14 raises it 5 → 10 for throughput). A naive fan-out launches all
+      <em>N</em> workers at once — so the first <em>N</em> scans of every
+      batch race before any has written the cache, making them all cache
+      misses. Raising concurrency makes this worse (10 cold scans, not 5),
+      and a batch of ≤<em>N</em> jobs gets no cache benefit at all. The owner
+      raised exactly this concern when asking to bump concurrency.
+    </p>
+
+    <h2>Decision</h2>
+    <p>
+      <code>runScan</code> primes the cache before fanning out: run the
+      <strong>first scan alone</strong> to completion (populating the
+      implicit cache for this user's prefix), then start the
+      <code>SCAN_CONCURRENCY</code>-wide worker pool on the remaining ids.
+      One cold scan per batch instead of <code>SCAN_CONCURRENCY</code>; the
+      rest hit the warm cache. Mechanically the per-id handling (counters,
+      halt/abort, progress) is factored out so both the warm-up scan and the
+      pool share it.
+    </p>
+
+    <h2>Consequences</h2>
+    <ul>
+      <li>Every batch pays at most one full-price scan for the shared prefix
+        instead of up to ten; small batches regain the cache discount they
+        lost under a flat fan-out.</li>
+      <li>Slight upfront latency: the first scan's round-trip (~2–4s) runs at
+        concurrency 1 before the pool spins up. Negligible against the 10×
+        throughput on the bulk, and it is cheaper, not just faster.</li>
+      <li>Warm-up is best-effort. If the first scan is a non-halt failure
+        (fetch/Gemini error) the cache may not be primed and the batch still
+        fans out cold — acceptable and rare. A <em>halt</em> on the first
+        scan (no credits / not signed in / profile unset) short-circuits the
+        whole run before fan-out, unchanged from before.</li>
+      <li>This couples the client loop to an implementation detail of the
+        provider (implicit prefix caching). If scoring ever moves to an
+        explicit cached-content handle or a provider without prefix caching,
+        the warm-up becomes a no-op worth removing — hence this ADR, so a
+        future "simplify" doesn't delete it blind.</li>
+    </ul>
+  </body>
+</html>

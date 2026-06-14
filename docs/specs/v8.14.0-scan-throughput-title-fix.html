@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v8.14.0" />
+    <meta name="status" content="planned" />
+    <meta name="last-updated" content="2026-06-14" />
+    <title>v8.14 — Scan throughput &amp; title fix</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>v8.14 — Scan throughput &amp; title fix</h1>
+
+    <h2>Goal</h2>
+    <p>
+      Two findings from owner live use (2026-06-14): scans run too slowly,
+      and some postings fail the <code>/scan</code> call with
+      <code>HTTP 422 string_too_long</code> on <code>meta.title</code>
+      (cap 300). The 422 value was job-description prose
+      (<em>"We're modernizing the internal applications…"</em>), not a
+      title — the extension's off-page title fallback grabs the wrong
+      element. Fix both: raise concurrency and stop garbage landing in the
+      title field.
+    </p>
+    <ol>
+      <li id="concurrency">
+        <strong>Concurrency 5 → 10, with a cache warm-up</strong> —
+        <code>SCAN_CONCURRENCY</code> (<code>core.js</code>) goes from 5 to
+        10. But the backend leans on Gemini's <em>implicit</em> context
+        cache (<code>gemini.py</code> sends a fixed
+        <code>systemInstruction</code> + <code>&lt;candidate_profile&gt;</code>
+        prefix on every <code>/scan</code>; <code>pricing.py</code> bills the
+        cheap rate on <code>cachedContentTokenCount</code>). Implicit cache
+        is populated by the <em>first</em> request with that prefix, so a
+        flat 10-wide launch makes the first 10 scans all cache misses every
+        batch — and a batch of ≤10 gets no cache benefit at all. So
+        <code>runScan</code> primes the cache: run the <strong>first scan
+        alone</strong>, then fan out to the 10-worker pool for the rest.
+        One cold scan per batch instead of ten. See
+        <a href="../decisions/0051-scan-warmup-then-fan-out.html">ADR 0051</a>.
+      </li>
+      <li id="title">
+        <strong>Title-extraction fix (the 422 root cause)</strong> — the
+        scan loop sources <code>meta.title</code> from, in order: the
+        visible job-table row (<code>rowInfo.title</code>, authoritative),
+        else <code>extractedTitle</code> from the fetched overview HTML,
+        else <code>#postingId</code>. The row map only covers the
+        <em>currently visible</em> page, but a scan runs over <em>all</em>
+        posting ids across all pages (<code>onSelectAll</code>), so off-page
+        postings rely on the fallback — and the fallback,
+        <code>doc.querySelector('h1, h2, h3')</code>, grabs whatever the
+        first heading is, which on some postings is description prose, not
+        the title. Fix:
+        <ul>
+          <li><code>fetchPostingText</code> collapses whitespace on the
+            extracted heading and <strong>rejects it as a title if it is
+            implausibly long</strong> (a real job title is short; a
+            multi-sentence "heading" is prose) — returns <code>''</code> so
+            the meta builder falls through to <code>#postingId</code> rather
+            than sending a paragraph.</li>
+          <li>The meta builder <strong>hard-truncates</strong>
+            <code>title</code> and <code>org</code> to
+            <code>META_CHAR_CAP</code> (200) before sending — a guarantee no
+            source (row, heading, future change) can blow the server cap.</li>
+        </ul>
+      </li>
+      <li id="server-cap">
+        <strong>Server cap as defense-in-depth</strong> —
+        <code>_MAX_META_CHARS</code> (<code>scoring/routes.py</code>) goes
+        300 → 400 (comfortably above the client's 200 truncation). The
+        validation stays; this is the backstop, not the fix. Test updated to
+        assert against <code>_MAX_META_CHARS</code> rather than a literal.
+      </li>
+    </ol>
+
+    <h2>Files</h2>
+    <ul>
+      <li><code>server/app/scoring/routes.py</code> —
+        <code>_MAX_META_CHARS</code> 300 → 400.</li>
+      <li><code>server/tests/test_input_caps.py</code> — assert title cap via
+        <code>_MAX_META_CHARS</code> (import it), not the literal 301.</li>
+      <li><code>server/pyproject.toml</code> — version bump (ADR 0010).</li>
+      <li><code>docs/reference/api.html</code> — <code>/scan</code>
+        <code>meta.title</code>/<code>org</code> cap noted as 400.</li>
+      <li><code>ext/src/content/core.js</code> —
+        <code>SCAN_CONCURRENCY</code> 5 → 10; add
+        <code>META_CHAR_CAP = 200</code>.</li>
+      <li><code>ext/src/content/scan.js</code> — <code>runScan</code> warm-up
+        + fan-out; <code>fetchPostingText</code> length-guards the extracted
+        heading; meta builder truncates title/org.</li>
+      <li><code>ext/manifest.json</code> — version bumps.</li>
+    </ul>
+
+    <h2>Commits</h2>
+    <ol>
+      <li><code>v8.14.0</code> — this spec + ADR 0051.</li>
+      <li><code>v8.14.1</code> — server slice: <code>_MAX_META_CHARS</code> →
+        400, test, <code>pyproject</code>, <code>api.html</code>.</li>
+      <li><code>v8.14.2</code> — extension slice: concurrency + warm-up +
+        title-extraction fix + truncation; close-out (roadmap + spec
+        status).</li>
+    </ol>
+
+    <h2>Verify</h2>
+    <ul>
+      <li>pytest green, including the updated meta-cap test; CI green on
+        push.</li>
+      <li><code>node --check</code> passes on every file under
+        <code>ext/src/</code> (no build step to catch typos).</li>
+      <li><strong>Owner manual pass (live WW):</strong> load
+        <code>ext/</code> unpacked; scan a <em>multi-page</em> board (so
+        off-page postings exercise the title fallback) and confirm none fail
+        with 422 and the sidebar/history titles read as titles (or
+        <code>#id</code>), never description prose. Confirm a large batch
+        completes visibly faster, and a small batch (≤10) still scores.</li>
+    </ul>
+
+    <h2>Notes</h2>
+    <ul>
+      <li>The warm-up is best-effort: if the first scan is a non-halt
+        failure (fetch/Gemini error), the cache may not be primed, but the
+        batch still fans out. A halt on the first scan (no credits / not
+        signed in / profile unset) short-circuits before any fan-out, as
+        before.</li>
+      <li>The proper off-page title source would be a per-posting field from
+        the overview DOM, but that DOM's title element isn't documented and
+        varies by board; the length guard + <code>#id</code> fallback is the
+        minimal-code fix that kills the 422 and keeps titles sane without
+        depending on an unverified selector.</li>
+      <li>Concurrency 10 also raises parallel load on WaterlooWorks'
+        overview fetch and on the backend → Gemini. Both are per-user and
+        modest; no server-side change needed.</li>
+    </ul>
+  </body>
+</html>
