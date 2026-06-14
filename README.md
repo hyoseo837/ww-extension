@@ -18,9 +18,7 @@ Score every co-op posting against your profile in seconds. See which jobs are wo
 
 ---
 
-![Demo](screenshots/demoVideo.gif)
-
-[▶ Full walkthrough on YouTube](https://www.youtube.com/watch?v=YURcZTqKS5U)
+[▶ Full walkthrough on YouTube](https://www.youtube.com/watch?v=oh_4EEv-ILs)
 
 ![Sidebar in action on WaterlooWorks](screenshots/extension/sidebar_scored.png)
 

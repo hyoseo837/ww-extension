@@ -5,6 +5,9 @@ dist/
 docs/reference/ww-dom-full.html
 docs/reference/ww-dom-direct-full.html
 ww-extension-v*.zip
+# Demo lives on YouTube, not in-repo — the gif export is too large for GitHub
+# (>100 MB hard limit) and would bloat the public history (v8.14.4).
+screenshots/*.gif
 
 # server/ (FastAPI backend)
 server/__pycache__/
