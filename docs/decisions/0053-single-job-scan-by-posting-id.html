@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-06-16" />
+    <title>ADR 0053 — Single-job scan by posting ID: sidebar input now (reuses the batch path), detail-page button deferred pending a DOM capture</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>ADR 0053 — Single-job scan by posting ID: sidebar input now
+      (reuses the batch path), detail-page button deferred pending a DOM
+      capture</h1>
+
+    <h2>Context</h2>
+    <p>
+      A whiteboard feature: <em>scan a job one by one by entering a posting
+      ID</em>. The owner's intent (confirmed 2026-06-16) is
+      cost-conscious — score one specific posting without spending credits on
+      the whole table — and the requested surfaces are <strong>both</strong>
+      a posting-ID input in the extension sidebar <em>and</em> a "Scan this
+      job" button on an individual posting's detail view.
+    </p>
+    <p>
+      Two facts from the code shape the decision. (1) The extension's whole
+      content script — sidebar, the page-bridge, and the session-specific
+      WaterlooWorks action tokens (<code>selectAll</code>,
+      <code>getPostingOverview</code>) — only exists on the job-table page
+      (<code>jobs.htm</code>, gated on the table by <code>waitForTable</code>).
+      The posting fetch (<code>fetchOverview</code>) scrapes those tokens from
+      the page's inline scripts and POSTs to <code>location.pathname</code>;
+      it is table-page-bound. (2) Bulk scan already scores <em>off-page</em>
+      postings: <code>selectAll</code> returns every posting id across all
+      pages and <code>runScan</code> scores ids that have no visible table
+      row, with the title falling back to the fetched heading or
+      <code>#id</code> (v8.14). So scoring an <em>arbitrary</em> id is the
+      exact path bulk scan already exercises.
+    </p>
+    <p>
+      The detail view is different. WaterlooWorks' posting-detail DOM and URL
+      are not documented in <code>docs/reference/ww-dom*.html</code> and no
+      capture of that view is checked into the repo. The project rule is to
+      build WW integration against verified captures, never guesses
+      (ww-dom reference; the v8.8.4 column-order bug is the cautionary tale).
+    </p>
+
+    <h2>Decision</h2>
+    <ul>
+      <li><strong>Ship the sidebar posting-ID input first (v8.16.1).</strong>
+        A small input + button under "Scan All Jobs": type a numeric id →
+        confirm the 1-credit cost → <code>runScan([id])</code>. It reuses the
+        batch machinery verbatim — a single id is just a one-element batch,
+        and off-page fetch/score already works. This alone fully serves the
+        "scan one specific posting cheaply" goal.</li>
+      <li><strong>Already-scored id → reveal, don't re-charge.</strong> If
+        the entered id is already in <code>scores</code>, show its
+        score/verdict in the status line and scroll to its row (best-effort)
+        rather than spending credits again. Cost-consciousness is the whole
+        point of the feature, and a re-scan path already exists (delete the
+        card, or the future refresh idea).</li>
+      <li><strong>Defer the detail-page "Scan this job" button (v8.16.2)
+        until a posting-detail capture exists.</strong> It needs the content
+        script to run on the detail view and a verified way to read the open
+        posting's id and reach the fetch tokens. Without a saved snapshot
+        that is a guess, so it waits on the owner providing one — exactly how
+        <code>exampleWW.html</code> / <code>ww-dom-direct-full.html</code>
+        seeded the existing DOM reference.</li>
+      <li><strong>No backend or server change.</strong> The single scan hits
+        the same <code>POST /scan</code> with the same per-scan debit; the
+        batch-grouping <code>batchId</code> is still sent (a batch of one).</li>
+    </ul>
+
+    <h2>Consequences</h2>
+    <ul>
+      <li><strong>+</strong> The core value (scan one posting cheaply, even
+        one not in the current list / on the other board) ships immediately
+        with near-zero new surface area — it is the audited batch path with a
+        one-element list.</li>
+      <li><strong>+</strong> No new WW-DOM dependency for the shipped part, so
+        nothing new can break when WaterlooWorks changes its markup.</li>
+      <li><strong>−</strong> The detail-page button — the more discoverable
+        of the two surfaces — does not ship in this phase. Accepted: typing
+        an id covers the use case, and guessing the detail DOM would likely
+        be wrong and churn.</li>
+      <li>An invalid / nonexistent id flows through the existing failure path
+        (fetch error → counted as a failure, offered for retry); no special
+        handling beyond digit sanitisation.</li>
+    </ul>
+
+    <h2>Alternatives considered</h2>
+    <ul>
+      <li><strong>Build the detail-page button now against best-guess
+        DOM</strong> — rejected: violates the verified-capture rule and risks
+        the v8.8.4-class breakage; better to wait for a snapshot.</li>
+      <li><strong>A separate single-scan code path</strong> (own fetch, own
+        progress) — rejected: <code>runScan([id])</code> already does it,
+        including the warm-up, refund-on-failure, and badge injection. A
+        second path would duplicate audited logic.</li>
+      <li><strong>Re-scan an already-scored id by default</strong> — rejected
+        for this cost-conscious feature; reveal the existing score instead.
+        On-demand refresh stays a separate whiteboard idea.</li>
+    </ul>
+  </body>
+</html>

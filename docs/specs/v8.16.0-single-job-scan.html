@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v8.16.0" />
+    <meta name="status" content="in-progress" />
+    <meta name="last-updated" content="2026-06-16" />
+    <title>v8.16 — Single-job scan by posting ID</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>v8.16 — Single-job scan by posting ID</h1>
+
+    <h2>Goal</h2>
+    <p>
+      Let the user scan one specific posting by its id, instead of the whole
+      table — the cost-conscious "score just this one" case (owner call,
+      2026-06-16). Per
+      <a href="../decisions/0053-single-job-scan-by-posting-id.html">ADR
+      0053</a> the two requested surfaces are sequenced: the
+      <strong>sidebar posting-ID input ships now</strong> (it reuses the
+      batch path verbatim); the <strong>detail-page "Scan this job" button is
+      deferred</strong> until a posting-detail DOM capture exists, because
+      this project builds WW integration against verified captures, never
+      guesses.
+    </p>
+    <ol>
+      <li id="sidebar-input">
+        <strong>Sidebar "Scan one job" input (v8.16.1)</strong> — under the
+        "Scan All Jobs" button, a numeric input + "Scan" button. On submit
+        (click or Enter):
+        <ul>
+          <li>Sanitise to digits; empty → a progress-line error, no spend.</li>
+          <li>If the id is <strong>already scored</strong>, reveal it — show
+            "Already scored: N/20 (Verdict)" in the progress line and
+            <code>scrollToRow(id)</code> (best-effort; off-page ids have no
+            row) — <strong>no credit charge</strong>.</li>
+          <li>Otherwise confirm the 1-credit cost via the existing
+            <code>confirmScan(1, balance)</code>, then
+            <code>runScan([id])</code> — the audited batch loop with a
+            one-element list. Off-page / cross-board ids already work: bulk
+            scan scores off-page postings today, with the title falling back
+            to the fetched heading or <code>#id</code> (v8.14).</li>
+          <li>Reuse <code>withScanButton</code> (shared Stop/▮ state), so a
+            single scan is stoppable and styled like any scan. Guard against
+            launching while a scan is already running.</li>
+        </ul>
+        An invalid / nonexistent id rides the existing failure path (fetch
+        error → counted, offered for retry) — no special handling.
+      </li>
+      <li id="detail-button">
+        <strong>Detail-page "Scan this job" button (v8.16.2 — deferred)</strong>
+        — blocked on a saved snapshot of a WaterlooWorks posting-detail view
+        (DOM + URL), which the repo does not have. Tracked, not built this
+        phase. See ADR 0053 "Consequences".
+      </li>
+    </ol>
+
+    <h2>Files</h2>
+    <ul>
+      <li><code>ext/src/content/sidebar.js</code> — add the "Scan one job"
+        input + button markup in the first controls section; wire its click /
+        Enter to a new <code>scanOneJob()</code>; guard while scanning.</li>
+      <li><code>ext/src/content/scan.js</code> — <code>scanOneJob()</code>:
+        sanitise id, already-scored reveal, confirm, <code>runScan([id])</code>.</li>
+      <li><code>ext/src/sidebar.css</code> — style the input + Scan button to
+        match <code>#ww-ext-min-score</code> / <code>#ww-ext-save-all</code>.</li>
+      <li><code>ext/manifest.json</code> — version bumps.</li>
+    </ul>
+
+    <h2>Commits</h2>
+    <ol>
+      <li><code>v8.16.0</code> — this spec + ADR 0053 + roadmap open.</li>
+      <li><code>v8.16.1</code> — ext slice: sidebar single-job scan; close-out
+        for the shipped surface.</li>
+      <li><code>v8.16.2</code> — (deferred) detail-page button, once a
+        posting-detail capture is provided.</li>
+    </ol>
+
+    <h2>Verify</h2>
+    <ul>
+      <li><code>node --check</code> passes on every touched
+        <code>ext/src/</code> file (no build step).</li>
+      <li><strong>Owner manual pass (live WW):</strong> load <code>ext/</code>
+        unpacked on a jobs board. Enter an <em>unscored</em> posting id (one
+        on the current page, then one from another page / the other board) →
+        confirm dialog shows 1-scan cost → it scores and the card appears in
+        the list with the right title (or <code>#id</code> when off-page).
+        Enter an <em>already-scored</em> id → it reveals the existing score
+        with no confirm and no credit change (balance unchanged). Enter junk
+        / empty → a friendly error, no spend. Stop works mid-scan.</li>
+    </ul>
+
+    <h2>Notes</h2>
+    <ul>
+      <li>To unblock v8.16.2, save a posting-detail page (DevTools → save full
+        HTML) the way <code>exampleWW.html</code> seeded the table reference,
+        and add it (or the relevant excerpt) to
+        <code>docs/reference/</code>. Needed: the detail URL pattern, how the
+        open posting's id appears in the DOM, and whether the fetch tokens are
+        reachable there.</li>
+    </ul>
+  </body>
+</html>
