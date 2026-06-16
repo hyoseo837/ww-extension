@@ -13,6 +13,7 @@ from decimal import Decimal
 
 import pytest
 
+from app.admin import db as admin_db
 from app.billing import db as billing_db
 
 pytestmark = pytest.mark.skipif(
@@ -147,6 +148,33 @@ async def test_concurrent_debits_cannot_overdraw(pool, user_id):
 
     assert r2 < 0  # second check saw the first debit and rejected
     assert await billing_db.get_balance(user_id) == Decimal(80)
+
+
+async def test_deleting_granting_admin_nulls_created_by(pool, user_id):
+    """Migration 0015: deleting an admin who granted credits must not be
+    blocked by the created_by FK (23503 broke account deletion before 0015).
+    The recipient's grant row survives with created_by nulled to the gone
+    actor."""
+    async with pool.acquire() as conn:
+        admin_id = str(await conn.fetchval(
+            "insert into auth.users (email) values ($1) returning id",
+            f"admin-{uuid.uuid4().hex}@example.test",
+        ))
+    await admin_db.grant_credits(
+        user_id=user_id, credits=Decimal(50), admin_id=admin_id, reason="promo"
+    )
+
+    async with pool.acquire() as conn:
+        # The delete the account-erasure path performs; pre-0015 this raised 23503.
+        await conn.execute("delete from auth.users where id = $1::uuid", admin_id)
+        grant = await conn.fetchrow(
+            "select created_by from credit_ledger_entry "
+            "where user_id = $1::uuid and kind = 'admin_grant'",
+            user_id,
+        )
+    assert grant is not None                 # recipient's grant row survives
+    assert grant["created_by"] is None       # actor pointer nulled
+    assert await billing_db.get_balance(user_id) == Decimal(250)  # 200 bonus + 50 grant
 
 
 # ── Stranded-scan reconciliation (ADR 0047) ──────────────────────────────────
