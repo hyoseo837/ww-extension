@@ -224,6 +224,11 @@ function injectSidebar() {
         </div>
       </div>
     </div>
+    <div id="ww-ext-data-row">
+      <button id="ww-ext-export" class="ww-ext-data-btn" title="Download all scores as a JSON file">${SVG_DOWNLOAD}Export</button>
+      <button id="ww-ext-import" class="ww-ext-data-btn" title="Load scores from a JSON file">${SVG_UPLOAD}Import</button>
+      <input id="ww-ext-import-file" type="file" accept=".json,application/json" hidden>
+    </div>
     <ul id="ww-ext-results"></ul>
   `;
   document.body.appendChild(sidebar);
@@ -343,6 +348,17 @@ function injectSidebar() {
       goLabel: 'Clear all'
     });
     if (ok) clearScores();
+  });
+
+  // Scan backup (v8.17, ADR 0054): export downloads a JSON; import opens the
+  // hidden file picker, which hands the chosen file to importScores.
+  document.getElementById('ww-ext-export').addEventListener('click', exportScores);
+  const importFile = document.getElementById('ww-ext-import-file');
+  document.getElementById('ww-ext-import').addEventListener('click', () => importFile.click());
+  importFile.addEventListener('change', () => {
+    const file = importFile.files?.[0];
+    importFile.value = '';        // let the same file be re-picked later
+    importScores(file);
   });
 
   document.getElementById('ww-ext-results').addEventListener('click', e => {

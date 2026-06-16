@@ -416,6 +416,29 @@
 }
 #ww-ext-clear:hover { color: var(--s-on-dim); }
 
+/* Scan backup row (v8.17): low-profile export/import, just above the list. */
+#ww-ext-data-row {
+  display: flex;
+  gap: 6px;
+  padding: 8px 20px;
+  border-top: 1px solid var(--s-border);
+}
+.ww-ext-data-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  color: var(--s-on-dim);
+  border: none;
+  padding: 5px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font: 600 12px 'WW Sans', system-ui, sans-serif;
+  transition: color 0.15s, background 0.15s;
+}
+.ww-ext-data-btn:hover { color: var(--s-primary); background: var(--s-hover); }
+.ww-ext-data-btn svg { opacity: 0.85; }
+
 /* Status line lives right under the Scan/Stop button, right-aligned. */
 #ww-ext-progress {
   font: 12px 'WW Sans', system-ui, sans-serif;

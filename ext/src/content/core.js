@@ -31,6 +31,9 @@ const SVG_X = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" strok
 const SVG_GEAR = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
 // "Open in new tab" / external-link — the sidebar shortcut to the web app (v8.17).
 const SVG_EXTERNAL = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/></svg>';
+// Export (download) / import (upload) icons for the scan-backup row (v8.17).
+const SVG_DOWNLOAD = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>';
+const SVG_UPLOAD   = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>';
 
 // Which WW job board this page is (v8.7.1). Entries are tagged at scan time;
 // the sidebar list and bulk save only show the current board's jobs. Entries
@@ -117,10 +120,7 @@ async function loadScores() {
     // Drop entries that don't match the current shape — guards against
     // corrupted storage or future schema migrations.
     for (const [id, entry] of Object.entries(data.ww_scores)) {
-      if (entry && typeof entry === 'object'
-          && (Number.isInteger(entry.score) || (entry.score === null && entry.verdict === 'Excluded'))
-          && VERDICT_ORDER[entry.verdict] !== undefined
-          && typeof entry.reason === 'string') {
+      if (isValidScoreEntry(entry)) {
         if (!Array.isArray(entry.breakdown)) entry.breakdown = [];
         scores.set(id, entry);
       }
@@ -129,6 +129,88 @@ async function loadScores() {
     injectRowScores();
   }
   renderSidebarList();
+}
+
+// An entry matches the current scoring shape (ADR 0016) — the single guard for
+// both the storage load and the file import (v8.17).
+function isValidScoreEntry(entry) {
+  return entry && typeof entry === 'object'
+    && (Number.isInteger(entry.score) || (entry.score === null && entry.verdict === 'Excluded'))
+    && VERDICT_ORDER[entry.verdict] !== undefined
+    && typeof entry.reason === 'string';
+}
+
+// ── Backup: export / import scores (v8.17, ADR 0054) ────────────────────────────
+
+// Download every score (both boards) as a JSON file. No `downloads` permission —
+// a Blob URL + <a download> click in the page.
+function exportScores() {
+  if (!scores.size) { setProgress('No scores to export.', true); return; }
+  const payload = {
+    app: 'ww-extension',
+    schema: SCORING_SCHEMA_VERSION,
+    exportedAt: new Date().toISOString(),
+    scores: Object.fromEntries(scores),
+    postingIds: allPostingIds
+  };
+  const url = URL.createObjectURL(
+    new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+  );
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `ww-scores-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  setProgress(`Exported ${scores.size} ${scores.size === 1 ? 'score' : 'scores'}.`);
+}
+
+// Import scores from a user-picked JSON file. Rejects a malformed / non-ww /
+// wrong-schema file; otherwise warns that a merge overwrites current scores on
+// a shared posting id, then merges — imported entries win on collision.
+async function importScores(file) {
+  if (!file) return;
+  let data;
+  try {
+    data = JSON.parse(await file.text());
+  } catch {
+    setProgress('Import failed: not a valid JSON file.', true);
+    return;
+  }
+  if (data?.app !== 'ww-extension' || !data.scores || typeof data.scores !== 'object') {
+    setProgress('Import failed: not a WW Scorer export.', true);
+    return;
+  }
+  if (data.schema !== SCORING_SCHEMA_VERSION) {
+    setProgress('Import failed: this file is from an older score version.', true);
+    return;
+  }
+  const valid = Object.entries(data.scores).filter(([, e]) => isValidScoreEntry(e));
+  if (!valid.length) { setProgress('Import failed: no usable scores in the file.', true); return; }
+
+  const overlap = valid.filter(([id]) => scores.has(id)).length;
+  const ok = await confirmDialog({
+    title: `Import ${valid.length} ${valid.length === 1 ? 'score' : 'scores'}?`,
+    msg: 'They merge into your current list.',
+    warn: overlap
+      ? `⚠ ${overlap} already-scored posting${overlap === 1 ? '' : 's'} will be overwritten — you can lose current scores.`
+      : '',
+    goLabel: 'Import'
+  });
+  if (!ok) { setProgress('Import cancelled.'); return; }
+
+  for (const [id, entry] of valid) {
+    if (!Array.isArray(entry.breakdown)) entry.breakdown = [];
+    scores.set(id, entry);
+  }
+  if (Array.isArray(data.postingIds)) {
+    allPostingIds = [...new Set([...allPostingIds, ...data.postingIds.map(String)])];
+  }
+  saveScores();
+  injectRowScores();
+  renderSidebarList();
+  setProgress(`Imported ${valid.length} ${valid.length === 1 ? 'score' : 'scores'}.`);
 }
 
 // Throttle expensive UI work during the scan loop (sidebar re-render + storage write).
