@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-06-16" />
+    <title>ADR 0055 — Sign in from the sidebar credits field, via one OAuth flow centralized in the background worker</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>ADR 0055 — Sign in from the sidebar credits field, via one OAuth
+      flow centralized in the background worker</h1>
+
+    <h2>Context</h2>
+    <p>
+      A whiteboard feature: <em>in the credit field, add login with
+      UWaterloo if not logged in</em> (owner, 2026-06-16). Today the sidebar
+      header's credits chip (<code>#ww-ext-credits</code>) is simply
+      <strong>hidden</strong> when signed out, and the only way to sign in is
+      the options page — the empty-list guide points the user there ("Sign in
+      … in Settings"). A signed-out user looking at the sidebar has no direct
+      way to authenticate.
+    </p>
+    <p>
+      The sign-in itself is an Azure (Microsoft / UWaterloo, ADR 0036) OAuth
+      flow through Supabase, run with
+      <code>chrome.identity.launchWebAuthFlow</code>. That API is
+      <strong>not available in content scripts</strong> — only in extension
+      pages and the background service worker. So the flow currently lives
+      inline in <code>options.js</code>; the sidebar (a content script) cannot
+      call it directly.
+    </p>
+
+    <h2>Decision</h2>
+    <ul>
+      <li><strong>Centralize the OAuth flow in the background worker</strong>
+        as a <code>{ type: 'signIn' }</code> message handler. It runs
+        <code>launchWebAuthFlow</code>, parses the access/refresh tokens and
+        the JWT email/sub, writes <code>auth</code> to
+        <code>chrome.storage.local</code>, and returns
+        <code>{ ok, email } | { ok:false, error }</code>. Background.js already
+        names "any future caller" as a design goal and reuses its existing
+        <code>decodeJwtPayload</code>.</li>
+      <li><strong>Both surfaces call the one handler.</strong>
+        <code>options.js</code> is refactored to send the message instead of
+        running its own copy of the flow — removing the duplicated OAuth code
+        (and its now-unused <code>SUPABASE_URL</code> /
+        <code>decodeJwtPayload</code>). The sidebar sends the same message.</li>
+      <li><strong>Sidebar credits field shows a "Sign in" button when signed
+        out.</strong> <code>renderCreditsChip</code> stops hiding the node;
+        signed out it renders a compact "Sign in" chip-button that sends
+        <code>signIn</code>. On success the background writes
+        <code>auth</code>, and the existing
+        <code>storage.onChanged</code> reactions take over: background
+        refreshes the balance, the content script re-renders the chip (now the
+        ⚡ balance) and the guide's step-1 checkmark. No new state plumbing.</li>
+      <li><strong>Storage stays the single source of truth.</strong> No new
+        auth state, no token handling in the content script — it only triggers
+        the flow and reacts to the resulting <code>auth</code> write, exactly
+        as the options page does.</li>
+    </ul>
+
+    <h2>Consequences</h2>
+    <ul>
+      <li><strong>+</strong> A signed-out user can authenticate in one click
+        from where they already are (the sidebar), not only via Settings.</li>
+      <li><strong>+</strong> One OAuth implementation instead of two; the
+        options page and sidebar can't drift, and a future caller (popup,
+        welcome page) reuses it.</li>
+      <li><strong>+</strong> No manifest change — <code>identity</code> is
+        already granted and <code>launchWebAuthFlow</code> runs in the SW.</li>
+      <li><strong>−</strong> The sign-in popup is launched from the background
+        after a content-script message rather than directly in the click
+        handler. <code>launchWebAuthFlow(interactive:true)</code> does not
+        require a propagated user gesture, so this is fine; the options-page
+        path keeps the same behaviour through the shared handler.</li>
+      <li>The empty-list guide's "in Settings" wording stays valid (Settings
+        still signs in) — left unchanged to keep the diff tight.</li>
+    </ul>
+
+    <h2>Alternatives considered</h2>
+    <ul>
+      <li><strong>Sidebar button just opens the options page</strong> (like
+        the guide link) — rejected: that is a redirect, not "add login"; the
+        feature asks for sign-in from the credits field itself.</li>
+      <li><strong>Duplicate the OAuth flow into a content-script-reachable
+        place</strong> — impossible (no <code>chrome.identity</code> in
+        content scripts) and, even via a second copy, would duplicate the flow
+        the project's minimal-code rule discourages.</li>
+      <li><strong>Leave sign-in to Settings only</strong> — rejected: that is
+        the status quo the feature is removing.</li>
+    </ul>
+  </body>
+</html>

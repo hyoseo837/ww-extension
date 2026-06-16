@@ -278,6 +278,15 @@
           app (<code>/account</code>), and export/import of the scored set as a
           plain JSON file — all boards, merge-with-warning on import,
           schema-gated — to move between devices or back up.</li>
+        <li data-status="in-progress"><strong>v8.18 — sign in from the sidebar
+          credits field</strong> (<a
+          href="specs/v8.18.0-sidebar-signin.html">spec</a>, <a
+          href="decisions/0055-sidebar-signin-centralized-background-oauth.html">ADR
+          0055</a>; whiteboard, owner call 2026-06-16): a signed-out user can
+          sign in with UWaterloo straight from the credits chip, not only via
+          Settings. The Azure/Supabase OAuth flow is centralized in the
+          background worker (one <code>signIn</code> message shared by the
+          options page and the sidebar).</li>
       </ol>
       <p>
         A <strong>portfolio strand</strong> runs in parallel, owner-gated

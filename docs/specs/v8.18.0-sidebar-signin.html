@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v8.18.0" />
+    <meta name="status" content="in-progress" />
+    <meta name="last-updated" content="2026-06-16" />
+    <title>v8.18 — Sign in from the sidebar credits field</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>v8.18 — Sign in from the sidebar credits field</h1>
+
+    <h2>Goal</h2>
+    <p>
+      Let a signed-out user sign in with UWaterloo straight from the sidebar
+      credits field, instead of only via the options page (whiteboard, owner
+      call 2026-06-16). Per
+      <a href="../decisions/0055-sidebar-signin-centralized-background-oauth.html">ADR
+      0055</a>, the Azure/Supabase OAuth flow
+      (<code>chrome.identity.launchWebAuthFlow</code>, unavailable in content
+      scripts) is centralized in the background worker as one
+      <code>signIn</code> message handler that both the options page and the
+      sidebar call. Extension-only; no server/web change.
+    </p>
+    <ol>
+      <li id="centralize">
+        <strong>Centralize the OAuth flow (v8.18.1)</strong> — add
+        <code>signIn()</code> + a <code>{ type: 'signIn' }</code> handler to
+        <code>background.js</code>: run <code>launchWebAuthFlow</code>, parse
+        tokens + JWT claims, write <code>auth</code> to storage, return
+        <code>{ ok, email } | { ok:false, error }</code>. Refactor
+        <code>options.js</code>'s sign-in button to send the message and drop
+        its inline copy of the flow (and the now-unused
+        <code>SUPABASE_URL</code> / <code>decodeJwtPayload</code> /
+        post-sign-in <code>refreshBalance</code> ping — the background's
+        <code>storage.onChanged</code> already refreshes the balance on an
+        <code>auth</code> write).</li>
+      <li id="sidebar-button">
+        <strong>Sidebar credits-field sign-in (v8.18.2)</strong> —
+        <code>renderCreditsChip</code> stops hiding the node when signed out;
+        it renders a compact "Sign in" chip-button that sends
+        <code>signIn</code> (disabled → "Signing in…" while the popup is up).
+        On success the background writes <code>auth</code>; the existing
+        <code>core.js</code> <code>storage.onChanged</code> reaction
+        re-renders the chip as the ⚡ balance and ticks the guide's step-1
+        check. On failure, surface the error on the progress line and restore
+        the button.</li>
+    </ol>
+
+    <h2>Files</h2>
+    <ul>
+      <li><code>ext/src/background.js</code> — <code>signIn()</code> +
+        <code>signIn</code> message handler (reuses
+        <code>decodeJwtPayload</code>, <code>SUPABASE_URL</code>).</li>
+      <li><code>ext/src/options.js</code> — sign-in button → send
+        <code>signIn</code>; remove the inline OAuth flow and its now-dead
+        helpers/constants.</li>
+      <li><code>ext/src/content/sidebar.js</code> —
+        <code>renderCreditsChip</code> signed-out branch renders the "Sign in"
+        button; a <code>startSignIn()</code> helper sends the message and
+        handles the error path.</li>
+      <li><code>ext/src/sidebar.css</code> — style the signed-out
+        <code>#ww-ext-credits</code> sign-in button.</li>
+      <li><code>ext/manifest.json</code> — version bumps.</li>
+    </ul>
+
+    <h2>Commits</h2>
+    <ol>
+      <li><code>v8.18.0</code> — this spec + ADR 0055 + roadmap open.</li>
+      <li><code>v8.18.1</code> — background <code>signIn</code> + options.js
+        refactor.</li>
+      <li><code>v8.18.2</code> — sidebar credits-field sign-in; close-out.</li>
+    </ol>
+
+    <h2>Verify</h2>
+    <ul>
+      <li><code>node --check</code> passes on every touched
+        <code>ext/src/</code> file.</li>
+      <li><strong>Owner manual pass (live WW):</strong> signed out, the
+        sidebar header shows a "Sign in" button instead of the credits chip;
+        clicking it opens the UWaterloo popup; after signing in, the button
+        becomes the ⚡ balance and the guide's step 1 shows ✓ — with no
+        reload. Cancelling the popup restores the button and shows a message.
+        The options-page sign-in still works (same shared handler).</li>
+    </ul>
+
+    <h2>Notes</h2>
+    <ul>
+      <li>No manifest permission change — <code>identity</code> is already
+        granted and <code>launchWebAuthFlow</code> runs in the service
+        worker.</li>
+      <li>The empty-list guide's "Sign in … in Settings" wording is left as
+        is (Settings still signs in); this phase adds the credits-field path,
+        it doesn't replace the guide.</li>
+    </ul>
+  </body>
+</html>
