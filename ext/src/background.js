@@ -53,6 +53,10 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     refreshBalance().then(sendResponse);
     return true;
   }
+  if (msg.type === "signIn") {
+    signIn().then(sendResponse);
+    return true;
+  }
 });
 
 // Auto-refresh balance on sign-in (auth set in storage) and clear it on
@@ -73,6 +77,39 @@ chrome.storage.onChanged.addListener((changes, area) => {
 chrome.storage.local.get("auth", (data) => {
   if (data.auth?.access_token) refreshBalance();
 });
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+
+// UWaterloo (Azure/Microsoft, ADR 0036) OAuth through Supabase. Runs here, not
+// in callers, because chrome.identity is unavailable in content scripts — the
+// options page and the sidebar both trigger it via { type: 'signIn' } (ADR
+// 0055). Writes `auth` to storage; the storage.onChanged listener above then
+// refreshes the balance, so callers only react to the resulting auth state.
+async function signIn() {
+  const redirectUrl = chrome.identity.getRedirectURL();
+  const authUrl = `${SUPABASE_URL}/auth/v1/authorize?provider=azure&scopes=email&redirect_to=${encodeURIComponent(redirectUrl)}`;
+  try {
+    const responseUrl = await chrome.identity.launchWebAuthFlow({ url: authUrl, interactive: true });
+    if (!responseUrl) return { ok: false, error: "Sign-in cancelled." };
+    const params = new URLSearchParams(new URL(responseUrl).hash.substring(1));
+    const errorDesc = params.get("error_description") || params.get("error");
+    if (errorDesc) return { ok: false, error: `Sign-in failed: ${errorDesc}` };
+    const accessToken = params.get("access_token");
+    if (!accessToken) return { ok: false, error: "Sign-in failed: no access token returned." };
+    const claims = decodeJwtPayload(accessToken) || {};
+    await chrome.storage.local.set({
+      auth: {
+        access_token: accessToken,
+        refresh_token: params.get("refresh_token"),
+        email: claims.email,
+        user_id: claims.sub,
+      },
+    });
+    return { ok: true, email: claims.email };
+  } catch (e) {
+    return { ok: false, error: `Sign-in failed: ${e.message || e}` };
+  }
+}
 
 // ── Scoring ───────────────────────────────────────────────────────────────────
 

@@ -13,17 +13,6 @@ document.querySelectorAll('.open-web').forEach(btn => {
 
 // ── Account / Auth ────────────────────────────────────────────────────────────
 
-const SUPABASE_URL = 'https://bumrzedwwfhbxlttwboh.supabase.co';
-
-function decodeJwtPayload(token) {
-  try {
-    const [, payload] = token.split('.');
-    return JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
-  } catch {
-    return null;
-  }
-}
-
 function setAuthStatus(msg, type) {
   const s = el('authStatus');
   s.textContent = msg;
@@ -49,47 +38,19 @@ function renderBalance(balance) {
   node.textContent = typeof balance === 'number' ? balance.toFixed(2) : '—';
 }
 
+// Sign-in runs in the background worker (ADR 0055) — one shared flow for the
+// options page and the sidebar. On success the background writes `auth` and the
+// storage.onChanged listeners (here + background) refresh the UI and balance.
 el('signIn').addEventListener('click', async () => {
-  const redirectUrl = chrome.identity.getRedirectURL();
-  const authUrl = `${SUPABASE_URL}/auth/v1/authorize?provider=azure&scopes=email&redirect_to=${encodeURIComponent(redirectUrl)}`;
-
   el('signIn').disabled = true;
   setAuthStatus('Opening UWaterloo sign-in…');
-
-  try {
-    const responseUrl = await chrome.identity.launchWebAuthFlow({ url: authUrl, interactive: true });
-    if (!responseUrl) {
-      setAuthStatus('Sign-in cancelled.', 'err');
-      return;
-    }
-    const hash = new URL(responseUrl).hash.substring(1);
-    const params = new URLSearchParams(hash);
-    const errorDesc = params.get('error_description') || params.get('error');
-    if (errorDesc) {
-      setAuthStatus(`Sign-in failed: ${errorDesc}`, 'err');
-      return;
-    }
-    const accessToken = params.get('access_token');
-    const refreshToken = params.get('refresh_token');
-    if (!accessToken) {
-      setAuthStatus('Sign-in failed: no access token returned.', 'err');
-      return;
-    }
-    const claims = decodeJwtPayload(accessToken) || {};
-    const auth = {
-      access_token: accessToken,
-      refresh_token: refreshToken,
-      email: claims.email,
-      user_id: claims.sub,
-    };
-    await chrome.storage.local.set({ auth });
+  const res = await chrome.runtime.sendMessage({ type: 'signIn' });
+  if (res?.ok) {
     setAuthStatus('Signed in.', 'ok');
-    chrome.runtime.sendMessage({ type: 'refreshBalance' });
-  } catch (e) {
-    setAuthStatus(`Sign-in failed: ${e.message || e}`, 'err');
-  } finally {
-    el('signIn').disabled = false;
+  } else {
+    setAuthStatus(res?.error || 'Sign-in failed.', 'err');
   }
+  el('signIn').disabled = false;
 });
 
 el('signOut').addEventListener('click', async () => {
