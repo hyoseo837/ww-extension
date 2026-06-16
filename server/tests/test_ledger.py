@@ -21,7 +21,7 @@ pytestmark = pytest.mark.skipif(
 
 
 async def test_signup_bonus_granted_once(pool, user_id):
-    assert await billing_db.get_balance(user_id) == Decimal(100)
+    assert await billing_db.get_balance(user_id) == Decimal(200)
 
 
 async def test_insert_scan_pending_is_idempotent(pool, user_id):
@@ -45,9 +45,9 @@ async def test_balance_after_estimate(pool, user_id):
     async with pool.acquire() as conn:
         assert await billing_db.balance_after_estimate(
             conn, user_id, Decimal(30)
-        ) == Decimal(70)
+        ) == Decimal(170)
         assert await billing_db.balance_after_estimate(
-            conn, user_id, Decimal(150)
+            conn, user_id, Decimal(250)
         ) == Decimal(-50)
 
 
@@ -55,7 +55,7 @@ async def test_grant_purchase_replay_is_noop(pool, user_id):
     event_id = f"evt_{uuid.uuid4().hex}"
     await billing_db.grant_purchase(user_id, Decimal(300), event_id)
     await billing_db.grant_purchase(user_id, Decimal(300), event_id)
-    assert await billing_db.get_balance(user_id) == Decimal(400)  # 100 bonus + 300 once
+    assert await billing_db.get_balance(user_id) == Decimal(500)  # 200 bonus + 300 once
 
 
 async def _make_scan(conn, user_id, *, title="Dev", org="Acme") -> uuid.UUID:
@@ -110,7 +110,7 @@ async def test_concurrent_debits_cannot_overdraw(pool, user_id):
     the balance check, the second transaction blocks until the first commits,
     sees its debit, and gets rejected — the balance never goes negative.
     (Pre-v8.9 this test asserted the overdraw it now rules out.)"""
-    estimate = Decimal(60)  # two of these exceed the 100-credit bonus
+    estimate = Decimal(120)  # two of these exceed the 200-credit bonus
     async with pool.acquire() as c1, pool.acquire() as c2:
         tx1 = c1.transaction()
         await tx1.start()
@@ -146,7 +146,7 @@ async def test_concurrent_debits_cannot_overdraw(pool, user_id):
         r2 = await asyncio.wait_for(task, timeout=5)
 
     assert r2 < 0  # second check saw the first debit and rejected
-    assert await billing_db.get_balance(user_id) == Decimal(40)
+    assert await billing_db.get_balance(user_id) == Decimal(80)
 
 
 # ── Stranded-scan reconciliation (ADR 0047) ──────────────────────────────────
@@ -177,11 +177,11 @@ async def _strand_scan(
 async def test_reconcile_refunds_stranded_scan(pool, user_id):
     async with pool.acquire() as conn:
         scan_id = await _strand_scan(conn, user_id)
-    assert await billing_db.get_balance(user_id) == Decimal("85.84")
+    assert await billing_db.get_balance(user_id) == Decimal("185.84")
 
     assert await billing_db.reconcile_stranded_scans() == 1
 
-    assert await billing_db.get_balance(user_id) == Decimal(100)
+    assert await billing_db.get_balance(user_id) == Decimal(200)
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
             "select status, error from scan where id = $1", scan_id
@@ -195,7 +195,7 @@ async def test_reconcile_rerun_is_noop(pool, user_id):
         await _strand_scan(conn, user_id)
     assert await billing_db.reconcile_stranded_scans() == 1
     assert await billing_db.reconcile_stranded_scans() == 0
-    assert await billing_db.get_balance(user_id) == Decimal(100)  # no double refund
+    assert await billing_db.get_balance(user_id) == Decimal(200)  # no double refund
 
 
 async def test_reconcile_skips_in_flight_scan(pool, user_id):
@@ -204,7 +204,7 @@ async def test_reconcile_skips_in_flight_scan(pool, user_id):
 
     assert await billing_db.reconcile_stranded_scans() == 0
 
-    assert await billing_db.get_balance(user_id) == Decimal("85.84")
+    assert await billing_db.get_balance(user_id) == Decimal("185.84")
     async with pool.acquire() as conn:
         status = await conn.fetchval(
             "select status from scan where id = $1", scan_id

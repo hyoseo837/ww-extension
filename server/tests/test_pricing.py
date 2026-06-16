@@ -89,8 +89,10 @@ def test_extract_cost_page_clamp():
 
 
 def test_credit_packages_sane():
-    # Base rate 1 credit = 1 cent; bigger packs add bonus credits, never fewer.
-    assert CREDIT_PACKAGES["credits_300"]["credits"] == 300
-    assert CREDIT_PACKAGES["credits_300"]["cad_cents"] == 300
+    # Base rate 1 credit = 1 cent; bigger packs add bonus credits, never fewer
+    # (ADR 0034). Ladder is $5/$10/$20 since v8.15 (ADR 0052).
+    assert set(CREDIT_PACKAGES) == {"credits_525", "credits_1100", "credits_2500"}
+    assert CREDIT_PACKAGES["credits_2500"]["cad_cents"] == 2000
+    assert CREDIT_PACKAGES["credits_2500"]["credits"] == 2500
     for pkg in CREDIT_PACKAGES.values():
         assert pkg["credits"] >= pkg["cad_cents"]

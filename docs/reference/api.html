@@ -470,13 +470,14 @@
           by the webhook. The granted amount is derived server-side
           from <code>package_id</code>; the client never sends a credit
           or dollar amount. Base rate <code>1 credit = $0.01 CAD</code>;
-          bigger packs include bonus credits (ADR 0034):
-          <code>credits_300</code> (300 / $3),
+          bigger packs include bonus credits (ADR 0034; ladder revised by
+          ADR 0052):
           <code>credits_525</code> (525 / $5),
-          <code>credits_1100</code> (1,100 / $10).</p>
+          <code>credits_1100</code> (1,100 / $10),
+          <code>credits_2500</code> (2,500 / $20).</p>
         <p><strong>Request:</strong></p>
         <pre><code>{
-  "package_id": "credits_300" | "credits_525" | "credits_1100"
+  "package_id": "credits_525" | "credits_1100" | "credits_2500"
 }</code></pre>
         <p><strong>Response:</strong> <code>200 OK</code></p>
         <pre><code>{

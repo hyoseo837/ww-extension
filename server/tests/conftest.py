@@ -87,7 +87,7 @@ async def pool(_schema):
 @pytest.fixture
 async def user_id(pool) -> str:
     """A fresh auth user per test. The insert fires the signup-bonus
-    trigger, so every new user starts with 100 credits."""
+    trigger, so every new user starts with 200 credits (ADR 0052)."""
     async with pool.acquire() as conn:
         uid = await conn.fetchval(
             "insert into auth.users (email) values ($1) returning id",

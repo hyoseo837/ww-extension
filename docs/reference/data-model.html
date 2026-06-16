@@ -194,8 +194,9 @@
       <strong>Signup bonus trigger.</strong>
       <code>public.grant_signup_bonus()</code> fires AFTER INSERT on
       <code>auth.users</code> and inserts one
-      <code>signup_bonus</code> row of <code>delta = 100</code>
-      (= $1 CAD). Hardcoded; bump via a follow-up migration.
+      <code>signup_bonus</code> row of <code>delta = 200</code>
+      (= $2 CAD; doubled from 100 by ADR 0052, migration 0014).
+      Hardcoded; bump via a follow-up migration.
     </p>
 
     <p>

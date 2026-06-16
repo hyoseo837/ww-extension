@@ -18,9 +18,9 @@ stripe.api_key = settings.stripe_secret_key
 # entry tier (ADR 0034). Stripe is charged cad_cents; the ledger is
 # granted credits.
 CREDIT_PACKAGES: dict[str, dict[str, int]] = {
-    "credits_300":  {"cad_cents": 300,  "credits": 300},
     "credits_525":  {"cad_cents": 500,  "credits": 525},
     "credits_1100": {"cad_cents": 1000, "credits": 1100},
+    "credits_2500": {"cad_cents": 2000, "credits": 2500},
 }
 
 
