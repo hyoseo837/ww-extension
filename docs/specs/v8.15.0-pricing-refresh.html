@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v8.15.0" />
+    <meta name="status" content="planned" />
+    <meta name="last-updated" content="2026-06-16" />
+    <title>v8.15 — Pricing refresh</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>v8.15 — Pricing refresh</h1>
+
+    <h2>Goal</h2>
+    <p>
+      Refresh the credit packages and the signup bonus per
+      <a href="../decisions/0052-pricing-refresh-floor-top-tier-bonus.html">ADR
+      0052</a> (owner confirmed 2026-06-16). The price ladder becomes a
+      rounder <strong>$5 / $10 / $20</strong> — the $3 entry tier is dropped
+      and a $20 top tier is added — and the signup bonus doubles to 200
+      credits so it again buys ~100 scans at today's ~2 credits/scan rate
+      (<a href="../decisions/0048-two-credits-per-scan-copy-fix.html">ADR
+      0048</a>). Amounts only; the bonus-pack model
+      (<a href="../decisions/0034-bonus-packages-and-remargin.html">ADR
+      0034</a>) is unchanged.
+    </p>
+    <ol>
+      <li id="packages">
+        <strong>Package table: drop $3, add $20</strong> — the server
+        (<code>billing/payments.py</code> <code>CREDIT_PACKAGES</code>) and
+        web (<code>web/src/packages.ts</code> <code>PACKAGES</code>) tables,
+        which must stay in lockstep, become:
+        <table>
+          <tr><th>id</th><th>cad_cents</th><th>credits</th><th>note</th></tr>
+          <tr><td><code>credits_525</code></td><td>500</td><td>525</td><td>$5 — 500 + 25 bonus</td></tr>
+          <tr><td><code>credits_1100</code></td><td>1000</td><td>1100</td><td>$10 — 1,000 + 100 bonus</td></tr>
+          <tr><td><code>credits_2500</code></td><td>2000</td><td>2500</td><td>$20 — 2,000 + 500 bonus</td></tr>
+        </table>
+        <code>credits_525</code> and <code>credits_1100</code> keep their
+        ids and values verbatim; only <code>credits_300</code> leaves and
+        <code>credits_2500</code> joins. The Buy and Landing pages render
+        <code>PACKAGES</code> dynamically (3-col grid) — no layout change.
+        Keep <code>credits_525</code> as the <code>popular</code> pick.</li>
+      <li id="bonus">
+        <strong>Signup bonus 100 → 200</strong> — a new migration
+        (<code>0014_signup_bonus_200.sql</code>) recreates
+        <code>grant_signup_bonus()</code> with
+        <code>bonus_amount := 200</code>, mirroring 0005. The one-per-user
+        partial unique index and the ADR 0029 re-register suppression are
+        untouched; create-or-replace updates the function in place. Only
+        future grants change — no backfill of existing 100-credit bonuses.</li>
+    </ol>
+
+    <h2>Files</h2>
+    <ul>
+      <li><code>server/app/billing/payments.py</code> —
+        <code>CREDIT_PACKAGES</code>: drop <code>credits_300</code>, add
+        <code>credits_2500</code> (2000 / 2500).</li>
+      <li><code>server/migrations/0014_signup_bonus_200.sql</code> — new;
+        recreate <code>grant_signup_bonus()</code> with 200.</li>
+      <li><code>server/tests/test_pricing.py</code> — update the
+        package-table assertions to the new set (entry tier is now
+        <code>credits_525</code>; assert the new <code>credits_2500</code>).</li>
+      <li><code>server/tests/test_ledger.py</code> — signup-bonus balance
+        assertions 100 → 200 (and the "100 bonus + 300 once" case).</li>
+      <li><code>server/tests/conftest.py</code> — docstring: new users start
+        with 200 credits.</li>
+      <li><code>server/pyproject.toml</code> + <code>server/uv.lock</code> —
+        version bump (ADR 0010).</li>
+      <li><code>docs/reference/api.html</code> — checkout package list +
+        request example to the new ids.</li>
+      <li><code>docs/reference/data-model.html</code> — signup-bonus trigger
+        <code>delta = 200</code>.</li>
+      <li><code>web/src/packages.ts</code> — <code>PACKAGES</code> to match.</li>
+      <li><code>web/src/pages/GettingStarted.tsx</code> — "100 free credits"
+        → "200 free credits".</li>
+      <li><code>ext/manifest.json</code> — version bumps.</li>
+    </ul>
+
+    <h2>Commits</h2>
+    <ol>
+      <li><code>v8.15.0</code> — this spec + ADR 0052 + roadmap open.</li>
+      <li><code>v8.15.1</code> — server slice: packages + migration 0014 +
+        tests + pyproject/uv.lock + reference docs.</li>
+      <li><code>v8.15.2</code> — web slice: <code>packages.ts</code> +
+        GettingStarted copy; close-out (spec status done, roadmap done).</li>
+    </ol>
+
+    <h2>Verify</h2>
+    <ul>
+      <li>pytest green, including the updated package and signup-bonus tests
+        (the conftest schema applies 0014, so fresh users get 200); CI green
+        on push.</li>
+      <li><code>node --check</code> passes on the touched <code>ext/</code>
+        files (none here beyond manifest); web type-checks.</li>
+      <li><strong>Owner manual pass:</strong> on the deployed web app, the
+        Buy and Landing pages show the $5 / $10 / $20 cards; a checkout for
+        <code>credits_2500</code> charges $20 and grants 2,500 credits; a
+        brand-new account's ledger shows a 200-credit
+        <code>signup_bonus</code> row.</li>
+    </ul>
+
+    <h2>Notes</h2>
+    <ul>
+      <li>Migration 0014 must be applied to Supabase as part of the release
+        (it changes a trigger function, not data) — same flow as 0005/0013.</li>
+      <li>The <code>pricing.py</code> docstring's calibration narrative still
+        refers to the historical 100-credit bonus; left as-is — it documents
+        past <code>MARGIN</code> reasoning, not the current amount.</li>
+    </ul>
+  </body>
+</html>

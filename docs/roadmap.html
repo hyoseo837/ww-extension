@@ -254,6 +254,13 @@
           no longer leaks description prose into <code>meta.title</code> —
           length-guarded + truncated to 200, server cap raised to 400 as
           backstop (the live <code>422 string_too_long</code>).</li>
+        <li data-status="planned"><strong>v8.15 — pricing refresh</strong>
+          (<a href="specs/v8.15.0-pricing-refresh.html">spec</a>, <a
+          href="decisions/0052-pricing-refresh-floor-top-tier-bonus.html">ADR
+          0052</a>; owner call, 2026-06-16): rounder $5/$10/$20 package
+          ladder (drop the $3 entry tier, add a $20 top tier; $5/$10 keep
+          their ids and values), and the signup bonus doubles 100→200 so it
+          again buys ~100 scans at today's ~2 credits/scan rate.</li>
       </ol>
       <p>
         A <strong>portfolio strand</strong> runs in parallel, owner-gated

@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-06-16" />
+    <title>ADR 0052 — Pricing refresh: $5/$10/$20 ladder (drop $3 floor, add $20 top tier) and double the signup bonus to 200</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>ADR 0052 — Pricing refresh: $5/$10/$20 ladder (drop $3 floor,
+      add $20 top tier) and double the signup bonus to 200</h1>
+
+    <h2>Context</h2>
+    <p>
+      <a href="0034-bonus-packages-and-remargin.html">ADR 0034</a> set the
+      bonus-pack economy (token-based per-scan cost via one
+      <code>MARGIN</code> dial; Stripe packs where <code>cad_cents</code> no
+      longer equals <code>credits</code> above the entry tier). v7.4.2 then
+      retuned the tiers to <code>$3/300</code>, <code>$5/525</code>,
+      <code>$10/1100</code> after live testing showed Stripe's fixed
+      $0.30/charge fee ate a third of the $1 tier.
+    </p>
+    <p>
+      Two facts have shifted since. First, a real scan now costs
+      <strong>~2 credits</strong>, not the ~1 ADR 0034 designed for — the
+      v8.5 richer prompt outgrew it (measured live 2026-06-11: 35 scans →
+      67.9 credits, see <a href="0048-two-credits-per-scan-copy-fix.html">ADR
+      0048</a>). That quietly halved what every credit balance buys,
+      including the <strong>100-credit signup bonus</strong>, which now buys
+      ~50 scans instead of the ~100 the "1 credit ≈ 1 scan" story promised.
+      Second, the September wave (<a href="0042-portfolio-flagship-direction.html">ADR
+      0042</a>) wants a cleaner, more marketable price ladder and a heavier
+      top tier for power users (a co-op job hunt is hundreds of scans).
+    </p>
+    <p>
+      The owner confirmed the new numbers on 2026-06-16. As with v7.4.2,
+      this moves <em>amounts</em>, not the model — ADR 0034 stays the
+      conceptual decision and is immutable.
+    </p>
+
+    <h2>Decision</h2>
+    <ul>
+      <li><strong>New package ladder $5 / $10 / $20</strong> (the $3 entry
+        tier is dropped; a $20 top tier is added). <code>cad_cents</code> is
+        what Stripe charges; <code>credits</code> is what the ledger grants
+        (ADR 0034's bonus model, unchanged):
+        <table>
+          <tr><th>id</th><th>price (cad_cents)</th><th>credits</th><th>bonus</th></tr>
+          <tr><td><code>credits_525</code></td><td>$5 (500)</td><td>525</td><td>+25</td></tr>
+          <tr><td><code>credits_1100</code></td><td>$10 (1000)</td><td>1100</td><td>+100</td></tr>
+          <tr><td><code>credits_2500</code></td><td>$20 (2000)</td><td>2500</td><td>+500</td></tr>
+        </table>
+        The $5 and $10 tiers keep their existing ids and values verbatim;
+        only the $3 tier leaves and the $20 tier joins. The
+        <code>credits ≥ cad_cents</code> invariant (every pack is worth at
+        least its dollars) still holds.</li>
+      <li><strong>Signup bonus 100 → 200 credits.</strong> Doubling it
+        restores the "~100 free scans" welcome at today's ~2 credits/scan
+        rate — the number the bonus was always meant to buy. The amount
+        lives in the <code>grant_signup_bonus()</code> trigger; a new
+        migration (0014) recreates the function with 200, mirroring how 0005
+        last set it. The one-per-user partial unique index and ADR 0029
+        re-register suppression are untouched.</li>
+      <li><strong>No code-shape change.</strong> The Stripe line item is
+        still inline <code>price_data</code> (no Dashboard products, ADR
+        0012); the granted amount is still derived server-side from
+        <code>package_id</code>; web (<code>packages.ts</code>) and server
+        (<code>payments.py</code>) tables move together in one commit.</li>
+    </ul>
+
+    <h2>Consequences</h2>
+    <ul>
+      <li><strong>+</strong> Cleaner, rounder $5/$10/$20 ladder; a top tier
+        that covers a full co-op cycle without re-buying.</li>
+      <li><strong>+</strong> The free signup bonus is back to ~100 scans of
+        runway — a stronger first impression for the September wave.</li>
+      <li><strong>−</strong> The $3 entry point is gone, so the cheapest
+        first purchase doubles to $5. Accepted: the $3 tier's 300 credits
+        (~150 scans) was an awkward middle, and the doubled signup bonus
+        softens the floor for new users.</li>
+      <li><strong>−</strong> New accounts cost ~$0.004 more in nominal credit
+        value (200 vs 100 credits), and far less in actual Gemini spend
+        (~$0.001/scan raw). Negligible at the current user base.</li>
+      <li>Existing balances and already-granted 100-credit bonuses are
+        unaffected — the migration only changes future grants. No backfill.</li>
+      <li>Server change → <code>server/pyproject.toml</code> + uv.lock bump
+        (ADR 0010). New migration → applied to Supabase on release. Stripe
+        needs no Dashboard change (inline prices).</li>
+    </ul>
+
+    <h2>Alternatives considered</h2>
+    <ul>
+      <li><strong>Keep the $3 floor and just add $20</strong> — rejected by
+        the owner in favour of a rounder $5/$10/$20 ladder; the $3/300 tier
+        sat awkwardly between the bonus and the bigger packs.</li>
+      <li><strong>Re-margin instead of doubling the bonus</strong> (move
+        <code>MARGIN</code> back toward ~1 credit/scan) — rejected: ADR 0048
+        deliberately settled the copy on "~2 credits/scan" rather than
+        re-tuning the dial; doubling the bonus restores the welcome runway
+        without re-opening the per-scan price.</li>
+    </ul>
+  </body>
+</html>
