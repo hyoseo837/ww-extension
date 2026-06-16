@@ -31,6 +31,11 @@ moved out or dropped.
 
 - subscription model / term pass (unlimited scan for certain period)
 - cover letter generator
+- detail-page "Scan this job" button — a scan button on the open
+  WaterlooWorks posting-detail view (more discoverable than the sidebar
+  id input). Needs a saved WW posting-detail DOM capture first (URL
+  pattern, where the open posting's id lives, fetch-token reachability);
+  was considered in v8.16 / ADR 0053, descoped to here 2026-06-16.
 
 ## Solved
 
@@ -49,7 +54,7 @@ moved out or dropped.
 - ~~feedback loop of user~~ — shipped (v8.6.6, ADR 0044)
 - ~~extension on "Employer-Student Direct" page~~ — shipped (v8.7)
 - ~~score badge missing on Direct page job table~~ — fixed (v8.8.4)
-- ~~scan job one by one (enter post id)~~ — shipped sidebar input (v8.16.1, ADR 0053); detail-page "Scan this job" button deferred, needs a WW posting-detail DOM capture
+- ~~scan job one by one (enter post id)~~ — shipped sidebar input (v8.16.1, ADR 0053); detail-page "Scan this job" button descoped back to Possible questions (2026-06-16)
 - ~~export / import scans to/from a file (share between devices / backup)~~ — shipped as JSON, all boards, merge-with-warning, schema-gated (v8.17.2, ADR 0054)
 - ~~icon next to settings button → opens web app~~ — shipped (v8.17.1)
 - ~~credits field: sign in with UWaterloo when logged out~~ — shipped (v8.18, ADR 0055); OAuth centralized in the background worker, shared by sidebar + options

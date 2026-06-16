@@ -19,12 +19,12 @@
       table — the cost-conscious "score just this one" case (owner call,
       2026-06-16). Per
       <a href="../decisions/0053-single-job-scan-by-posting-id.html">ADR
-      0053</a> the two requested surfaces are sequenced: the
-      <strong>sidebar posting-ID input ships now</strong> (it reuses the
-      batch path verbatim); the <strong>detail-page "Scan this job" button is
-      deferred</strong> until a posting-detail DOM capture exists, because
-      this project builds WW integration against verified captures, never
-      guesses.
+      0053</a> the <strong>sidebar posting-ID input</strong> is the surface
+      that ships (it reuses the batch path verbatim). The detail-page "Scan
+      this job" button considered alongside it was descoped back to the
+      whiteboard (a possible question) — it needs a verified WW posting-detail
+      DOM capture first, and this project builds WW integration against
+      captures, never guesses.
     </p>
     <ol>
       <li id="sidebar-input">
@@ -50,12 +50,6 @@
         An invalid / nonexistent id rides the existing failure path (fetch
         error → counted, offered for retry) — no special handling.
       </li>
-      <li id="detail-button">
-        <strong>Detail-page "Scan this job" button (v8.16.2 — deferred)</strong>
-        — blocked on a saved snapshot of a WaterlooWorks posting-detail view
-        (DOM + URL), which the repo does not have. Tracked, not built this
-        phase. See ADR 0053 "Consequences".
-      </li>
     </ol>
 
     <h2>Files</h2>
@@ -75,8 +69,6 @@
       <li><code>v8.16.0</code> — this spec + ADR 0053 + roadmap open.</li>
       <li><code>v8.16.1</code> — ext slice: sidebar single-job scan; close-out
         for the shipped surface.</li>
-      <li><code>v8.16.2</code> — (deferred) detail-page button, once a
-        posting-detail capture is provided.</li>
     </ol>
 
     <h2>Verify</h2>
@@ -95,12 +87,13 @@
 
     <h2>Notes</h2>
     <ul>
-      <li>To unblock v8.16.2, save a posting-detail page (DevTools → save full
-        HTML) the way <code>exampleWW.html</code> seeded the table reference,
-        and add it (or the relevant excerpt) to
-        <code>docs/reference/</code>. Needed: the detail URL pattern, how the
-        open posting's id appears in the DOM, and whether the fetch tokens are
-        reachable there.</li>
+      <li>The detail-page "Scan this job" button is no longer tracked here —
+        it moved back to the whiteboard's "Possible questions". If it returns,
+        unblock it by saving a posting-detail page (DevTools → save full HTML)
+        the way <code>exampleWW.html</code> seeded the table reference, and add
+        it (or the relevant excerpt) to <code>docs/reference/</code>. Needed:
+        the detail URL pattern, how the open posting's id appears in the DOM,
+        and whether the fetch tokens are reachable there.</li>
     </ul>
   </body>
 </html>
