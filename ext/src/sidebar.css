@@ -140,6 +140,21 @@
   border-radius: 999px;
 }
 
+/* Signed out, the credits field becomes a sign-in button (v8.18). */
+#ww-ext-credits.ww-ext-credits--signin { background: none; padding: 0; }
+#ww-ext-signin-chip {
+  background: var(--s-primary);
+  color: var(--s-on-primary);
+  border: none;
+  padding: 3px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  font: 600 11px 'WW Sans', system-ui, sans-serif;
+  transition: background 0.15s;
+}
+#ww-ext-signin-chip:hover:not(:disabled) { background: var(--s-accent); }
+#ww-ext-signin-chip:disabled { opacity: 0.6; cursor: default; }
+
 .ww-ext-header-btns { display: flex; align-items: center; gap: 2px; }
 
 #ww-ext-webapp,

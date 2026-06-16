@@ -25,8 +25,6 @@ moved out or dropped.
 
 ## Future features
 
-- for credit field, add login with uwaterloo if not loged in.
-
 ## fixes needed
 
 ## Possible questions
@@ -54,3 +52,4 @@ moved out or dropped.
 - ~~scan job one by one (enter post id)~~ — shipped sidebar input (v8.16.1, ADR 0053); detail-page "Scan this job" button deferred, needs a WW posting-detail DOM capture
 - ~~export / import scans to/from a file (share between devices / backup)~~ — shipped as JSON, all boards, merge-with-warning, schema-gated (v8.17.2, ADR 0054)
 - ~~icon next to settings button → opens web app~~ — shipped (v8.17.1)
+- ~~credits field: sign in with UWaterloo when logged out~~ — shipped (v8.18, ADR 0055); OAuth centralized in the background worker, shared by sidebar + options

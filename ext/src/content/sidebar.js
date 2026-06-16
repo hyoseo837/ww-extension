@@ -4,15 +4,31 @@
 function renderCreditsChip(auth, balance) {
   const node = document.getElementById('ww-ext-credits');
   if (!node) return;
-  const signedIn = !!auth?.access_token;
-  if (!signedIn) {
-    node.hidden = true;
-    node.textContent = '';
+  node.hidden = false;
+  if (!auth?.access_token) {
+    // Signed out: offer sign-in right here instead of hiding the field (v8.18).
+    node.classList.add('ww-ext-credits--signin');
+    node.innerHTML =
+      '<button id="ww-ext-signin-chip" title="Sign in with your UWaterloo account">Sign in</button>';
+    node.querySelector('#ww-ext-signin-chip').addEventListener('click', startSignIn);
     return;
   }
-  node.hidden = false;
+  node.classList.remove('ww-ext-credits--signin');
   const value = typeof balance === 'number' ? balance.toFixed(2) : '—';
   node.textContent = `⚡ ${value}`;
+}
+
+// Trigger the shared background sign-in flow (ADR 0055). On success the
+// background writes `auth`; the core.js storage.onChanged reaction re-renders
+// this chip as the balance — so only the failure/restore path is handled here.
+async function startSignIn() {
+  const btn = document.getElementById('ww-ext-signin-chip');
+  if (btn) { btn.disabled = true; btn.textContent = 'Signing in…'; }
+  const res = await chrome.runtime.sendMessage({ type: 'signIn' });
+  if (!res?.ok) {
+    setProgress(res?.error || 'Sign-in failed.', true);
+    if (btn) { btn.disabled = false; btn.textContent = 'Sign in'; }
+  }
 }
 
 // ── Sidebar list ──────────────────────────────────────────────────────────────
