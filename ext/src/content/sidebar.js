@@ -171,6 +171,7 @@ function injectSidebar() {
         <span id="ww-ext-credits" hidden></span>
       </div>
       <div class="ww-ext-header-btns">
+        <button id="ww-ext-webapp" title="Open web app">${SVG_EXTERNAL}</button>
         <button id="ww-ext-settings" title="Settings">${SVG_GEAR}</button>
         <button id="ww-ext-close" title="Close">${SVG_X}</button>
       </div>
@@ -280,6 +281,11 @@ function injectSidebar() {
   document.getElementById('ww-ext-close').addEventListener('click', () => sidebar.classList.remove('open'));
   document.getElementById('ww-ext-settings').addEventListener('click', () => {
     chrome.runtime.sendMessage({ type: 'openOptions' });
+  });
+  // Web-app shortcut (v8.17): opens the user's hub — same target as the
+  // toolbar action (background.js).
+  document.getElementById('ww-ext-webapp').addEventListener('click', () => {
+    chrome.runtime.sendMessage({ type: 'openWebApp', path: '/account' });
   });
   const scanBtn = document.getElementById('ww-ext-scan');
   scanBtn.addEventListener('click', () => {

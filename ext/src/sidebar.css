@@ -142,6 +142,7 @@
 
 .ww-ext-header-btns { display: flex; align-items: center; gap: 2px; }
 
+#ww-ext-webapp,
 #ww-ext-settings,
 #ww-ext-close {
   background: none;
@@ -153,6 +154,7 @@
   line-height: 0;
   transition: color 0.15s, background 0.15s;
 }
+#ww-ext-webapp:hover,
 #ww-ext-settings:hover,
 #ww-ext-close:hover { color: var(--s-primary); background: var(--s-hover); }
 
