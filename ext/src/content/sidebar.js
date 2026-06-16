@@ -178,6 +178,11 @@ function injectSidebar() {
     <div id="ww-ext-controls">
       <div class="ww-ext-section">
         <button id="ww-ext-scan">Scan All Jobs</button>
+        <div id="ww-ext-scan-one">
+          <input id="ww-ext-scan-one-id" type="text" inputmode="numeric"
+            maxlength="12" placeholder="Posting ID" autocomplete="off">
+          <button id="ww-ext-scan-one-btn">Scan one</button>
+        </div>
         <div id="ww-ext-progress"></div>
       </div>
       <div class="ww-ext-section" id="ww-ext-save-section">
@@ -285,6 +290,19 @@ function injectSidebar() {
     } else {
       scanAllJobs();
     }
+  });
+
+  // Scan one job by id (v8.16): ignored while a scan (all or one) is running —
+  // scanOneJob shares withScanButton's Stop state, so the Scan/Stop button is
+  // the single stop control.
+  const scanOneBtn = document.getElementById('ww-ext-scan-one-btn');
+  const scanOneId  = document.getElementById('ww-ext-scan-one-id');
+  const startScanOne = () => {
+    if (!scanBtn.classList.contains('ww-ext-scanning')) scanOneJob();
+  };
+  scanOneBtn.addEventListener('click', startScanOne);
+  scanOneId.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); startScanOne(); }
   });
 
   // Save-to-Folder section collapses to "Score ≥ n  [Save to Folder]";

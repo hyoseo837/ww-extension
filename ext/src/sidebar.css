@@ -225,6 +225,34 @@
 }
 #ww-ext-scan.ww-ext-scanning:hover:not(:disabled) { background: #a01616; }
 
+/* Scan one job by id (v8.16): a compact input + secondary button row. */
+#ww-ext-scan-one { display: flex; gap: 8px; align-items: center; }
+#ww-ext-scan-one-id {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 10px;
+  background: var(--s-input-bg) !important;
+  border: 1px solid var(--s-border-hi) !important;
+  border-radius: 8px;
+  color: var(--s-on) !important;
+  font: 13px 'WW Sans', system-ui, sans-serif;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+#ww-ext-scan-one-id:focus { border-color: var(--s-primary); box-shadow: 0 0 0 2px rgba(143,72,48,0.15); }
+#ww-ext-scan-one-btn {
+  flex: none;
+  background: transparent;
+  color: var(--s-primary);
+  border: 1px solid var(--s-border-hi);
+  padding: 7px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font: 600 13px 'WW Sans', system-ui, sans-serif;
+  transition: border-color 0.15s, background 0.15s;
+}
+#ww-ext-scan-one-btn:hover { border-color: var(--s-primary); background: var(--s-hover); }
+
 /* ── Confirmation overlay (scan + clear) ───────────────────────────────────── */
 .ww-ext-confirm-backdrop {
   position: absolute;

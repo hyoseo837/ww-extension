@@ -187,9 +187,41 @@ function retryFailed() {
   });
 }
 
+// Scan one posting by id (v8.16, ADR 0053). The cost-conscious case: score a
+// single posting — including one not in the current list or on the other board
+// — instead of the whole table. Reuses the audited batch path (runScan scores
+// off-page ids already; bulk scan does this for every page). An already-scored
+// id is revealed for free, not re-charged.
+function scanOneJob() {
+  return withScanButton(async () => {
+    const input = document.getElementById('ww-ext-scan-one-id');
+    const id = (input?.value || '').replace(/\D/g, '');
+    if (!id) {
+      setProgress('Enter a posting ID to scan.', true);
+      return;
+    }
+    if (scores.has(id)) {
+      const entry = scores.get(id);
+      setProgress(`Already scored: ${entry.score}/20 (${entry.verdict}).`);
+      scrollToRow(id);           // best-effort; off-page ids have no row
+      if (input) input.value = '';
+      return;
+    }
+    const balance = await new Promise(res =>
+      chrome.storage.local.get('creditBalance', d => res(d.creditBalance))
+    );
+    if (!(await confirmScan(1, balance))) {
+      setProgress('Scan cancelled.');
+      return;
+    }
+    await runScan([id]);
+    if (input) input.value = '';
+  });
+}
+
 // The batch loop: scores `toScore` with SCAN_CONCURRENCY workers. Shared by
-// Scan All Jobs and Retry. Records non-halt failures in failedIds and offers
-// the retry button when a completed run has any.
+// Scan All Jobs, Retry, and Scan one. Records non-halt failures in failedIds
+// and offers the retry button when a completed run has any.
 async function runScan(toScore) {
   // One id for this whole run, sent on every /scan so the web app's credit
   // history can group the batch ("Scanned N jobs"). v6.2.
