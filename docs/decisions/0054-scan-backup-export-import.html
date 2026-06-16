@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-06-16" />
+    <title>ADR 0054 — Scan backup: export/import as plain JSON, merge-with-warning, all boards, schema-gated</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>ADR 0054 — Scan backup: export/import as plain JSON,
+      merge-with-warning, all boards, schema-gated</h1>
+
+    <h2>Context</h2>
+    <p>
+      Scores live only in <code>chrome.storage.local</code>
+      (<code>ww_scores</code> + <code>ww_posting_ids</code>), per browser
+      profile — there is no cross-device sync and no backup. The owner wants
+      to move a scored set between devices and keep a backup (whiteboard,
+      2026-06-16). The data is small structured text: a map of posting id →
+      {score, verdict, reason, breakdown, title, org, board, feedback}.
+    </p>
+
+    <h2>Decision</h2>
+    <ul>
+      <li><strong>Plain JSON file, not a zip.</strong> The extension has no
+        build step and vendors no libraries (ADR 0026); a zip would mean a
+        bundled archive lib for a payload that is a few KB of text. Export
+        writes one <code>.json</code>; import reads one. File shape:
+        <pre><code>{
+  "app": "ww-extension",
+  "schema": 2,                 // SCORING_SCHEMA_VERSION at export time
+  "exportedAt": "2026-06-16T...Z",
+  "scores": { "&lt;postingId&gt;": { score, verdict, ... board }, ... },
+  "postingIds": ["&lt;id&gt;", ...]
+}</code></pre>
+        Download is a Blob + <code>&lt;a download&gt;</code> click in the
+        content script (no <code>downloads</code> permission); import is a
+        hidden <code>&lt;input type="file"&gt;</code> read with
+        <code>file.text()</code>.</li>
+      <li><strong>Export includes all boards.</strong> Entries are already
+        board-tagged (<code>entry.board</code>, v8.7.1), and the
+        <code>scores</code> map holds both Full-Cycle and Direct. A backup
+        wants everything; the per-board filtering stays a <em>view</em>
+        concern, not an export one.</li>
+      <li><strong>Import merges, behind a warning.</strong> Imported entries
+        are merged into the live <code>scores</code> map; on a posting-id
+        collision the <strong>imported entry wins</strong>. Because that can
+        overwrite scores already in the sidebar, import is gated by a confirm
+        dialog that says so plainly ("Merge N jobs? Scores for postings in
+        both will be replaced by the file's — you can lose current scores.").
+        Owner's call: merge is the useful default for combining devices, and
+        the warning covers the data-loss risk. (Replace-all was the
+        alternative; rejected.)</li>
+      <li><strong>Schema-gated.</strong> Import refuses a file whose
+        <code>schema</code> ≠ the current <code>SCORING_SCHEMA_VERSION</code>
+        — the same guard <code>loadScores</code> uses so score scales never
+        mix (ADR 0016). A mismatch shows a message, not a silent merge. A
+        malformed / non-ww file is rejected the same way.</li>
+      <li><strong>Lives in the sidebar (content script), purely local.</strong>
+        No server involvement — these are the user's local scores. Doing it in
+        the content script (not the options page) means a merge live-updates
+        the open tab: re-render the list, re-inject row badges
+        (<code>injectRowScores</code>), <code>saveScores</code>.</li>
+    </ul>
+
+    <h2>Consequences</h2>
+    <ul>
+      <li><strong>+</strong> Cross-device move and backup with one file and
+        zero new dependencies or permissions.</li>
+      <li><strong>+</strong> Board tags survive the round-trip, so a merged
+        set still filters correctly per board.</li>
+      <li><strong>−</strong> Merge can overwrite current scores on id
+        collision — mitigated by the explicit warning, not prevented.</li>
+      <li><strong>−</strong> The file is plaintext (no encryption). Accepted:
+        it holds only the job scores/titles the user already sees, no
+        credentials or account data.</li>
+      <li>A file exported under an older score scale is rejected by the schema
+        gate rather than mixed in — correct by construction.</li>
+    </ul>
+
+    <h2>Alternatives considered</h2>
+    <ul>
+      <li><strong>Zip archive</strong> — rejected: a vendored archive lib and
+        build-step pressure (against ADR 0026) for a negligible size win on a
+        few-KB text payload.</li>
+      <li><strong>Replace-all on import</strong> — rejected by the owner in
+        favour of merge; the warning makes the collision behaviour explicit.</li>
+      <li><strong>Export/import on the options page</strong> — rejected: the
+        sidebar sits with the scores and can live-update the open tab on
+        merge; the options page could not without a reload.</li>
+      <li><strong>Cloud sync via the backend</strong> — out of scope: scores
+        are deliberately local (the server stores per-scan billing rows, not
+        the user's curated board). A file keeps it simple and offline.</li>
+    </ul>
+  </body>
+</html>

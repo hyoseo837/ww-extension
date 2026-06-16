@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="spec" />
+    <meta name="version" content="v8.17.0" />
+    <meta name="status" content="in-progress" />
+    <meta name="last-updated" content="2026-06-16" />
+    <title>v8.17 — Sidebar utilities: web-app shortcut &amp; scan backup</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>v8.17 — Sidebar utilities: web-app shortcut &amp; scan backup</h1>
+
+    <h2>Goal</h2>
+    <p>
+      Two small whiteboard features for the extension sidebar (owner call,
+      2026-06-16): a one-click shortcut to the web app, and export/import of
+      the scored set as a file (move between devices / backup). Both are
+      extension-only — no server or web-app change.
+    </p>
+    <ol>
+      <li id="webapp-shortcut">
+        <strong>Web-app shortcut icon (v8.17.1)</strong> — an icon button in
+        the sidebar header, next to the gear (Settings), that opens the web
+        app. It targets <code>/account</code> — the user's hub (balance,
+        history, profile) and the same destination the toolbar action already
+        opens (<code>background.js</code> <code>chrome.action.onClicked</code>).
+        Reuses the existing <code>openWebApp</code> message
+        (<code>chrome.runtime.sendMessage({ type: 'openWebApp', path: '/account' })</code>).
+      </li>
+      <li id="scan-backup">
+        <strong>Scan export / import (v8.17.2)</strong> — per
+        <a href="../decisions/0054-scan-backup-export-import.html">ADR
+        0054</a>: a compact Export / Import row in the sidebar controls.
+        <ul>
+          <li><strong>Export</strong> — serialise <em>all</em> scores (both
+            boards) + <code>postingIds</code> into
+            <code>{ app, schema, exportedAt, scores, postingIds }</code> and
+            download <code>ww-scores-YYYY-MM-DD.json</code> via a Blob +
+            <code>&lt;a download&gt;</code>. Disabled when there are no
+            scores.</li>
+          <li><strong>Import</strong> — a hidden <code>&lt;input
+            type="file" accept=".json"&gt;</code>; read with
+            <code>file.text()</code>, <code>JSON.parse</code>. Reject a
+            malformed / non-ww file or a <code>schema</code> mismatch
+            (≠ <code>SCORING_SCHEMA_VERSION</code>, the ADR 0016 guard) with a
+            progress-line error. Otherwise show a confirm dialog that
+            <strong>warns current scores for shared posting ids will be
+            replaced by the file's</strong> (data-loss warning), then
+            <strong>merge</strong> (imported wins on collision), union the
+            <code>postingIds</code>, <code>saveScores()</code>,
+            <code>renderSidebarList()</code>, and <code>injectRowScores()</code>
+            so the open tab updates live.</li>
+        </ul>
+      </li>
+    </ol>
+
+    <h2>Files</h2>
+    <ul>
+      <li><code>ext/src/content/core.js</code> — add
+        <code>SVG_EXTERNAL</code> (web-app icon) near the other inline SVGs;
+        <code>importScores()</code> / <code>exportScores()</code> helpers
+        (or in sidebar.js — kept with the other score ops).</li>
+      <li><code>ext/src/content/sidebar.js</code> — header web-app button +
+        markup; Export/Import row + hidden file input; wire all three
+        (web-app → <code>openWebApp</code>; export → download; import → file
+        picker → confirm/merge).</li>
+      <li><code>ext/src/sidebar.css</code> — style the header icon button to
+        match <code>#ww-ext-settings</code>; the Export/Import row to match
+        the existing controls.</li>
+      <li><code>ext/manifest.json</code> — version bumps.</li>
+    </ul>
+
+    <h2>Commits</h2>
+    <ol>
+      <li><code>v8.17.0</code> — this spec + ADR 0054 + roadmap open.</li>
+      <li><code>v8.17.1</code> — ext: web-app shortcut icon.</li>
+      <li><code>v8.17.2</code> — ext: scan export/import; close-out.</li>
+    </ol>
+
+    <h2>Verify</h2>
+    <ul>
+      <li><code>node --check</code> passes on every touched
+        <code>ext/src/</code> file.</li>
+      <li><strong>Owner manual pass (live WW):</strong> the header shows the
+        web-app icon next to the gear; clicking it opens
+        <code>/account</code> in a new tab. With some scores, Export
+        downloads a <code>.json</code>; clear scores, then Import that file →
+        the warning dialog appears → confirm → the scores and row badges come
+        back. Import on top of existing scores merges (file wins on shared
+        ids). A non-JSON / wrong-schema file is rejected with a message and
+        leaves current scores untouched.</li>
+    </ul>
+
+    <h2>Notes</h2>
+    <ul>
+      <li>Export is a content-script Blob download — no <code>downloads</code>
+        permission, so the manifest's permission set is unchanged.</li>
+      <li>Import live-updates only the tab it runs in; other open WW tabs pick
+        the merged set up on their next load (the storage write is shared, but
+        the content script only reloads scores on init).</li>
+    </ul>
+  </body>
+</html>
