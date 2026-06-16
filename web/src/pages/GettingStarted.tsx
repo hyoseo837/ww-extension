@@ -102,7 +102,7 @@ export default function GettingStarted() {
       <section className={CARD}>
         <h2 className="mb-sm font-headline-md text-headline-md text-on-surface">FAQ</h2>
         <Faq q="How much does it cost?">
-          New accounts get <strong>100 free credits</strong>. Each scan costs about 2 credits (1 credit = $0.01 CAD). Top
+          New accounts get <strong>200 free credits</strong> (≈ 100 scans). Each scan costs about 2 credits (1 credit = $0.01 CAD). Top
           up any time from <Link to="/buy">Buy credits</Link>; bigger packs include bonus credits.
         </Faq>
         <Faq q="What counts as a scan?">
