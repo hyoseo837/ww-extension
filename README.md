@@ -10,15 +10,31 @@ Score every co-op posting against your profile in seconds. See which jobs are wo
 
 <sub>Chrome · Manifest V3 · Google Gemini</sub>
 
-[**▶ Install from the Chrome Web Store**](https://chromewebstore.google.com/detail/ww-extension/bichfckekdcnmkenflpmmehegggcfgdd) · [Web app](https://ww-extension.hyoseo.dev)
-
 <sub><i>Not affiliated with the University of Waterloo or WaterlooWorks.</i></sub>
 
 </div>
 
 ---
 
-[▶ Full walkthrough on YouTube](https://www.youtube.com/watch?v=oh_4EEv-ILs)
+> ### 🗄️ This project is closed and no longer running
+>
+> **Shut down July 2026.** The hosted backend, database, and web app have been
+> torn down, and the extension has been unpublished from the Chrome Web Store.
+> Nothing in this repo will work end-to-end without standing up your own
+> infrastructure — scoring requires a backend, a database, and API keys that no
+> longer exist.
+>
+> It shipped, it worked, and it was complete: an extension approved on the
+> Chrome Web Store, a deployed FastAPI backend, a React web app, Stripe
+> payments, and a credit system. It just never found users — the co-op term
+> that motivated it ended, and paying to host a service with nobody on it
+> stopped making sense.
+>
+> **What's still here:** the full source, 56 architecture decision records,
+> per-phase specs, and the walkthrough below. The reasoning behind the
+> shutdown is [ADR 0056](docs/decisions/0056-project-closure-full-teardown.html).
+
+[▶ Full walkthrough on YouTube](https://www.youtube.com/watch?v=oh_4EEv-ILs) — the product in action, while it was live
 
 ![Sidebar in action on WaterlooWorks](screenshots/extension/sidebar_scored.png)
 
@@ -73,7 +89,10 @@ Scoring runs on a hosted backend, not in your browser — so there's no API key 
 
 ## Install
 
-The easiest path is the [Chrome Web Store](https://chromewebstore.google.com/detail/ww-extension/bichfckekdcnmkenflpmmehegggcfgdd).
+> The Chrome Web Store listing has been taken down and the backend it talked to
+> no longer exists. The steps below still load the extension, but sign-in and
+> scanning will fail — you'd need to run your own `server/` instance
+> (Supabase + Gemini + Stripe keys) to make it functional.
 
 To run from source in developer mode:
 
@@ -104,7 +123,11 @@ Each scoring call sends to Google Gemini:
 
 Scores, credit balance, and billing records are kept server-side. You can review, export, or delete your data from the web app at any time.
 
-Full policy: <https://ww-extension.hyoseo.dev/privacy> · Terms: <https://ww-extension.hyoseo.dev/terms>
+**As of the July 2026 shutdown, none of this data exists any more.** The
+Supabase project holding accounts, profiles, scores, and ledgers was deleted
+along with the rest of the infrastructure, and the policy pages came down with
+the web app. The section above describes how the service handled data while it
+was running.
 
 ## Architecture
 
@@ -136,7 +159,10 @@ ext/
 
 ## Feedback
 
-Bugs and suggestions: [GitHub Issues](https://github.com/hyoseo837/ww-extension/issues).
+The project is closed and no longer maintained, so bug reports won't be acted
+on. Questions about how something was built are welcome via
+[GitHub Issues](https://github.com/hyoseo837/ww-extension/issues) — the
+[ADRs](docs/decisions/) usually answer "why is it like this" first.
 
 ## License
 

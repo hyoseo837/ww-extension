@@ -175,8 +175,19 @@
       </p>
     </section>
 
-    <section id="active" data-status="in-progress">
-      <h2>v8 — Maintenance &amp; polish (active)</h2>
+    <section id="active" data-status="done">
+      <h2>v8 — Maintenance &amp; polish (final major — project closed)</h2>
+      <blockquote>
+        <strong>Project closed <time datetime="2026-07-26">2026-07-26</time> at
+        v8.19.0</strong> (<a href="decisions/0056-project-closure-full-teardown.html">ADR
+        0056</a>, superseding <a href="decisions/0042-portfolio-flagship-direction.html">ADR
+        0042</a>). All hosted infrastructure was torn down — DigitalOcean,
+        Supabase, Vercel, Stripe, Sentry — and the Chrome Web Store listing was
+        unpublished. The owner's co-op term ended with the product still at zero
+        users, so the September 2026 marketing push and the December checkpoint
+        ADR 0042 planned are cancelled rather than deferred. Everything below is
+        the record of what shipped; nothing on this roadmap is still scheduled.
+      </blockquote>
       <p>
         Opened 2026-06-05 as a <strong>rolling maintenance major</strong>:
         cleanup, small fixes, and minor bugs now that the product is in
@@ -296,11 +307,27 @@
         reaffirm-or-scrub call on ADR 0045's key-in-history (the repo is
         public). If time runs short before September, v8.8 + v8.9 are the
         must-ships; v8.10/v8.11 degrade to later.
+        <em>Closed at v8.19.0 — the strand's remaining items (GitHub Pages for
+        <code>docs/</code>, the ADR 0045 key-in-history call) are the owner's to
+        take or drop outside the version scheme.</em>
       </p>
+      <ol>
+        <li data-status="done"><strong>v8.19 — project closure</strong> (<a
+          href="decisions/0056-project-closure-full-teardown.html">ADR
+          0056</a>): full infrastructure teardown, Web Store listing
+          unpublished, user data deleted with the Supabase project, closing
+          docs. The final release.</li>
+      </ol>
     </section>
 
-    <section id="future">
-      <h2>Further out (uncommitted)</h2>
+    <section id="future" data-status="cancelled">
+      <h2>Further out (never built)</h2>
+      <blockquote>
+        <strong>Closed unbuilt</strong> at the 2026-07-26 shutdown
+        (<a href="decisions/0056-project-closure-full-teardown.html">ADR
+        0056</a>). Kept as a record of what was considered and consciously not
+        done — not as a backlog.
+      </blockquote>
       <p>
         Candidates still on the table, no commitment yet — revisit at
         phase-planning time: cover-letter generation, re-score on demand, and

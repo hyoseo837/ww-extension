@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="project" content="ww-extension" />
+    <meta name="type" content="adr" />
+    <meta name="status" content="accepted" />
+    <meta name="date" content="2026-07-26" />
+    <title>ADR 0056 — Close the project: full infrastructure teardown; the repo becomes the artifact</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <h1>ADR 0056 — Close the project: full infrastructure teardown; the
+      repo becomes the artifact</h1>
+
+    <p><em>Supersedes <a href="0042-portfolio-flagship-direction.html">ADR
+      0042</a> (portfolio flagship; December 2026 checkpoint).</em></p>
+
+    <h2>Context</h2>
+    <p>
+      <a href="0042-portfolio-flagship-direction.html">ADR 0042</a> (2026-06-10)
+      froze feature work and bet the remaining upside on distribution: get in
+      front of UWaterloo co-op students during the <strong>September 2026
+      recruiting wave</strong>, then judge the product on real adoption data at
+      a <strong>December 2026 checkpoint</strong>. Everything since
+      (v8.6 → v8.18) has been maintenance and polish against that plan.
+    </p>
+    <p>
+      Two things changed by 2026-07-26. The owner's co-op term ended, which
+      removes both the daily contact with the user base the marketing plan
+      depended on and the owner's own use of the product. And the user count is
+      still <strong>zero</strong> — the same number ADR 0042 was written to fix,
+      with no organic signal in the seven weeks since.
+    </p>
+    <p>
+      Against that, the deployment bills continuously.
+      <a href="0007-deploy-on-digitalocean-app-platform.html">ADR 0007</a>
+      accepted <em>"no scale-to-zero: pay for compute even at zero traffic"</em>
+      as fine at hobby scale; at zero users it is the entire cost of the
+      project, ~$5/mo, and reaching the December checkpoint would spend roughly
+      $25 more to run an experiment whose input — owner-driven marketing to a
+      cohort the owner has left — is no longer available. Supabase, Vercel,
+      Stripe, Gemini, and Sentry all sit at $0 on free or usage-based tiers and
+      contribute nothing to the bill.
+    </p>
+
+    <h2>Decision</h2>
+    <ul>
+      <li><strong>Close the project. Tear down all hosted
+        infrastructure</strong> — not just the billed component. The owner
+        chose a clean full stop over keeping the $0 tiers alive as a live
+        portfolio link, on the grounds that a half-live service (browsable web
+        app, dead API) misrepresents the product to anyone who clicks
+        through.</li>
+      <li><strong>Teardown covers</strong>: the DigitalOcean App Platform app
+        (the only paid component), the Supabase project (auth + Postgres), the
+        Vercel deployment of <code>web/</code>, the Stripe account's live
+        product and webhook, the Sentry project, and the
+        <code>ww-extension.hyoseo.dev</code> DNS records.</li>
+      <li><strong>Unpublish the Chrome Web Store listing.</strong> The
+        extension (approved as 7.1.1 on 2026-06-04) is non-functional without
+        the backend — sign-in and scanning both fail. Leaving it installable
+        would hand new installers a broken product. The developer account and
+        the approval history are retained, so republishing later does not start
+        from zero.</li>
+      <li><strong>Delete user data with the Supabase project</strong>, rather
+        than retaining it against a possible reopening. This is the behaviour
+        <a href="0027-account-deletion-policy.html">ADR 0027</a> and the
+        published privacy policy promise: data exists to serve the account, and
+        the service is ending. A final database export is taken first and kept
+        offline by the owner, for the ledger record only.</li>
+      <li><strong>Settle money before Stripe goes away.</strong> Any unspent
+        purchased credit balance is refunded per
+        <a href="0028-refund-policy.html">ADR 0028</a> ahead of deactivation.
+        Stripe retains its own transaction records independently, so the
+        financial trail survives the teardown.</li>
+      <li><strong>The repository is the artifact.</strong> The portfolio value
+        ADR 0042 identified — a complete, shipped, documented, revenue-capable
+        system — now lives in the code, the 56 ADRs, the phase specs, the
+        screenshots, and the walkthrough video, none of which depend on
+        anything being deployed.</li>
+      <li><strong>No further versions.</strong> v8.19.0 is the final release.
+        The <code>dev</code> → <code>master</code> split
+        (<a href="0039-prod-dev-branch-split.html">ADR 0039</a>) is retained but
+        inert once <code>master</code> has nothing to auto-deploy to.</li>
+    </ul>
+
+    <h2>Consequences</h2>
+    <ul>
+      <li><strong>+</strong> Recurring cost goes to $0. The teardown is
+        complete rather than partial, so no forgotten resource resumes billing
+        later — the common failure mode of "just downgrade it for now".</li>
+      <li><strong>+</strong> Nobody encounters a broken product. Unpublishing
+        ahead of the backend teardown means there is no window in which the
+        store offers an extension whose API is already gone.</li>
+      <li><strong>+</strong> Deleting user data at shutdown honours the privacy
+        policy instead of leaving personal data (UWaterloo emails, extracted CV
+        text) sitting in an unmonitored project indefinitely.</li>
+      <li><strong>−</strong> The live demo is gone. README and store links go
+        dead, and the portfolio story becomes "here is the repo and the video"
+        rather than "here is the running product". Accepted deliberately: the
+        owner judged a dead-API web app worse than an honest archive.</li>
+      <li><strong>−</strong> Reopening is a rebuild, not a restart.
+        <code>server/</code> stays portable — the Dockerfile redeploys and
+        <code>migrations/</code> recreates the schema
+        (<a href="0007-deploy-on-digitalocean-app-platform.html">ADR 0007</a>
+        anticipated exactly this) — but it needs a fresh Supabase project, a
+        fresh key set, new Stripe products, and a new Web Store review. Days,
+        not minutes.</li>
+      <li>The whiteboard's parked ideas (subscription / term pass, cover-letter
+        generation, the detail-page scan button) and the roadmap's "Further out"
+        section are closed unbuilt. They stay in the docs as a record of what
+        was considered, not as a backlog.</li>
+      <li>The scraping-fragility risk becomes moot: WaterlooWorks DOM changes no
+        longer break anything that runs.</li>
+    </ul>
+
+    <h2>Alternatives considered</h2>
+    <ul>
+      <li><strong>Destroy the DO app only, keep the $0 tiers</strong> — the
+        cheapest option that preserves a live URL, and it stops 100% of the
+        bill, since DO is the only paid component. Rejected by the owner: the
+        web app without its API still renders sign-in, credit, and scan
+        surfaces that all fail on click, which reads worse to a visitor than no
+        site at all.</li>
+      <li><strong>Replace the web app with a static "discontinued"
+        page</strong> — keeps a $0 live link that is honest about its state.
+        Rejected as ongoing surface to maintain for a project being closed; the
+        GitHub repo and the walkthrough video serve the same purpose without a
+        deployment.</li>
+      <li><strong>Hold to ADR 0042's December checkpoint</strong> — rejected:
+        the checkpoint tests a marketing push the owner is no longer positioned
+        to run, so it would spend five more months of hosting to measure
+        nothing.</li>
+      <li><strong>Retain user data and pause the project instead of deleting
+        it</strong> — rejected: contradicts the published privacy policy and
+        <a href="0027-account-deletion-policy.html">ADR 0027</a>, and leaves
+        personal data in an unwatched project.</li>
+    </ul>
+  </body>
+</html>

@@ -1,5 +1,13 @@
 # ww-extension
 
+> **CLOSED 2026-07-26 at v8.19.0** (ADR 0056). All hosted infrastructure is torn
+> down — DigitalOcean, Supabase, Vercel, Stripe, Sentry — and the Chrome Web
+> Store listing is unpublished. There is no running deployment, no database, and
+> no live API. **Nothing auto-deploys from `master` any more**, so the branch
+> rules below are inert; there is no further version work planned. Treat this
+> repo as an archive: answer questions about it, don't resume phase work on it
+> unless the owner explicitly reopens the project.
+
 Chrome MV3 extension that scores WaterlooWorks job postings via Gemini,
 with a `server/` backend (user accounts + credit system) and a `web/`
 account/profile/payment app. Monorepo since 2026-05-27 (ADR 0010
